@@ -106,3 +106,35 @@ class AEClient:
             timeout=self.timeout,
         )
         return self._handle_response(response)
+
+    def add_layer(
+        self,
+        layer_type: str,
+        name: str | None = None,
+        text: str | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        color: List[float] | None = None,
+        duration: float | None = None,
+    ) -> Dict[str, Any]:
+        """Add a new layer to the active composition."""
+        payload: Dict[str, Any] = {"layerType": layer_type}
+        if name is not None:
+            payload["name"] = name
+        if text is not None:
+            payload["text"] = text
+        if width is not None:
+            payload["width"] = width
+        if height is not None:
+            payload["height"] = height
+        if color is not None:
+            payload["color"] = color
+        if duration is not None:
+            payload["duration"] = duration
+
+        response = requests.post(
+            self._url("/layers"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)

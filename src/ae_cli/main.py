@@ -66,6 +66,26 @@ def build_parser() -> argparse.ArgumentParser:
     effect_parser.add_argument("--effect-match-name", required=True)
     effect_parser.add_argument("--effect-name")
 
+    layer_parser = subparsers.add_parser("add-layer", help="Add a layer to the active composition")
+    layer_parser.add_argument(
+        "--layer-type",
+        choices=["text", "null", "solid", "shape"],
+        default="null",
+        help="Layer type to add (default: null)",
+    )
+    layer_parser.add_argument("--name", help="Optional layer name")
+    layer_parser.add_argument("--text", help="Text content for text layers")
+    layer_parser.add_argument("--width", type=int, help="Width for solid layers")
+    layer_parser.add_argument("--height", type=int, help="Height for solid layers")
+    layer_parser.add_argument(
+        "--color",
+        nargs=3,
+        type=float,
+        metavar=("R", "G", "B"),
+        help="Color for solid layers (0-1 or 0-255)",
+    )
+    layer_parser.add_argument("--duration", type=float, help="Duration in seconds for solid layers")
+
     return parser
 
 
@@ -109,6 +129,19 @@ def run(argv: list[str] | None = None) -> int:
                     layer_id=args.layer_id,
                     effect_match_name=args.effect_match_name,
                     effect_name=args.effect_name,
+                )
+            )
+            return 0
+        if args.command == "add-layer":
+            _print_json(
+                client.add_layer(
+                    layer_type=args.layer_type,
+                    name=args.name,
+                    text=args.text,
+                    width=args.width,
+                    height=args.height,
+                    color=args.color,
+                    duration=args.duration,
                 )
             )
             return 0

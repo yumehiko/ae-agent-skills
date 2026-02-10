@@ -99,6 +99,8 @@ if (nodeReady) {
             log('Health check responded with ok.');
         } else if (pathname === '/layers' && method === 'GET') {
             handleGetLayers(req, res);
+        } else if (pathname === '/layers' && method === 'POST') {
+            handleAddLayer(req, res);
         } else if (pathname === '/properties' && method === 'GET') {
             handleGetProperties(searchParams, res);
         } else if (pathname === '/selected-properties' && method === 'GET') {
@@ -296,6 +298,112 @@ function handleAddEffect(req, res) {
             res.writeHead(400);
             res.end(JSON.stringify({ status: 'error', message: 'Invalid JSON', error: e.toString() }));
             log(`addEffect failed: Invalid JSON - ${e.toString()}`);
+        }
+    });
+}
+
+function handleAddLayer(req, res) {
+    let body = '';
+    req.on('data', chunk => {
+        body += chunk.toString();
+    });
+    req.on('end', () => {
+        try {
+            const { layerType, name, text, width, height, color, duration } = JSON.parse(body);
+            if (!layerType || typeof layerType !== 'string') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'layerType is required and must be a string' }));
+                log('addLayer failed: invalid layerType');
+                return;
+            }
+
+            const normalizedType = layerType.toLowerCase();
+            if (!['text', 'null', 'solid', 'shape'].includes(normalizedType)) {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'Unsupported layerType. Use one of: text, null, solid, shape.' }));
+                log(`addLayer failed: unsupported layerType "${layerType}"`);
+                return;
+            }
+
+            if (name !== undefined && typeof name !== 'string') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'name must be a string when specified' }));
+                log('addLayer failed: name must be string');
+                return;
+            }
+            if (text !== undefined && typeof text !== 'string') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'text must be a string when specified' }));
+                log('addLayer failed: text must be string');
+                return;
+            }
+            if (width !== undefined && typeof width !== 'number') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'width must be a number when specified' }));
+                log('addLayer failed: width must be number');
+                return;
+            }
+            if (height !== undefined && typeof height !== 'number') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'height must be a number when specified' }));
+                log('addLayer failed: height must be number');
+                return;
+            }
+            if (duration !== undefined && typeof duration !== 'number') {
+                res.writeHead(400);
+                res.end(JSON.stringify({ status: 'error', message: 'duration must be a number when specified' }));
+                log('addLayer failed: duration must be number');
+                return;
+            }
+            if (color !== undefined) {
+                const validColor = Array.isArray(color)
+                    && color.length === 3
+                    && color.every((part) => typeof part === 'number');
+                if (!validColor) {
+                    res.writeHead(400);
+                    res.end(JSON.stringify({ status: 'error', message: 'color must be an array of 3 numbers when specified' }));
+                    log('addLayer failed: color must be [r, g, b]');
+                    return;
+                }
+            }
+
+            const options = {};
+            if (name !== undefined) options.name = name;
+            if (text !== undefined) options.text = text;
+            if (width !== undefined) options.width = width;
+            if (height !== undefined) options.height = height;
+            if (color !== undefined) options.color = color;
+            if (duration !== undefined) options.duration = duration;
+
+            const layerTypeLiteral = toExtendScriptStringLiteral(normalizedType);
+            const optionsLiteral = Object.keys(options).length === 0
+                ? 'null'
+                : toExtendScriptStringLiteral(JSON.stringify(options));
+            const script = `addLayer(${layerTypeLiteral}, ${optionsLiteral})`;
+            log(`Calling ExtendScript: ${script}`);
+            evalHostScript(script, (result) => {
+                try {
+                    const parsedResult = parseBridgeResult(result);
+                    if (parsedResult && parsedResult.status === 'error') {
+                        res.writeHead(500);
+                        res.end(JSON.stringify({ status: 'error', message: parsedResult.message || 'Failed to add layer' }));
+                        log(`addLayer failed: ${parsedResult.message || 'Unknown error'}`);
+                        return;
+                    }
+
+                    res.writeHead(200);
+                    res.end(JSON.stringify({ status: 'success', data: parsedResult }));
+                    log('addLayer successful.');
+                } catch (e) {
+                    res.writeHead(500);
+                    res.end(JSON.stringify({ status: 'error', message: 'Failed to parse ExtendScript result.', error: e.toString(), rawResult: result }));
+                    log(`addLayer failed: ${e.toString()}`);
+                }
+            });
+        } catch (e) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ status: 'error', message: 'Invalid JSON', error: e.toString() }));
+            log(`addLayer failed: Invalid JSON - ${e.toString()}`);
         }
     });
 }

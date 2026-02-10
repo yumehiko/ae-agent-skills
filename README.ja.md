@@ -17,6 +17,7 @@ English README は [README.md](README.md) を参照してください。
   - レイヤー/プロパティ取得
   - expression 適用
   - エフェクト追加
+  - レイヤー追加
 - Codex/Gemini 向け skill を同梱
   - `.codex/skills/aftereffects-cli/SKILL.md`
   - `.codex/skills/aftereffects-onboarding/SKILL.md`
@@ -72,6 +73,8 @@ ae-cli selected-properties
 ae-cli properties --layer-id 1 --max-depth 3
 ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
+ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
+ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
 ```
 
 `ae-cli` が `PATH` にない場合は、次で実行できます。
