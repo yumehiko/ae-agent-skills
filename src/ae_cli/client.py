@@ -228,3 +228,145 @@ class AEClient:
             timeout=self.timeout,
         )
         return self._handle_response(response)
+
+    def set_in_out_point(
+        self,
+        layer_id: int,
+        in_point: float | None = None,
+        out_point: float | None = None,
+    ) -> Dict[str, Any]:
+        """Set in/out points for the specified layer."""
+        payload: Dict[str, Any] = {"layerId": layer_id}
+        if in_point is not None:
+            payload["inPoint"] = in_point
+        if out_point is not None:
+            payload["outPoint"] = out_point
+
+        response = requests.post(
+            self._url("/layer-in-out"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def move_layer_time(self, layer_id: int, delta: float) -> Dict[str, Any]:
+        """Move layer timing by delta seconds."""
+        response = requests.post(
+            self._url("/layer-time"),
+            json={
+                "layerId": layer_id,
+                "delta": delta,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_cti(self, time: float) -> Dict[str, Any]:
+        """Set composition current time indicator."""
+        response = requests.post(
+            self._url("/cti"),
+            json={"time": time},
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_work_area(self, start: float, duration: float) -> Dict[str, Any]:
+        """Set composition work area start and duration."""
+        response = requests.post(
+            self._url("/work-area"),
+            json={
+                "start": start,
+                "duration": duration,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def parent_layer(self, child_layer_id: int, parent_layer_id: int | None = None) -> Dict[str, Any]:
+        """Set or clear parent relationship for a layer."""
+        payload: Dict[str, Any] = {"childLayerId": child_layer_id}
+        if parent_layer_id is not None:
+            payload["parentLayerId"] = parent_layer_id
+        response = requests.post(
+            self._url("/layer-parent"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def precompose(
+        self,
+        layer_ids: List[int],
+        name: str,
+        move_all_attributes: bool = False,
+    ) -> Dict[str, Any]:
+        """Precompose selected layers."""
+        response = requests.post(
+            self._url("/precompose"),
+            json={
+                "layerIds": layer_ids,
+                "name": name,
+                "moveAllAttributes": move_all_attributes,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def duplicate_layer(self, layer_id: int) -> Dict[str, Any]:
+        """Duplicate a layer."""
+        response = requests.post(
+            self._url("/duplicate-layer"),
+            json={"layerId": layer_id},
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def move_layer_order(
+        self,
+        layer_id: int,
+        before_layer_id: int | None = None,
+        after_layer_id: int | None = None,
+        to_top: bool = False,
+        to_bottom: bool = False,
+    ) -> Dict[str, Any]:
+        """Move layer order relative to another layer or to top/bottom."""
+        payload: Dict[str, Any] = {"layerId": layer_id}
+        if before_layer_id is not None:
+            payload["beforeLayerId"] = before_layer_id
+        if after_layer_id is not None:
+            payload["afterLayerId"] = after_layer_id
+        if to_top:
+            payload["toTop"] = True
+        if to_bottom:
+            payload["toBottom"] = True
+
+        response = requests.post(
+            self._url("/layer-order"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def delete_layer(self, layer_id: int) -> Dict[str, Any]:
+        """Delete a layer in the active composition."""
+        response = requests.post(
+            self._url("/delete-layer"),
+            json={"layerId": layer_id},
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def delete_comp(self, comp_id: int | None = None, comp_name: str | None = None) -> Dict[str, Any]:
+        """Delete a composition by id or name."""
+        payload: Dict[str, Any] = {}
+        if comp_id is not None:
+            payload["compId"] = comp_id
+        if comp_name is not None:
+            payload["compName"] = comp_name
+
+        response = requests.post(
+            self._url("/delete-comp"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)

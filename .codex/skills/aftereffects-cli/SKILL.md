@@ -30,6 +30,16 @@ After Effects 操作を `ae-cli` で実行する。
    - `ae-cli set-keyframe --layer-id <id> --property-path "<path>" --time <sec> --value "<json>" [--in-interp linear|bezier|hold] [--out-interp linear|bezier|hold] [--ease-in "<json>"] [--ease-out "<json>"]`
    - `ae-cli set-expression --layer-id <id> --property-path "<path>" --expression "<expr>"`
    - `ae-cli add-effect --layer-id <id> --effect-match-name "<matchName>" [--effect-name "<name>"]`
+   - `ae-cli set-in-out-point --layer-id <id> [--in-point <sec>] [--out-point <sec>]`
+   - `ae-cli move-layer-time --layer-id <id> --delta <sec>`
+   - `ae-cli set-cti --time <sec>`
+   - `ae-cli set-work-area --start <sec> --duration <sec>`
+   - `ae-cli parent-layer --child-layer-id <id> (--parent-layer-id <id> | --clear-parent)`
+   - `ae-cli precompose --layer-id <id> --layer-id <id> --name "<name>" [--move-all-attributes]`
+   - `ae-cli duplicate-layer --layer-id <id>`
+   - `ae-cli move-layer-order --layer-id <id> (--before-layer-id <id> | --after-layer-id <id> | --to-top | --to-bottom)`
+   - `ae-cli delete-layer --layer-id <id>`
+   - `ae-cli delete-comp (--comp-id <id> | --comp-name "<name>")`
 5. 複雑な値/式はファイル入力を使う。
    - `--value-file <path>`
    - `--expression-file <path>`
@@ -48,6 +58,16 @@ ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Posi
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
 ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
+ae-cli set-in-out-point --layer-id 1 --in-point 0.5 --out-point 6.5
+ae-cli move-layer-time --layer-id 1 --delta 0.25
+ae-cli set-cti --time 2.0
+ae-cli set-work-area --start 1.0 --duration 4.0
+ae-cli parent-layer --child-layer-id 2 --parent-layer-id 1
+ae-cli precompose --layer-id 3 --layer-id 2 --name "Shot_A" --move-all-attributes
+ae-cli duplicate-layer --layer-id 1
+ae-cli move-layer-order --layer-id 4 --to-top
+ae-cli delete-layer --layer-id 4
+ae-cli delete-comp --comp-name "Shot_A"
 ```
 
 ## トラブルシュート

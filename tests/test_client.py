@@ -162,3 +162,213 @@ def test_set_keyframe_posts_easing_payload(monkeypatch) -> None:
         "easeIn": [0, 80],
         "easeOut": [0, 40],
     }
+
+
+def test_set_in_out_point_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_in_out_point(layer_id=2, in_point=0.5, out_point=3.0)
+
+    assert captured["url"] == "http://127.0.0.1:8080/layer-in-out"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerId": 2,
+        "inPoint": 0.5,
+        "outPoint": 3.0,
+    }
+
+
+def test_move_layer_time_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.move_layer_time(layer_id=2, delta=1.25)
+
+    assert captured["url"] == "http://127.0.0.1:8080/layer-time"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerId": 2,
+        "delta": 1.25,
+    }
+
+
+def test_set_cti_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"time": 2.0}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_cti(time=2.0)
+
+    assert captured["url"] == "http://127.0.0.1:8080/cti"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {"time": 2.0}
+
+
+def test_set_work_area_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"start": 1.0}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_work_area(start=1.0, duration=4.0)
+
+    assert captured["url"] == "http://127.0.0.1:8080/work-area"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "start": 1.0,
+        "duration": 4.0,
+    }
+
+
+def test_parent_layer_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"childLayerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.parent_layer(child_layer_id=2, parent_layer_id=1)
+
+    assert captured["url"] == "http://127.0.0.1:8080/layer-parent"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "childLayerId": 2,
+        "parentLayerId": 1,
+    }
+
+
+def test_precompose_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"compName": "Precomp"}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.precompose(layer_ids=[3, 2], name="Precomp", move_all_attributes=True)
+
+    assert captured["url"] == "http://127.0.0.1:8080/precompose"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerIds": [3, 2],
+        "name": "Precomp",
+        "moveAllAttributes": True,
+    }
+
+
+def test_duplicate_layer_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"duplicatedLayerId": 6}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.duplicate_layer(layer_id=4)
+
+    assert captured["url"] == "http://127.0.0.1:8080/duplicate-layer"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {"layerId": 4}
+
+
+def test_move_layer_order_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 4}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.move_layer_order(layer_id=4, before_layer_id=2)
+
+    assert captured["url"] == "http://127.0.0.1:8080/layer-order"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerId": 4,
+        "beforeLayerId": 2,
+    }
+
+
+def test_delete_layer_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 3}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.delete_layer(layer_id=3)
+
+    assert captured["url"] == "http://127.0.0.1:8080/delete-layer"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {"layerId": 3}
+
+
+def test_delete_comp_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"compId": 11}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.delete_comp(comp_name="Main")
+
+    assert captured["url"] == "http://127.0.0.1:8080/delete-comp"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {"compName": "Main"}

@@ -129,4 +129,54 @@ def build_parser() -> argparse.ArgumentParser:
     )
     layer_parser.add_argument("--duration", type=float, help="Duration in seconds for solid layers")
 
+    set_in_out_parser = subparsers.add_parser("set-in-out-point", help="Set layer in/out points")
+    set_in_out_parser.add_argument("--layer-id", type=int, required=True)
+    set_in_out_parser.add_argument("--in-point", type=float)
+    set_in_out_parser.add_argument("--out-point", type=float)
+
+    move_layer_time_parser = subparsers.add_parser("move-layer-time", help="Move layer timing by delta seconds")
+    move_layer_time_parser.add_argument("--layer-id", type=int, required=True)
+    move_layer_time_parser.add_argument("--delta", type=float, required=True)
+
+    set_cti_parser = subparsers.add_parser("set-cti", help="Set current time indicator")
+    set_cti_parser.add_argument("--time", type=float, required=True)
+
+    set_work_area_parser = subparsers.add_parser("set-work-area", help="Set comp work area")
+    set_work_area_parser.add_argument("--start", type=float, required=True)
+    set_work_area_parser.add_argument("--duration", type=float, required=True)
+
+    parent_layer_parser = subparsers.add_parser("parent-layer", help="Set or clear layer parent")
+    parent_layer_parser.add_argument("--child-layer-id", type=int, required=True)
+    parent_group = parent_layer_parser.add_mutually_exclusive_group(required=True)
+    parent_group.add_argument("--parent-layer-id", type=int)
+    parent_group.add_argument("--clear-parent", action="store_true")
+
+    precompose_parser = subparsers.add_parser("precompose", help="Precompose layers")
+    precompose_parser.add_argument("--layer-id", type=int, action="append", required=True)
+    precompose_parser.add_argument("--name", required=True)
+    precompose_parser.add_argument(
+        "--move-all-attributes",
+        action="store_true",
+        help="Move all attributes into the new composition",
+    )
+
+    duplicate_layer_parser = subparsers.add_parser("duplicate-layer", help="Duplicate a layer")
+    duplicate_layer_parser.add_argument("--layer-id", type=int, required=True)
+
+    move_layer_order_parser = subparsers.add_parser("move-layer-order", help="Reorder a layer")
+    move_layer_order_parser.add_argument("--layer-id", type=int, required=True)
+    order_group = move_layer_order_parser.add_mutually_exclusive_group(required=True)
+    order_group.add_argument("--before-layer-id", type=int)
+    order_group.add_argument("--after-layer-id", type=int)
+    order_group.add_argument("--to-top", action="store_true")
+    order_group.add_argument("--to-bottom", action="store_true")
+
+    delete_layer_parser = subparsers.add_parser("delete-layer", help="Delete a layer")
+    delete_layer_parser.add_argument("--layer-id", type=int, required=True)
+
+    delete_comp_parser = subparsers.add_parser("delete-comp", help="Delete a composition by id or name")
+    delete_comp_group = delete_comp_parser.add_mutually_exclusive_group(required=True)
+    delete_comp_group.add_argument("--comp-id", type=int)
+    delete_comp_group.add_argument("--comp-name")
+
     return parser

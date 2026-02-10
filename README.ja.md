@@ -18,6 +18,8 @@ English README は [README.md](README.md) を参照してください。
   - expression 適用
   - エフェクト追加
   - レイヤー追加
+  - タイムライン操作（`set-in-out-point`, `move-layer-time`, `set-cti`, `set-work-area`）
+  - レイヤー構造操作（`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`）
 - Codex/Gemini 向け skill を同梱
   - `.codex/skills/aftereffects-cli/SKILL.md`
   - `.codex/skills/aftereffects-onboarding/SKILL.md`
@@ -81,6 +83,18 @@ ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Posi
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
 ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
+ae-cli set-in-out-point --layer-id 1 --in-point 0.5 --out-point 6.5
+ae-cli move-layer-time --layer-id 1 --delta 0.25
+ae-cli set-cti --time 2.0
+ae-cli set-work-area --start 1.0 --duration 4.0
+ae-cli parent-layer --child-layer-id 2 --parent-layer-id 1
+ae-cli parent-layer --child-layer-id 2 --clear-parent
+ae-cli precompose --layer-id 3 --layer-id 2 --name "Shot_A" --move-all-attributes
+ae-cli duplicate-layer --layer-id 1
+ae-cli move-layer-order --layer-id 4 --to-top
+ae-cli move-layer-order --layer-id 4 --before-layer-id 2
+ae-cli delete-layer --layer-id 4
+ae-cli delete-comp --comp-name "Shot_A"
 ```
 
 `ae-cli` が `PATH` にない場合は、次で実行できます。
@@ -118,7 +132,9 @@ PYTHONPATH=src pytest
 - `host/lib/common.jsx`: ログ出力・JSON 初期化・共通ヘルパー
 - `host/lib/property_utils.jsx`: プロパティ探索の共通ヘルパー
 - `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`）
-- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（`setExpression`, `addEffect`, `addLayer`）
+- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（コア: `setExpression`, `addEffect`, `addLayer`, `setPropertyValue`, `setKeyframe`）
+- `host/lib/mutation_timeline_handlers.jsx`: タイムライン操作ハンドラ（`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`）
+- `host/lib/mutation_layer_structure_handlers.jsx`: レイヤー構造操作ハンドラ（`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`）
 
 ### CEP パネル client の構成
 

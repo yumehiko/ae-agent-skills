@@ -122,6 +122,86 @@ def test_build_parser_parses_set_keyframe_easing_options() -> None:
     assert args.ease_in == "[0,80]"
     assert args.ease_out == "[0,40]"
 
+def test_build_parser_parses_set_in_out_point() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "set-in-out-point",
+            "--layer-id",
+            "5",
+            "--in-point",
+            "1.2",
+            "--out-point",
+            "4.8",
+        ]
+    )
+    assert args.command == "set-in-out-point"
+    assert args.layer_id == 5
+    assert args.in_point == 1.2
+    assert args.out_point == 4.8
+
+
+def test_build_parser_parses_precompose_multi_layers() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "precompose",
+            "--layer-id",
+            "3",
+            "--layer-id",
+            "1",
+            "--name",
+            "Shot_A",
+            "--move-all-attributes",
+        ]
+    )
+    assert args.command == "precompose"
+    assert args.layer_id == [3, 1]
+    assert args.name == "Shot_A"
+    assert args.move_all_attributes is True
+
+
+def test_build_parser_parses_move_layer_order_to_top() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "move-layer-order",
+            "--layer-id",
+            "4",
+            "--to-top",
+        ]
+    )
+    assert args.command == "move-layer-order"
+    assert args.layer_id == 4
+    assert args.to_top is True
+
+
+def test_build_parser_parses_delete_layer() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "delete-layer",
+            "--layer-id",
+            "7",
+        ]
+    )
+    assert args.command == "delete-layer"
+    assert args.layer_id == 7
+
+
+def test_build_parser_parses_delete_comp_by_name() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "delete-comp",
+            "--comp-name",
+            "Main",
+        ]
+    )
+    assert args.command == "delete-comp"
+    assert args.comp_name == "Main"
+    assert args.comp_id is None
+
 
 def test_run_command_returns_2_for_unknown_command(capsys) -> None:
     args = SimpleNamespace(command="unknown", base_url="http://x", timeout=1.0)

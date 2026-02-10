@@ -149,6 +149,74 @@ def _run_add_layer(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_set_in_out_point(client: AEClient, args: argparse.Namespace) -> None:
+    if args.in_point is None and args.out_point is None:
+        raise ValueError("At least one of --in-point or --out-point is required.")
+    _print_json(
+        client.set_in_out_point(
+            layer_id=args.layer_id,
+            in_point=args.in_point,
+            out_point=args.out_point,
+        )
+    )
+
+
+def _run_move_layer_time(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.move_layer_time(layer_id=args.layer_id, delta=args.delta))
+
+
+def _run_set_cti(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.set_cti(time=args.time))
+
+
+def _run_set_work_area(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.set_work_area(start=args.start, duration=args.duration))
+
+
+def _run_parent_layer(client: AEClient, args: argparse.Namespace) -> None:
+    parent_layer_id = None if args.clear_parent else args.parent_layer_id
+    _print_json(
+        client.parent_layer(
+            child_layer_id=args.child_layer_id,
+            parent_layer_id=parent_layer_id,
+        )
+    )
+
+
+def _run_precompose(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(
+        client.precompose(
+            layer_ids=args.layer_id,
+            name=args.name,
+            move_all_attributes=args.move_all_attributes,
+        )
+    )
+
+
+def _run_duplicate_layer(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.duplicate_layer(layer_id=args.layer_id))
+
+
+def _run_move_layer_order(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(
+        client.move_layer_order(
+            layer_id=args.layer_id,
+            before_layer_id=args.before_layer_id,
+            after_layer_id=args.after_layer_id,
+            to_top=args.to_top,
+            to_bottom=args.to_bottom,
+        )
+    )
+
+
+def _run_delete_layer(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.delete_layer(layer_id=args.layer_id))
+
+
+def _run_delete_comp(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.delete_comp(comp_id=args.comp_id, comp_name=args.comp_name))
+
+
 CommandHandler = Callable[[AEClient, argparse.Namespace], None]
 
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
@@ -164,6 +232,16 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "set-keyframe": _run_set_keyframe,
     "add-effect": _run_add_effect,
     "add-layer": _run_add_layer,
+    "set-in-out-point": _run_set_in_out_point,
+    "move-layer-time": _run_move_layer_time,
+    "set-cti": _run_set_cti,
+    "set-work-area": _run_set_work_area,
+    "parent-layer": _run_parent_layer,
+    "precompose": _run_precompose,
+    "duplicate-layer": _run_duplicate_layer,
+    "move-layer-order": _run_move_layer_order,
+    "delete-layer": _run_delete_layer,
+    "delete-comp": _run_delete_comp,
 }
 
 
