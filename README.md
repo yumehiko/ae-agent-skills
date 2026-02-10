@@ -27,6 +27,18 @@ Japanese README is available at [README.ja.md](README.ja.md).
 - Adobe After Effects (CEP-capable environment)
 - Python 3.10+
 
+### CEP Debug Setting (for unsigned extensions)
+
+This extension is intended for development use, so some environments require `PlayerDebugMode=1`.
+
+```bash
+defaults domains | tr ',' '\n' | rg 'com\.adobe\.CSXS\.'
+# Example: if com.adobe.CSXS.11 exists
+defaults write com.adobe.CSXS.11 PlayerDebugMode 1
+```
+
+After setting it, fully quit and relaunch After Effects.
+
 ## Quick Start (Recommended)
 
 Use an agent and ask it to run onboarding for this repository.

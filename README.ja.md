@@ -27,6 +27,18 @@ English README は [README.md](README.md) を参照してください。
 - Adobe After Effects（CEP 拡張が動作する環境）
 - Python 3.10+
 
+### CEP Debug 設定（未署名拡張向け）
+
+このリポジトリの拡張は開発用途を想定しているため、環境によっては `PlayerDebugMode=1` が必要です。
+
+```bash
+defaults domains | tr ',' '\n' | rg 'com\.adobe\.CSXS\.'
+# 例: com.adobe.CSXS.11 が見つかった場合
+defaults write com.adobe.CSXS.11 PlayerDebugMode 1
+```
+
+設定後は After Effects を完全終了して再起動してください。
+
 ## クイックスタート（推奨）
 
 エージェントに onboarding を依頼してください。

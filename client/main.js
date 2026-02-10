@@ -1,6 +1,15 @@
+let http = null;
+let path = null;
+let nodeReady = true;
+let nodeInitError = null;
 
-const http = require('http');
-const path = require('path');
+try {
+    http = require('http');
+    path = require('path');
+} catch (e) {
+    nodeReady = false;
+    nodeInitError = e;
+}
 
 // CEP-Spyを参考に、CSInterface.jsのパスを解決
 // https://github.com/Adobe-CEP/CEP-Spy/blob/master/spy/index.html#L32
@@ -17,9 +26,15 @@ function toExtendScriptStringLiteral(str) {
     return JSON.stringify(str);
 }
 
-const hostScriptPath = escapeForExtendScript(path.join(extensionRoot, 'host', 'index.jsx'));
+const hostScriptPath = nodeReady
+    ? escapeForExtendScript(path.join(extensionRoot, 'host', 'index.jsx'))
+    : null;
 
 function evalHostScript(scriptSource, callback) {
+    if (!hostScriptPath) {
+        callback('{"status":"error","message":"Host script unavailable because CEP Node.js is disabled."}');
+        return;
+    }
     const fullScript = `$.evalFile("${hostScriptPath}");${scriptSource}`;
     csInterface.evalScript(fullScript, callback);
 }
@@ -55,47 +70,50 @@ function parseBridgeResult(result) {
     return JSON.parse(decoded);
 }
 
-const server = http.createServer((req, res) => {
-    log(`Request received: ${req.method} ${req.url}`);
+let server = null;
+if (nodeReady) {
+    server = http.createServer((req, res) => {
+        log(`Request received: ${req.method} ${req.url}`);
 
-    // CORS preflight request
-    if (req.method === 'OPTIONS') {
-        res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*', 
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-        });
-        res.end();
-        return;
-    }
-    
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'application/json');
+        // CORS preflight request
+        if (req.method === 'OPTIONS') {
+            res.writeHead(204, {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
+            });
+            res.end();
+            return;
+        }
 
-    const [pathname, queryString = ''] = req.url.split('?');
-    const method = (req.method || 'GET').toUpperCase();
-    const searchParams = new URLSearchParams(queryString);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Type', 'application/json');
 
-    if (pathname === '/health' && method === 'GET') {
-        res.writeHead(200);
-        res.end(JSON.stringify({ status: 'ok' }));
-        log('Health check responded with ok.');
-    } else if (pathname === '/layers' && method === 'GET') {
-        handleGetLayers(req, res);
-    } else if (pathname === '/properties' && method === 'GET') {
-        handleGetProperties(searchParams, res);
-    } else if (pathname === '/selected-properties' && method === 'GET') {
-        handleGetSelectedProperties(res);
-    } else if (pathname === '/expression' && method === 'POST') {
-        handleSetExpression(req, res);
-    } else if (pathname === '/effects' && method === 'POST') {
-        handleAddEffect(req, res);
-    } else {
-        res.writeHead(404);
-        res.end(JSON.stringify({ status: 'error', message: 'Not Found' }));
-        log(`404 Not Found: ${req.method} ${req.url}`);
-    }
-});
+        const [pathname, queryString = ''] = req.url.split('?');
+        const method = (req.method || 'GET').toUpperCase();
+        const searchParams = new URLSearchParams(queryString);
+
+        if (pathname === '/health' && method === 'GET') {
+            res.writeHead(200);
+            res.end(JSON.stringify({ status: 'ok' }));
+            log('Health check responded with ok.');
+        } else if (pathname === '/layers' && method === 'GET') {
+            handleGetLayers(req, res);
+        } else if (pathname === '/properties' && method === 'GET') {
+            handleGetProperties(searchParams, res);
+        } else if (pathname === '/selected-properties' && method === 'GET') {
+            handleGetSelectedProperties(res);
+        } else if (pathname === '/expression' && method === 'POST') {
+            handleSetExpression(req, res);
+        } else if (pathname === '/effects' && method === 'POST') {
+            handleAddEffect(req, res);
+        } else {
+            res.writeHead(404);
+            res.end(JSON.stringify({ status: 'error', message: 'Not Found' }));
+            log(`404 Not Found: ${req.method} ${req.url}`);
+        }
+    });
+}
 
 function handleGetLayers(req, res) {
     log('Calling ExtendScript: getLayers()');
@@ -284,9 +302,27 @@ function handleAddEffect(req, res) {
 
 
 const port = 8080;
-server.listen(port, '127.0.0.1', () => {
-    log(`Server listening on http://127.0.0.1:${port}`);
-    log('HTTPブリッジを起動しました。CLI から利用してください。');
-});
+if (!nodeReady) {
+    log('main.js loaded (degraded mode).');
+    log('CEP Node.js runtime is not available. The bridge server is disabled.');
+    log('Enable PlayerDebugMode and restart After Effects to use this extension.');
+    if (nodeInitError) {
+        log(`Node bootstrap error: ${nodeInitError.toString()}`);
+    }
+} else {
+    server.on('error', (err) => {
+        if (err && err.code === 'EADDRINUSE') {
+            log(`Failed to start bridge: port ${port} is already in use.`);
+            log('Close the process using 127.0.0.1:8080, then reopen the panel.');
+            return;
+        }
+        log(`Failed to start bridge server: ${err ? err.toString() : 'Unknown error'}`);
+    });
 
-log('main.js loaded.');
+    server.listen(port, '127.0.0.1', () => {
+        log(`Server listening on http://127.0.0.1:${port}`);
+        log('HTTPブリッジを起動しました。CLI から利用してください。');
+    });
+
+    log('main.js loaded.');
+}

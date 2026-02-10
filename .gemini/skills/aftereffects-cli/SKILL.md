@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: After Effects の操作を `ae-cli` で実行するための手順。MCP ツールではなく CLI でレイヤー取得、プロパティ確認、expression 適用を行う依頼で使う。
+description: After Effects の操作を `ae-cli` で実行するための手順。MCP ツールではなく CLI でレイヤー取得、プロパティ確認、expression 適用、エフェクト追加を行う依頼で使う。
 ---
 
 # aftereffects-cli
@@ -23,6 +23,7 @@ After Effects 操作を `ae-cli` で実行する。
    - `ae-cli properties --layer-id <id>`
 3. 更新系は対象確認後に実行する。
    - `ae-cli set-expression --layer-id <id> --property-path "<path>" --expression "<expr>"`
+   - `ae-cli add-effect --layer-id <id> --effect-match-name "<matchName>" [--effect-name "<name>"]`
 4. 複雑な式は `--expression-file` を使う。
 
 ## コマンド例
@@ -32,6 +33,7 @@ ae-cli health
 ae-cli layers
 ae-cli properties --layer-id 1 --max-depth 2
 ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
+ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ```
 
 ## トラブルシュート
@@ -42,3 +44,6 @@ ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expr
 - 応答が `status=error` の場合:
   - 引数（`layer-id`, `property-path`, `expression`）を再確認する。
   - プロパティ名やパスを `ae-cli properties` で再取得してから再実行する。
+- エフェクト追加に失敗する場合:
+  - `--effect-match-name` が正しい AE の `matchName` か確認する（例: `ADBE Slider Control`）。
+  - 対象レイヤーで Effect Parade（`ADBE Effect Parade`）が利用可能か確認する。

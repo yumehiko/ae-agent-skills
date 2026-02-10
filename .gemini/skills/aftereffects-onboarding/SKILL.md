@@ -44,6 +44,11 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 
 ### Step 4: After Effects 側起動
 
+- 未署名 CEP 拡張を使う前提として、`PlayerDebugMode=1` を確認/設定する。
+  - `defaults domains | tr ',' '\n' | rg 'com\.adobe\.CSXS\.'`
+  - 使用中の `com.adobe.CSXS.<version>` に対して:
+    - `defaults write com.adobe.CSXS.<version> PlayerDebugMode 1`
+  - 設定後は After Effects を完全終了して再起動する。
 - ユーザーに依頼する:
   1. After Effects を起動する。
   2. `ウィンドウ > 機能拡張 (ベータ) > LLM Video Agent` を開く。
@@ -56,6 +61,7 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 - 成功時:
   - `ae-cli layers` を実行し、結果取得できるか確認する。
 - 失敗時:
+  - `PlayerDebugMode` が有効か再確認する。
   - パネルを再起動する。
   - `AE_BRIDGE_URL` と `--base-url` の整合を確認する。
   - `127.0.0.1:8080` 使用プロセス競合を確認する（必要なら `lsof -i :8080` を依頼）。
