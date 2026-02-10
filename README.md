@@ -105,3 +105,10 @@ PYTHONPATH=src pytest
 - `src/ae_cli/cli_runner.py`: command dispatch and error handling
 - `src/ae_cli/client.py`: HTTP client to the CEP bridge
 - `src/ae_cli/main.py`: thin entrypoint (`ae-cli`)
+
+### ExtendScript host structure
+
+- `host/index.jsx`: module loader entrypoint
+- `host/lib/common.jsx`: logging/json bootstrap/common helpers
+- `host/lib/query_handlers.jsx`: read-only handlers (`getLayers`, `getProperties`, `getSelectedProperties`)
+- `host/lib/mutation_handlers.jsx`: write handlers (`setExpression`, `addEffect`, `addLayer`)

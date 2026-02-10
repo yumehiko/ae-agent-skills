@@ -105,3 +105,10 @@ PYTHONPATH=src pytest
 - `src/ae_cli/cli_runner.py`: コマンドディスパッチとエラーハンドリング
 - `src/ae_cli/client.py`: CEP ブリッジへの HTTP クライアント
 - `src/ae_cli/main.py`: エントリポイント（`ae-cli`）
+
+### ExtendScript host の構成
+
+- `host/index.jsx`: モジュールローダー（エントリポイント）
+- `host/lib/common.jsx`: ログ出力・JSON 初期化・共通ヘルパー
+- `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`）
+- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（`setExpression`, `addEffect`, `addLayer`）
