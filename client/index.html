@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>LLM Video Agent</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #323232;
+            color: #E0E0E0;
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            font-size: 14px;
+            padding: 10px;
+            margin: 0;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .version {
+            font-size: 12px;
+            color: #B0B0B0;
+        }
+        #log {
+            flex-grow: 1;
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            background-color: #282828;
+            color: #E0E0E0;
+            border: none;
+            font-family: monospace;
+            white-space: pre-wrap;
+            resize: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>
+        <span>LLM Video Agent Logs</span>
+        <span class="version">v1.0.2</span>
+    </h1>
+    <textarea id="log" readonly></textarea>
+
+    <script type="text/javascript" src="./CSInterface.js"></script>
+    <script type="text/javascript" src="./main.js"></script>
+</body>
+</html>

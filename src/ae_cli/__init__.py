@@ -1,0 +1,2 @@
+"""After Effects CLI package."""
+

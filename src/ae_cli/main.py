@@ -1,0 +1,124 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+import requests
+
+from .client import AEBridgeError, AEClient
+
+
+DEFAULT_BRIDGE_URL = os.environ.get("AE_BRIDGE_URL", "http://127.0.0.1:8080")
+
+
+def _print_json(data: Any) -> None:
+    print(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+def _read_expression(args: argparse.Namespace) -> str:
+    if args.expression_file:
+        return Path(args.expression_file).read_text(encoding="utf-8")
+    return args.expression
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ae-cli",
+        description="Control After Effects CEP bridge without MCP.",
+    )
+    parser.add_argument(
+        "--base-url",
+        default=DEFAULT_BRIDGE_URL,
+        help=f"After Effects bridge URL (default: {DEFAULT_BRIDGE_URL})",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=10.0,
+        help="HTTP timeout in seconds (default: 10.0)",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    subparsers.add_parser("health", help="Check bridge health")
+    subparsers.add_parser("layers", help="Get active composition layers")
+    subparsers.add_parser("selected-properties", help="Get currently selected properties")
+
+    properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
+    properties_parser.add_argument("--layer-id", type=int, required=True)
+    properties_parser.add_argument("--include-group", action="append", default=[])
+    properties_parser.add_argument("--exclude-group", action="append", default=[])
+    properties_parser.add_argument("--max-depth", type=int)
+
+    expression_parser = subparsers.add_parser("set-expression", help="Set expression on a property")
+    expression_parser.add_argument("--layer-id", type=int, required=True)
+    expression_parser.add_argument("--property-path", required=True)
+    expression_group = expression_parser.add_mutually_exclusive_group(required=True)
+    expression_group.add_argument("--expression")
+    expression_group.add_argument("--expression-file")
+
+    effect_parser = subparsers.add_parser("add-effect", help="Add an effect to a layer")
+    effect_parser.add_argument("--layer-id", type=int, required=True)
+    effect_parser.add_argument("--effect-match-name", required=True)
+    effect_parser.add_argument("--effect-name")
+
+    return parser
+
+
+def run(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    client = AEClient(base_url=args.base_url, timeout=args.timeout)
+
+    try:
+        if args.command == "health":
+            _print_json(client.health())
+            return 0
+        if args.command == "layers":
+            _print_json(client.get_layers())
+            return 0
+        if args.command == "selected-properties":
+            _print_json(client.get_selected_properties())
+            return 0
+        if args.command == "properties":
+            data = client.get_properties(
+                layer_id=args.layer_id,
+                include_groups=args.include_group,
+                exclude_groups=args.exclude_group,
+                max_depth=args.max_depth,
+            )
+            _print_json(data)
+            return 0
+        if args.command == "set-expression":
+            expression = _read_expression(args)
+            _print_json(
+                client.set_expression(
+                    layer_id=args.layer_id,
+                    property_path=args.property_path,
+                    expression=expression,
+                )
+            )
+            return 0
+        if args.command == "add-effect":
+            _print_json(
+                client.add_effect(
+                    layer_id=args.layer_id,
+                    effect_match_name=args.effect_match_name,
+                    effect_name=args.effect_name,
+                )
+            )
+            return 0
+    except (AEBridgeError, requests.RequestException, OSError, ValueError) as exc:
+        print(f"ae-cli error: {exc}", file=sys.stderr)
+        return 1
+
+    parser.error(f"Unknown command: {args.command}")
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())
