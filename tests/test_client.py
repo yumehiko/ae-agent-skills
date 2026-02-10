@@ -127,6 +127,90 @@ def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
     }
 
 
+def test_add_layer_posts_shape_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.add_layer(
+        layer_type="shape",
+        name="Burst",
+        shape_type="ellipse",
+        shape_size=[640, 640],
+        shape_position=[0, 0],
+        shape_fill_color=[255, 128, 0],
+        shape_fill_opacity=90,
+        shape_stroke_color=[255, 255, 255],
+        shape_stroke_opacity=100,
+        shape_stroke_width=6,
+        shape_stroke_line_cap="round",
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/layers"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerType": "shape",
+        "name": "Burst",
+        "shapeType": "ellipse",
+        "shapeSize": [640, 640],
+        "shapePosition": [0, 0],
+        "shapeFillColor": [255, 128, 0],
+        "shapeFillOpacity": 90,
+        "shapeStrokeColor": [255, 255, 255],
+        "shapeStrokeOpacity": 100,
+        "shapeStrokeWidth": 6,
+        "shapeStrokeLineCap": "round",
+    }
+
+
+def test_add_shape_repeater_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"repeaterName": "BurstRepeater"}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.add_shape_repeater(
+        layer_id=3,
+        group_index=1,
+        name="BurstRepeater",
+        copies=12,
+        offset=0.5,
+        position=[0, -30],
+        scale=[100, 100],
+        rotation=20,
+        start_opacity=100,
+        end_opacity=0,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/shape-repeater"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerId": 3,
+        "groupIndex": 1,
+        "name": "BurstRepeater",
+        "copies": 12,
+        "offset": 0.5,
+        "position": [0, -30],
+        "scale": [100, 100],
+        "rotation": 20,
+        "startOpacity": 100,
+        "endOpacity": 0,
+    }
+
+
 def test_set_keyframe_posts_easing_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

@@ -197,6 +197,48 @@ class AEClient:
         )
         return self._handle_response(response)
 
+    def add_shape_repeater(
+        self,
+        layer_id: int,
+        group_index: int = 1,
+        name: str | None = None,
+        copies: float | None = None,
+        offset: float | None = None,
+        position: List[float] | None = None,
+        scale: List[float] | None = None,
+        rotation: float | None = None,
+        start_opacity: float | None = None,
+        end_opacity: float | None = None,
+    ) -> Dict[str, Any]:
+        """Add a shape repeater operator to the specified shape group."""
+        payload: Dict[str, Any] = {
+            "layerId": layer_id,
+            "groupIndex": group_index,
+        }
+        if name is not None:
+            payload["name"] = name
+        if copies is not None:
+            payload["copies"] = copies
+        if offset is not None:
+            payload["offset"] = offset
+        if position is not None:
+            payload["position"] = position
+        if scale is not None:
+            payload["scale"] = scale
+        if rotation is not None:
+            payload["rotation"] = rotation
+        if start_opacity is not None:
+            payload["startOpacity"] = start_opacity
+        if end_opacity is not None:
+            payload["endOpacity"] = end_opacity
+
+        response = requests.post(
+            self._url("/shape-repeater"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def add_layer(
         self,
         layer_type: str,
@@ -206,6 +248,16 @@ class AEClient:
         height: int | None = None,
         color: List[float] | None = None,
         duration: float | None = None,
+        shape_type: str | None = None,
+        shape_size: List[float] | None = None,
+        shape_position: List[float] | None = None,
+        shape_fill_color: List[float] | None = None,
+        shape_fill_opacity: float | None = None,
+        shape_stroke_color: List[float] | None = None,
+        shape_stroke_opacity: float | None = None,
+        shape_stroke_width: float | None = None,
+        shape_stroke_line_cap: str | None = None,
+        shape_roundness: float | None = None,
     ) -> Dict[str, Any]:
         """Add a new layer to the active composition."""
         payload: Dict[str, Any] = {"layerType": layer_type}
@@ -221,6 +273,26 @@ class AEClient:
             payload["color"] = color
         if duration is not None:
             payload["duration"] = duration
+        if shape_type is not None:
+            payload["shapeType"] = shape_type
+        if shape_size is not None:
+            payload["shapeSize"] = shape_size
+        if shape_position is not None:
+            payload["shapePosition"] = shape_position
+        if shape_fill_color is not None:
+            payload["shapeFillColor"] = shape_fill_color
+        if shape_fill_opacity is not None:
+            payload["shapeFillOpacity"] = shape_fill_opacity
+        if shape_stroke_color is not None:
+            payload["shapeStrokeColor"] = shape_stroke_color
+        if shape_stroke_opacity is not None:
+            payload["shapeStrokeOpacity"] = shape_stroke_opacity
+        if shape_stroke_width is not None:
+            payload["shapeStrokeWidth"] = shape_stroke_width
+        if shape_stroke_line_cap is not None:
+            payload["shapeStrokeLineCap"] = shape_stroke_line_cap
+        if shape_roundness is not None:
+            payload["shapeRoundness"] = shape_roundness
 
         response = requests.post(
             self._url("/layers"),

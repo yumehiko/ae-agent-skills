@@ -83,6 +83,8 @@ ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Posi
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
 ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
+ae-cli add-layer --layer-type shape --name "BurstCircle" --shape-type ellipse --shape-size 720 720 --shape-fill-color 255 128 0 --shape-stroke-color 255 255 255 --shape-stroke-width 8
+ae-cli add-shape-repeater --layer-id 1 --group-index 1 --copies 12 --rotation 30 --end-opacity 0
 ae-cli set-in-out-point --layer-id 1 --in-point 0.5 --out-point 6.5
 ae-cli move-layer-time --layer-id 1 --delta 0.25
 ae-cli set-cti --time 2.0
@@ -132,7 +134,8 @@ PYTHONPATH=src pytest
 - `host/lib/common.jsx`: logging/json bootstrap/common helpers
 - `host/lib/property_utils.jsx`: shared property-tree helpers
 - `host/lib/query_handlers.jsx`: read-only handlers (`getLayers`, `getProperties`, `getSelectedProperties`)
-- `host/lib/mutation_handlers.jsx`: write handlers core (`setExpression`, `addEffect`, `addLayer`, `setPropertyValue`, `setKeyframe`)
+- `host/lib/mutation_handlers.jsx`: write handlers core (`setExpression`, `addEffect`, `setPropertyValue`, `setKeyframe`, `createComp`, `setActiveComp`)
+- `host/lib/mutation_shape_handlers.jsx`: shape write handlers (`addLayer`, `addShapeRepeater`)
 - `host/lib/mutation_timeline_handlers.jsx`: timeline handlers (`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`)
 - `host/lib/mutation_layer_structure_handlers.jsx`: layer structure handlers (`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`)
 
@@ -142,5 +145,6 @@ PYTHONPATH=src pytest
 - `client/lib/runtime.js`: CEP/Node bootstrap and host script evaluation
 - `client/lib/logging.js`: panel log output helpers
 - `client/lib/bridge_utils.js`: JSON/body parsing and bridge response helpers
+- `client/lib/request_handlers_shape.js`: shape-specific request handlers (`addLayer`, `addShapeRepeater`)
 - `client/lib/request_handlers.js`: route dispatch and endpoint handlers
 - `client/lib/server.js`: HTTP server lifecycle

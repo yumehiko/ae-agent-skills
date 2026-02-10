@@ -109,6 +109,38 @@ def build_parser() -> argparse.ArgumentParser:
     effect_parser.add_argument("--effect-match-name", required=True)
     effect_parser.add_argument("--effect-name")
 
+    shape_repeater_parser = subparsers.add_parser(
+        "add-shape-repeater",
+        help="Add a Repeater operator to a shape group",
+    )
+    shape_repeater_parser.add_argument("--layer-id", type=int, required=True)
+    shape_repeater_parser.add_argument(
+        "--group-index",
+        type=int,
+        default=1,
+        help="1-based shape group index under Contents (default: 1)",
+    )
+    shape_repeater_parser.add_argument("--name", help="Optional repeater name")
+    shape_repeater_parser.add_argument("--copies", type=float, help="Repeater copies")
+    shape_repeater_parser.add_argument("--offset", type=float, help="Repeater offset")
+    shape_repeater_parser.add_argument(
+        "--position",
+        nargs=2,
+        type=float,
+        metavar=("X", "Y"),
+        help="Transform Position [x y]",
+    )
+    shape_repeater_parser.add_argument(
+        "--scale",
+        nargs=2,
+        type=float,
+        metavar=("X", "Y"),
+        help="Transform Scale [x y]",
+    )
+    shape_repeater_parser.add_argument("--rotation", type=float, help="Transform Rotation")
+    shape_repeater_parser.add_argument("--start-opacity", type=float, help="Transform Start Opacity (0-100)")
+    shape_repeater_parser.add_argument("--end-opacity", type=float, help="Transform End Opacity (0-100)")
+
     layer_parser = subparsers.add_parser("add-layer", help="Add a layer to the active composition")
     layer_parser.add_argument(
         "--layer-type",
@@ -128,6 +160,64 @@ def build_parser() -> argparse.ArgumentParser:
         help="Color for solid layers (0-1 or 0-255)",
     )
     layer_parser.add_argument("--duration", type=float, help="Duration in seconds for solid layers")
+    layer_parser.add_argument(
+        "--shape-type",
+        choices=["ellipse", "rect"],
+        help="Primitive type for shape layers",
+    )
+    layer_parser.add_argument(
+        "--shape-size",
+        nargs=2,
+        type=float,
+        metavar=("W", "H"),
+        help="Shape size [width height] in pixels",
+    )
+    layer_parser.add_argument(
+        "--shape-position",
+        nargs=2,
+        type=float,
+        metavar=("X", "Y"),
+        help="Shape position [x y] in pixels in the shape group",
+    )
+    layer_parser.add_argument(
+        "--shape-fill-color",
+        nargs=3,
+        type=float,
+        metavar=("R", "G", "B"),
+        help="Shape fill color (0-1 or 0-255)",
+    )
+    layer_parser.add_argument(
+        "--shape-fill-opacity",
+        type=float,
+        help="Shape fill opacity (0-100)",
+    )
+    layer_parser.add_argument(
+        "--shape-stroke-color",
+        nargs=3,
+        type=float,
+        metavar=("R", "G", "B"),
+        help="Shape stroke color (0-1 or 0-255)",
+    )
+    layer_parser.add_argument(
+        "--shape-stroke-opacity",
+        type=float,
+        help="Shape stroke opacity (0-100)",
+    )
+    layer_parser.add_argument(
+        "--shape-stroke-width",
+        type=float,
+        help="Shape stroke width in pixels",
+    )
+    layer_parser.add_argument(
+        "--shape-stroke-line-cap",
+        choices=["butt", "round", "projecting"],
+        help="Shape stroke line cap style",
+    )
+    layer_parser.add_argument(
+        "--shape-roundness",
+        type=float,
+        help="Rectangle roundness in pixels (rect only)",
+    )
 
     set_in_out_parser = subparsers.add_parser("set-in-out-point", help="Set layer in/out points")
     set_in_out_parser.add_argument("--layer-id", type=int, required=True)

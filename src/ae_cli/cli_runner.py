@@ -135,6 +135,23 @@ def _run_add_effect(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_add_shape_repeater(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(
+        client.add_shape_repeater(
+            layer_id=args.layer_id,
+            group_index=args.group_index,
+            name=args.name,
+            copies=args.copies,
+            offset=args.offset,
+            position=args.position,
+            scale=args.scale,
+            rotation=args.rotation,
+            start_opacity=args.start_opacity,
+            end_opacity=args.end_opacity,
+        )
+    )
+
+
 def _run_add_layer(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.add_layer(
@@ -145,6 +162,16 @@ def _run_add_layer(client: AEClient, args: argparse.Namespace) -> None:
             height=args.height,
             color=args.color,
             duration=args.duration,
+            shape_type=args.shape_type,
+            shape_size=args.shape_size,
+            shape_position=args.shape_position,
+            shape_fill_color=args.shape_fill_color,
+            shape_fill_opacity=args.shape_fill_opacity,
+            shape_stroke_color=args.shape_stroke_color,
+            shape_stroke_opacity=args.shape_stroke_opacity,
+            shape_stroke_width=args.shape_stroke_width,
+            shape_stroke_line_cap=args.shape_stroke_line_cap,
+            shape_roundness=args.shape_roundness,
         )
     )
 
@@ -231,6 +258,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "set-property": _run_set_property,
     "set-keyframe": _run_set_keyframe,
     "add-effect": _run_add_effect,
+    "add-shape-repeater": _run_add_shape_repeater,
     "add-layer": _run_add_layer,
     "set-in-out-point": _run_set_in_out_point,
     "move-layer-time": _run_move_layer_time,

@@ -296,92 +296,6 @@ function handleAddEffect(req, res) {
     });
 }
 
-function handleAddLayer(req, res) {
-    readJsonBody(req, res, ({ layerType, name, text, width, height, color, duration }) => {
-        if (!layerType || typeof layerType !== 'string') {
-            sendBadRequest(res, 'layerType is required and must be a string');
-            log('addLayer failed: invalid layerType');
-            return;
-        }
-
-        const normalizedType = layerType.toLowerCase();
-        if (!['text', 'null', 'solid', 'shape'].includes(normalizedType)) {
-            sendBadRequest(res, 'Unsupported layerType. Use one of: text, null, solid, shape.');
-            log(`addLayer failed: unsupported layerType "${layerType}"`);
-            return;
-        }
-        if (name !== undefined && typeof name !== 'string') {
-            sendBadRequest(res, 'name must be a string when specified');
-            log('addLayer failed: name must be string');
-            return;
-        }
-        if (text !== undefined && typeof text !== 'string') {
-            sendBadRequest(res, 'text must be a string when specified');
-            log('addLayer failed: text must be string');
-            return;
-        }
-        if (width !== undefined && typeof width !== 'number') {
-            sendBadRequest(res, 'width must be a number when specified');
-            log('addLayer failed: width must be number');
-            return;
-        }
-        if (height !== undefined && typeof height !== 'number') {
-            sendBadRequest(res, 'height must be a number when specified');
-            log('addLayer failed: height must be number');
-            return;
-        }
-        if (duration !== undefined && typeof duration !== 'number') {
-            sendBadRequest(res, 'duration must be a number when specified');
-            log('addLayer failed: duration must be number');
-            return;
-        }
-        if (color !== undefined) {
-            const validColor = Array.isArray(color)
-                && color.length === 3
-                && color.every((part) => typeof part === 'number');
-            if (!validColor) {
-                sendBadRequest(res, 'color must be an array of 3 numbers when specified');
-                log('addLayer failed: color must be [r, g, b]');
-                return;
-            }
-        }
-
-        const options = {};
-        if (name !== undefined) options.name = name;
-        if (text !== undefined) options.text = text;
-        if (width !== undefined) options.width = width;
-        if (height !== undefined) options.height = height;
-        if (color !== undefined) options.color = color;
-        if (duration !== undefined) options.duration = duration;
-
-        const layerTypeLiteral = toExtendScriptStringLiteral(normalizedType);
-        const optionsLiteral = Object.keys(options).length === 0
-            ? 'null'
-            : toExtendScriptStringLiteral(JSON.stringify(options));
-        const script = `addLayer(${layerTypeLiteral}, ${optionsLiteral})`;
-
-        log(`Calling ExtendScript: ${script}`);
-        evalHostScript(script, (result) => {
-            try {
-                const parsedResult = parseBridgeResult(result);
-                if (parsedResult && parsedResult.status === 'error') {
-                    sendJson(res, 500, {
-                        status: 'error',
-                        message: parsedResult.message || 'Failed to add layer',
-                    });
-                    log(`addLayer failed: ${parsedResult.message || 'Unknown error'}`);
-                    return;
-                }
-                sendJson(res, 200, { status: 'success', data: parsedResult });
-                log('addLayer successful.');
-            } catch (e) {
-                sendBridgeParseError(res, result, e);
-                log(`addLayer failed: ${e.toString()}`);
-            }
-        });
-    });
-}
-
 function handleSetInOutPoint(req, res) {
     readJsonBody(req, res, ({ layerId, inPoint, outPoint }) => {
         if (!layerId || (inPoint === undefined && outPoint === undefined)) {
@@ -683,6 +597,10 @@ function routeRequest(req, res) {
     }
     if (pathname === '/effects' && method === 'POST') {
         handleAddEffect(req, res);
+        return;
+    }
+    if (pathname === '/shape-repeater' && method === 'POST') {
+        handleAddShapeRepeater(req, res);
         return;
     }
     if (pathname === '/layer-in-out' && method === 'POST') {

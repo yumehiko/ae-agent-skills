@@ -47,6 +47,94 @@ def test_build_parser_parses_add_layer_color() -> None:
     assert args.color == [32.0, 64.0, 128.0]
 
 
+def test_build_parser_parses_add_shape_layer_options() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "add-layer",
+            "--layer-type",
+            "shape",
+            "--shape-type",
+            "ellipse",
+            "--shape-size",
+            "640",
+            "640",
+            "--shape-position",
+            "0",
+            "0",
+            "--shape-fill-color",
+            "255",
+            "128",
+            "0",
+            "--shape-fill-opacity",
+            "90",
+            "--shape-stroke-color",
+            "255",
+            "255",
+            "255",
+            "--shape-stroke-opacity",
+            "100",
+            "--shape-stroke-width",
+            "6",
+            "--shape-stroke-line-cap",
+            "round",
+        ]
+    )
+    assert args.command == "add-layer"
+    assert args.layer_type == "shape"
+    assert args.shape_type == "ellipse"
+    assert args.shape_size == [640.0, 640.0]
+    assert args.shape_position == [0.0, 0.0]
+    assert args.shape_fill_color == [255.0, 128.0, 0.0]
+    assert args.shape_fill_opacity == 90.0
+    assert args.shape_stroke_color == [255.0, 255.0, 255.0]
+    assert args.shape_stroke_opacity == 100.0
+    assert args.shape_stroke_width == 6.0
+    assert args.shape_stroke_line_cap == "round"
+
+
+def test_build_parser_parses_add_shape_repeater() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "add-shape-repeater",
+            "--layer-id",
+            "3",
+            "--group-index",
+            "1",
+            "--name",
+            "BurstRepeater",
+            "--copies",
+            "12",
+            "--offset",
+            "0.5",
+            "--position",
+            "0",
+            "-30",
+            "--scale",
+            "100",
+            "100",
+            "--rotation",
+            "20",
+            "--start-opacity",
+            "100",
+            "--end-opacity",
+            "0",
+        ]
+    )
+    assert args.command == "add-shape-repeater"
+    assert args.layer_id == 3
+    assert args.group_index == 1
+    assert args.name == "BurstRepeater"
+    assert args.copies == 12.0
+    assert args.offset == 0.5
+    assert args.position == [0.0, -30.0]
+    assert args.scale == [100.0, 100.0]
+    assert args.rotation == 20.0
+    assert args.start_opacity == 100.0
+    assert args.end_opacity == 0.0
+
+
 def test_build_parser_parses_create_comp() -> None:
     parser = build_parser()
     args = parser.parse_args(

@@ -83,6 +83,8 @@ ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Posi
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
 ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
+ae-cli add-layer --layer-type shape --name "BurstCircle" --shape-type ellipse --shape-size 720 720 --shape-fill-color 255 128 0 --shape-stroke-color 255 255 255 --shape-stroke-width 8
+ae-cli add-shape-repeater --layer-id 1 --group-index 1 --copies 12 --rotation 30 --end-opacity 0
 ae-cli set-in-out-point --layer-id 1 --in-point 0.5 --out-point 6.5
 ae-cli move-layer-time --layer-id 1 --delta 0.25
 ae-cli set-cti --time 2.0
@@ -132,7 +134,8 @@ PYTHONPATH=src pytest
 - `host/lib/common.jsx`: ログ出力・JSON 初期化・共通ヘルパー
 - `host/lib/property_utils.jsx`: プロパティ探索の共通ヘルパー
 - `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`）
-- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（コア: `setExpression`, `addEffect`, `addLayer`, `setPropertyValue`, `setKeyframe`）
+- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（コア: `setExpression`, `addEffect`, `setPropertyValue`, `setKeyframe`, `createComp`, `setActiveComp`）
+- `host/lib/mutation_shape_handlers.jsx`: shape 系ハンドラ（`addLayer`, `addShapeRepeater`）
 - `host/lib/mutation_timeline_handlers.jsx`: タイムライン操作ハンドラ（`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`）
 - `host/lib/mutation_layer_structure_handlers.jsx`: レイヤー構造操作ハンドラ（`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`）
 
@@ -142,5 +145,6 @@ PYTHONPATH=src pytest
 - `client/lib/runtime.js`: CEP/Node 初期化と host script 呼び出し
 - `client/lib/logging.js`: パネルログ出力ヘルパー
 - `client/lib/bridge_utils.js`: JSON/body 解析と bridge 応答ヘルパー
+- `client/lib/request_handlers_shape.js`: shape 系リクエストハンドラ（`addLayer`, `addShapeRepeater`）
 - `client/lib/request_handlers.js`: ルーティングとエンドポイントハンドラ
 - `client/lib/server.js`: HTTP サーバーの起動/エラーハンドリング
