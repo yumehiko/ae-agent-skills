@@ -12,6 +12,11 @@ dependencies = [
   "requests>=2.31.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+]
+
 [project.scripts]
 ae-cli = "ae_cli.main:run"
 

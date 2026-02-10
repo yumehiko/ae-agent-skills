@@ -84,3 +84,24 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 ```
 
 `--base-url` 未指定時は `AE_BRIDGE_URL`、なければ `http://127.0.0.1:8080` を使用します。
+
+## 開発向け
+
+開発用依存を入れる:
+
+```bash
+python3 -m pip install -e ".[dev]"
+```
+
+テスト実行:
+
+```bash
+PYTHONPATH=src pytest
+```
+
+### Python CLI の構成
+
+- `src/ae_cli/cli_parser.py`: 引数定義とコマンド定義
+- `src/ae_cli/cli_runner.py`: コマンドディスパッチとエラーハンドリング
+- `src/ae_cli/client.py`: CEP ブリッジへの HTTP クライアント
+- `src/ae_cli/main.py`: エントリポイント（`ae-cli`）

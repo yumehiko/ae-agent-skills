@@ -84,3 +84,24 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 ```
 
 By default, the CLI uses `AE_BRIDGE_URL` or falls back to `http://127.0.0.1:8080`.
+
+## Development
+
+Install dev dependencies:
+
+```bash
+python3 -m pip install -e ".[dev]"
+```
+
+Run tests:
+
+```bash
+PYTHONPATH=src pytest
+```
+
+### Python CLI structure
+
+- `src/ae_cli/cli_parser.py`: argument parser and command definitions
+- `src/ae_cli/cli_runner.py`: command dispatch and error handling
+- `src/ae_cli/client.py`: HTTP client to the CEP bridge
+- `src/ae_cli/main.py`: thin entrypoint (`ae-cli`)
