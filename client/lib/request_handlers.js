@@ -30,6 +30,28 @@ function handleBridgeDataCall(script, res, contextLabel) {
     });
 }
 
+function handleBridgeMutationCall(script, res, contextLabel, fallbackMessage) {
+    log(`Calling ExtendScript: ${contextLabel}`);
+    evalHostScript(script, (result) => {
+        try {
+            const parsedResult = parseBridgeResult(result);
+            if (parsedResult && parsedResult.status === 'error') {
+                sendJson(res, 500, {
+                    status: 'error',
+                    message: parsedResult.message || fallbackMessage,
+                });
+                log(`${contextLabel} failed: ${parsedResult.message || 'Unknown error'}`);
+                return;
+            }
+            sendJson(res, 200, { status: 'success', data: parsedResult });
+            log(`${contextLabel} successful.`);
+        } catch (e) {
+            sendBridgeParseError(res, result, e);
+            log(`${contextLabel} failed: ${e.toString()}`);
+        }
+    });
+}
+
 function handleHealth(res) {
     sendJson(res, 200, { status: 'ok' });
     log('Health check responded with ok.');
@@ -39,8 +61,79 @@ function handleGetLayers(res) {
     handleBridgeDataCall('getLayers()', res, 'getLayers()');
 }
 
+function handleGetComps(res) {
+    handleBridgeDataCall('listComps()', res, 'listComps()');
+}
+
 function handleGetSelectedProperties(res) {
     handleBridgeDataCall('getSelectedProperties()', res, 'getSelectedProperties()');
+}
+
+function handleCreateComp(req, res) {
+    readJsonBody(req, res, ({ name, width, height, duration, frameRate, pixelAspect }) => {
+        if (!name || typeof name !== 'string') {
+            sendBadRequest(res, 'name is required and must be a string');
+            log('createComp failed: invalid name');
+            return;
+        }
+        if (typeof width !== 'number' || width <= 0) {
+            sendBadRequest(res, 'width is required and must be a positive number');
+            log('createComp failed: invalid width');
+            return;
+        }
+        if (typeof height !== 'number' || height <= 0) {
+            sendBadRequest(res, 'height is required and must be a positive number');
+            log('createComp failed: invalid height');
+            return;
+        }
+        if (typeof duration !== 'number' || duration <= 0) {
+            sendBadRequest(res, 'duration is required and must be a positive number');
+            log('createComp failed: invalid duration');
+            return;
+        }
+        if (typeof frameRate !== 'number' || frameRate <= 0) {
+            sendBadRequest(res, 'frameRate is required and must be a positive number');
+            log('createComp failed: invalid frameRate');
+            return;
+        }
+        if (pixelAspect !== undefined && (typeof pixelAspect !== 'number' || pixelAspect <= 0)) {
+            sendBadRequest(res, 'pixelAspect must be a positive number when specified');
+            log('createComp failed: invalid pixelAspect');
+            return;
+        }
+
+        const nameLiteral = toExtendScriptStringLiteral(name);
+        const pixelAspectValue = pixelAspect === undefined ? 1.0 : pixelAspect;
+        const script = `createComp(${nameLiteral}, ${width}, ${height}, ${pixelAspectValue}, ${duration}, ${frameRate})`;
+        handleBridgeMutationCall(script, res, 'createComp()', 'Failed to create comp');
+    });
+}
+
+function handleSetActiveComp(req, res) {
+    readJsonBody(req, res, ({ compId, compName }) => {
+        const hasCompId = compId !== undefined;
+        const hasCompName = compName !== undefined && compName !== null && compName !== '';
+        if ((hasCompId && hasCompName) || (!hasCompId && !hasCompName)) {
+            sendBadRequest(res, 'Provide exactly one of compId or compName');
+            log('setActiveComp failed: invalid selector');
+            return;
+        }
+        if (hasCompId && typeof compId !== 'number') {
+            sendBadRequest(res, 'compId must be a number');
+            log('setActiveComp failed: compId must be number');
+            return;
+        }
+        if (hasCompName && typeof compName !== 'string') {
+            sendBadRequest(res, 'compName must be a string');
+            log('setActiveComp failed: compName must be string');
+            return;
+        }
+
+        const compIdLiteral = hasCompId ? String(compId) : 'null';
+        const compNameLiteral = hasCompName ? toExtendScriptStringLiteral(compName) : 'null';
+        const script = `setActiveComp(${compIdLiteral}, ${compNameLiteral})`;
+        handleBridgeMutationCall(script, res, 'setActiveComp()', 'Failed to set active comp');
+    });
 }
 
 function handleGetProperties(searchParams, res) {
@@ -107,6 +200,40 @@ function handleSetExpression(req, res) {
             sendJson(res, 500, { status: 'error', message: result });
             log(`setExpression failed: ${result}`);
         });
+    });
+}
+
+function handleSetPropertyValue(req, res) {
+    readJsonBody(req, res, ({ layerId, propertyPath, value }) => {
+        if (!layerId || !propertyPath || value === undefined) {
+            sendBadRequest(res, 'Missing parameters');
+            log('setPropertyValue failed: Missing parameters');
+            return;
+        }
+        const pathLiteral = toExtendScriptStringLiteral(propertyPath);
+        const valueLiteral = toExtendScriptStringLiteral(JSON.stringify(value));
+        const script = `setPropertyValue(${layerId}, ${pathLiteral}, ${valueLiteral})`;
+        handleBridgeMutationCall(script, res, 'setPropertyValue()', 'Failed to set property value');
+    });
+}
+
+function handleSetKeyframe(req, res) {
+    readJsonBody(req, res, ({ layerId, propertyPath, time, value }) => {
+        if (!layerId || !propertyPath || time === undefined || value === undefined) {
+            sendBadRequest(res, 'Missing parameters');
+            log('setKeyframe failed: Missing parameters');
+            return;
+        }
+        if (typeof time !== 'number' || !isFinite(time)) {
+            sendBadRequest(res, 'time must be a number');
+            log('setKeyframe failed: invalid time');
+            return;
+        }
+
+        const pathLiteral = toExtendScriptStringLiteral(propertyPath);
+        const valueLiteral = toExtendScriptStringLiteral(JSON.stringify(value));
+        const script = `setKeyframe(${layerId}, ${pathLiteral}, ${time}, ${valueLiteral})`;
+        handleBridgeMutationCall(script, res, 'setKeyframe()', 'Failed to set keyframe');
     });
 }
 
@@ -263,8 +390,20 @@ function routeRequest(req, res) {
         handleGetLayers(res);
         return;
     }
+    if (pathname === '/comps' && method === 'GET') {
+        handleGetComps(res);
+        return;
+    }
     if (pathname === '/layers' && method === 'POST') {
         handleAddLayer(req, res);
+        return;
+    }
+    if (pathname === '/comps' && method === 'POST') {
+        handleCreateComp(req, res);
+        return;
+    }
+    if (pathname === '/active-comp' && method === 'POST') {
+        handleSetActiveComp(req, res);
         return;
     }
     if (pathname === '/properties' && method === 'GET') {
@@ -277,6 +416,14 @@ function routeRequest(req, res) {
     }
     if (pathname === '/expression' && method === 'POST') {
         handleSetExpression(req, res);
+        return;
+    }
+    if (pathname === '/property-value' && method === 'POST') {
+        handleSetPropertyValue(req, res);
+        return;
+    }
+    if (pathname === '/keyframes' && method === 'POST') {
+        handleSetKeyframe(req, res);
         return;
     }
     if (pathname === '/effects' && method === 'POST') {

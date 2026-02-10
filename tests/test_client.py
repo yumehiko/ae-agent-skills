@@ -64,3 +64,64 @@ def test_get_properties_builds_query_params(monkeypatch) -> None:
         ("excludeGroup", "B"),
         ("maxDepth", 3),
     ]
+
+
+def test_create_comp_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"id": 10}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.create_comp(
+        name="Main",
+        width=1920,
+        height=1080,
+        duration=8.0,
+        frame_rate=30.0,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/comps"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "name": "Main",
+        "width": 1920,
+        "height": 1080,
+        "duration": 8.0,
+        "frameRate": 30.0,
+        "pixelAspect": 1.0,
+    }
+
+
+def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"keyIndex": 1}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_keyframe(
+        layer_id=1,
+        property_path="ADBE Transform Group.ADBE Position",
+        time=0.5,
+        value=[960, 540],
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/keyframes"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerId": 1,
+        "propertyPath": "ADBE Transform Group.ADBE Position",
+        "time": 0.5,
+        "value": [960, 540],
+    }

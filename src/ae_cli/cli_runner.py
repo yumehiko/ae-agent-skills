@@ -21,12 +21,44 @@ def _read_expression(args: argparse.Namespace) -> str:
     return args.expression
 
 
+def _read_json_value(args: argparse.Namespace) -> Any:
+    if getattr(args, "value_file", None):
+        raw = Path(args.value_file).read_text(encoding="utf-8")
+    else:
+        raw = args.value
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON value: {exc}") from exc
+
+
 def _run_health(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.health())
 
 
 def _run_layers(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.get_layers())
+
+
+def _run_list_comps(client: AEClient, _args: argparse.Namespace) -> None:
+    _print_json(client.list_comps())
+
+
+def _run_create_comp(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(
+        client.create_comp(
+            name=args.name,
+            width=args.width,
+            height=args.height,
+            duration=args.duration,
+            frame_rate=args.frame_rate,
+            pixel_aspect=args.pixel_aspect,
+        )
+    )
+
+
+def _run_set_active_comp(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.set_active_comp(comp_id=args.comp_id, comp_name=args.comp_name))
 
 
 def _run_selected_properties(client: AEClient, _args: argparse.Namespace) -> None:
@@ -51,6 +83,29 @@ def _run_set_expression(client: AEClient, args: argparse.Namespace) -> None:
             layer_id=args.layer_id,
             property_path=args.property_path,
             expression=expression,
+        )
+    )
+
+
+def _run_set_property(client: AEClient, args: argparse.Namespace) -> None:
+    value = _read_json_value(args)
+    _print_json(
+        client.set_property_value(
+            layer_id=args.layer_id,
+            property_path=args.property_path,
+            value=value,
+        )
+    )
+
+
+def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
+    value = _read_json_value(args)
+    _print_json(
+        client.set_keyframe(
+            layer_id=args.layer_id,
+            property_path=args.property_path,
+            time=args.time,
+            value=value,
         )
     )
 
@@ -84,9 +139,14 @@ CommandHandler = Callable[[AEClient, argparse.Namespace], None]
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "health": _run_health,
     "layers": _run_layers,
+    "list-comps": _run_list_comps,
+    "create-comp": _run_create_comp,
+    "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,
     "properties": _run_properties,
     "set-expression": _run_set_expression,
+    "set-property": _run_set_property,
+    "set-keyframe": _run_set_keyframe,
     "add-effect": _run_add_effect,
     "add-layer": _run_add_layer,
 }

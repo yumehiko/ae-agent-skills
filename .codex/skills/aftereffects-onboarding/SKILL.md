@@ -60,6 +60,14 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
   - `ae-cli health`
 - 成功時:
   - `ae-cli layers` を実行し、結果取得できるか確認する。
+  - 可能なら新規コマンドの最小スモークテストを行う。
+    - `ae-cli list-comps`
+    - `ae-cli create-comp --name "OnboardingSmoke" --width 1080 --height 1080 --duration 3 --frame-rate 30`
+    - `ae-cli set-active-comp --comp-name "OnboardingSmoke"`
+    - `ae-cli add-layer --layer-type text --name "SmokeText" --text "Hello"`
+    - `ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[540,540]"`
+    - `ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0 --value "[540,540]"`
+    - `ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1 --value "[540,300]"`
 - 失敗時:
   - `PlayerDebugMode` が有効か再確認する。
   - パネルを再起動する。
@@ -73,6 +81,7 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 1. `ae-cli --help` が表示できる。
 2. `ae-cli health` が成功する。
 3. `ae-cli layers` が成功する。
+4. （推奨）`list-comps` / `create-comp` / `set-active-comp` / `set-property` / `set-keyframe` の最低1回実行が成功する。
 
 ## 完了時の案内
 
@@ -82,6 +91,11 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 - 最初の操作例として以下を提示する。
 
 ```bash
+ae-cli list-comps
+ae-cli create-comp --name "Main" --width 1920 --height 1080 --duration 8 --frame-rate 30
+ae-cli set-active-comp --comp-name "Main"
 ae-cli selected-properties
 ae-cli properties --layer-id 1 --max-depth 2
+ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
+ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
 ```

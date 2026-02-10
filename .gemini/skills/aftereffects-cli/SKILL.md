@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: After Effects の操作を `ae-cli` で実行するための手順。MCP ツールではなく CLI でレイヤー取得、プロパティ確認、expression 適用、エフェクト追加を行う依頼で使う。
+description: After Effects の操作を `ae-cli` で実行するための手順。MCP ツールではなく CLI で comp 操作、レイヤー/プロパティ取得、値設定、キーフレーム設定、expression 適用、エフェクト追加を行う依頼で使う。
 ---
 
 # aftereffects-cli
@@ -18,20 +18,33 @@ After Effects 操作を `ae-cli` で実行する。
 
 1. まず `ae-cli health` を実行し、ブリッジ到達性を確認する。
 2. 取得系は次の順で実行する。
+   - `ae-cli list-comps`
    - `ae-cli layers`
    - `ae-cli selected-properties`
    - `ae-cli properties --layer-id <id>`
-3. 更新系は対象確認後に実行する。
+3. comp 操作は次を使う。
+   - `ae-cli create-comp --name "<name>" --width <w> --height <h> --duration <sec> --frame-rate <fps> [--pixel-aspect <ratio>]`
+   - `ae-cli set-active-comp --comp-id <id>` または `--comp-name "<name>"`
+4. 更新系は対象確認後に実行する。
+   - `ae-cli set-property --layer-id <id> --property-path "<path>" --value "<json>"`
+   - `ae-cli set-keyframe --layer-id <id> --property-path "<path>" --time <sec> --value "<json>"`
    - `ae-cli set-expression --layer-id <id> --property-path "<path>" --expression "<expr>"`
    - `ae-cli add-effect --layer-id <id> --effect-match-name "<matchName>" [--effect-name "<name>"]`
-4. 複雑な式は `--expression-file` を使う。
+5. 複雑な値/式はファイル入力を使う。
+   - `--value-file <path>`
+   - `--expression-file <path>`
 
 ## コマンド例
 
 ```bash
 ae-cli health
+ae-cli list-comps
+ae-cli create-comp --name "Main" --width 1920 --height 1080 --duration 8 --frame-rate 30
+ae-cli set-active-comp --comp-name "Main"
 ae-cli layers
 ae-cli properties --layer-id 1 --max-depth 2
+ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
+ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
 ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ```
@@ -42,8 +55,11 @@ ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effec
   - After Effects と CEP パネルが起動していることを確認する。
   - `AE_BRIDGE_URL` が変更されている場合は `--base-url` で合わせる。
 - 応答が `status=error` の場合:
-  - 引数（`layer-id`, `property-path`, `expression`）を再確認する。
+  - 引数（`comp-id/comp-name`, `layer-id`, `property-path`, `value`, `expression`, `time`）を再確認する。
   - プロパティ名やパスを `ae-cli properties` で再取得してから再実行する。
 - エフェクト追加に失敗する場合:
   - `--effect-match-name` が正しい AE の `matchName` か確認する（例: `ADBE Slider Control`）。
   - 対象レイヤーで Effect Parade（`ADBE Effect Parade`）が利用可能か確認する。
+- 値設定・キーフレーム設定に失敗する場合:
+  - `--value` が JSON として正しいか確認する（例: `100`, `[960,540]`, `true`）。
+  - キーフレーム可能なプロパティか確認する（`ae-cli properties` で対象を再特定）。

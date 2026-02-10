@@ -23,6 +23,43 @@ function getLayers() {
     }
 }
 
+function listComps() {
+    try {
+        ensureJSON();
+        if (!app.project) {
+            return encodePayload([]);
+        }
+
+        var activeComp = app.project.activeItem;
+        var activeCompId = null;
+        if (activeComp && activeComp instanceof CompItem) {
+            activeCompId = activeComp.id;
+        }
+
+        var comps = [];
+        for (var i = 1; i <= app.project.numItems; i++) {
+            var item = app.project.item(i);
+            if (!item || !(item instanceof CompItem)) {
+                continue;
+            }
+            comps.push({
+                id: item.id,
+                name: item.name,
+                width: item.width,
+                height: item.height,
+                pixelAspect: item.pixelAspect,
+                duration: item.duration,
+                frameRate: item.frameRate,
+                isActive: activeCompId !== null && item.id === activeCompId
+            });
+        }
+        return encodePayload(comps);
+    } catch (e) {
+        log("listComps() threw: " + e.toString());
+        return encodePayload({ status: "error", message: e.toString() });
+    }
+}
+
 function getProperties(layerId, optionsJSON) {
     try {
         ensureJSON();

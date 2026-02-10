@@ -41,6 +41,49 @@ class AEClient:
         response = requests.get(self._url("/layers"), timeout=self.timeout)
         return self._handle_response(response)
 
+    def list_comps(self) -> List[Dict[str, Any]]:
+        """Return the list of compositions in the current project."""
+        response = requests.get(self._url("/comps"), timeout=self.timeout)
+        return self._handle_response(response)
+
+    def create_comp(
+        self,
+        name: str,
+        width: int,
+        height: int,
+        duration: float,
+        frame_rate: float,
+        pixel_aspect: float = 1.0,
+    ) -> Dict[str, Any]:
+        """Create a composition in the current project."""
+        response = requests.post(
+            self._url("/comps"),
+            json={
+                "name": name,
+                "width": width,
+                "height": height,
+                "duration": duration,
+                "frameRate": frame_rate,
+                "pixelAspect": pixel_aspect,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_active_comp(self, comp_id: int | None = None, comp_name: str | None = None) -> Dict[str, Any]:
+        """Set active composition by id or name."""
+        payload: Dict[str, Any] = {}
+        if comp_id is not None:
+            payload["compId"] = comp_id
+        if comp_name is not None:
+            payload["compName"] = comp_name
+        response = requests.post(
+            self._url("/active-comp"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def get_selected_properties(self) -> List[Dict[str, Any]]:
         """Return the currently selected properties across layers."""
         response = requests.get(self._url("/selected-properties"), timeout=self.timeout)
@@ -81,6 +124,33 @@ class AEClient:
                 "layerId": layer_id,
                 "propertyPath": property_path,
                 "expression": expression,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_property_value(self, layer_id: int, property_path: str, value: Any) -> Dict[str, Any]:
+        """Set a property value on the given property path."""
+        response = requests.post(
+            self._url("/property-value"),
+            json={
+                "layerId": layer_id,
+                "propertyPath": property_path,
+                "value": value,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_keyframe(self, layer_id: int, property_path: str, time: float, value: Any) -> Dict[str, Any]:
+        """Set a keyframe value at a specific time."""
+        response = requests.post(
+            self._url("/keyframes"),
+            json={
+                "layerId": layer_id,
+                "propertyPath": property_path,
+                "time": time,
+                "value": value,
             },
             timeout=self.timeout,
         )

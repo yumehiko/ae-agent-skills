@@ -28,7 +28,29 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("health", help="Check bridge health")
     subparsers.add_parser("layers", help="Get active composition layers")
+    subparsers.add_parser("list-comps", help="List compositions in the current project")
     subparsers.add_parser("selected-properties", help="Get currently selected properties")
+
+    create_comp_parser = subparsers.add_parser("create-comp", help="Create a composition")
+    create_comp_parser.add_argument("--name", required=True)
+    create_comp_parser.add_argument("--width", type=int, required=True)
+    create_comp_parser.add_argument("--height", type=int, required=True)
+    create_comp_parser.add_argument("--duration", type=float, required=True)
+    create_comp_parser.add_argument("--frame-rate", type=float, required=True)
+    create_comp_parser.add_argument(
+        "--pixel-aspect",
+        type=float,
+        default=1.0,
+        help="Pixel aspect ratio (default: 1.0)",
+    )
+
+    set_active_comp_parser = subparsers.add_parser(
+        "set-active-comp",
+        help="Set the active composition by id or name",
+    )
+    set_active_group = set_active_comp_parser.add_mutually_exclusive_group(required=True)
+    set_active_group.add_argument("--comp-id", type=int)
+    set_active_group.add_argument("--comp-name")
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     properties_parser.add_argument("--layer-id", type=int, required=True)
@@ -42,6 +64,27 @@ def build_parser() -> argparse.ArgumentParser:
     expression_group = expression_parser.add_mutually_exclusive_group(required=True)
     expression_group.add_argument("--expression")
     expression_group.add_argument("--expression-file")
+
+    property_value_parser = subparsers.add_parser("set-property", help="Set a property value")
+    property_value_parser.add_argument("--layer-id", type=int, required=True)
+    property_value_parser.add_argument("--property-path", required=True)
+    property_value_group = property_value_parser.add_mutually_exclusive_group(required=True)
+    property_value_group.add_argument(
+        "--value",
+        help="JSON value (examples: 100, [960,540], true, \"Hello\")",
+    )
+    property_value_group.add_argument("--value-file", help="Path to a UTF-8 JSON file")
+
+    keyframe_parser = subparsers.add_parser("set-keyframe", help="Set a keyframe value at time")
+    keyframe_parser.add_argument("--layer-id", type=int, required=True)
+    keyframe_parser.add_argument("--property-path", required=True)
+    keyframe_parser.add_argument("--time", type=float, required=True)
+    keyframe_group = keyframe_parser.add_mutually_exclusive_group(required=True)
+    keyframe_group.add_argument(
+        "--value",
+        help="JSON value (examples: 100, [960,540], true, \"Hello\")",
+    )
+    keyframe_group.add_argument("--value-file", help="Path to a UTF-8 JSON file")
 
     effect_parser = subparsers.add_parser("add-effect", help="Add an effect to a layer")
     effect_parser.add_argument("--layer-id", type=int, required=True)
