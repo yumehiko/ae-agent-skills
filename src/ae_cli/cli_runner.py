@@ -32,6 +32,15 @@ def _read_json_value(args: argparse.Namespace) -> Any:
         raise ValueError(f"Invalid JSON value: {exc}") from exc
 
 
+def _read_json_optional(raw: str | None, label: str) -> Any:
+    if raw is None:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
+
+
 def _run_health(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.health())
 
@@ -100,12 +109,18 @@ def _run_set_property(client: AEClient, args: argparse.Namespace) -> None:
 
 def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
     value = _read_json_value(args)
+    ease_in = _read_json_optional(args.ease_in, "ease-in")
+    ease_out = _read_json_optional(args.ease_out, "ease-out")
     _print_json(
         client.set_keyframe(
             layer_id=args.layer_id,
             property_path=args.property_path,
             time=args.time,
             value=value,
+            in_interp=args.in_interp,
+            out_interp=args.out_interp,
+            ease_in=ease_in,
+            ease_out=ease_out,
         )
     )
 

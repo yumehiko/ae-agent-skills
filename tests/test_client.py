@@ -125,3 +125,40 @@ def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
         "time": 0.5,
         "value": [960, 540],
     }
+
+
+def test_set_keyframe_posts_easing_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"keyIndex": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_keyframe(
+        layer_id=1,
+        property_path="ADBE Transform Group.ADBE Position",
+        time=1.0,
+        value=[960, 300],
+        in_interp="bezier",
+        out_interp="bezier",
+        ease_in=[0, 80],
+        ease_out=[0, 40],
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/keyframes"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerId": 1,
+        "propertyPath": "ADBE Transform Group.ADBE Position",
+        "time": 1.0,
+        "value": [960, 300],
+        "inInterp": "bezier",
+        "outInterp": "bezier",
+        "easeIn": [0, 80],
+        "easeOut": [0, 40],
+    }

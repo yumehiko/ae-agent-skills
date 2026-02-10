@@ -85,6 +85,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON value (examples: 100, [960,540], true, \"Hello\")",
     )
     keyframe_group.add_argument("--value-file", help="Path to a UTF-8 JSON file")
+    keyframe_parser.add_argument(
+        "--in-interp",
+        choices=["linear", "bezier", "hold"],
+        help="Incoming interpolation type for the keyframe",
+    )
+    keyframe_parser.add_argument(
+        "--out-interp",
+        choices=["linear", "bezier", "hold"],
+        help="Outgoing interpolation type for the keyframe",
+    )
+    keyframe_parser.add_argument(
+        "--ease-in",
+        help='Incoming temporal ease as JSON. Example: "[0,66]" or "[[0,66],[0,66]]"',
+    )
+    keyframe_parser.add_argument(
+        "--ease-out",
+        help='Outgoing temporal ease as JSON. Example: "[0,66]" or "[[0,66],[0,66]]"',
+    )
 
     effect_parser = subparsers.add_parser("add-effect", help="Add an effect to a layer")
     effect_parser.add_argument("--layer-id", type=int, required=True)

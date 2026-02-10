@@ -142,16 +142,36 @@ class AEClient:
         )
         return self._handle_response(response)
 
-    def set_keyframe(self, layer_id: int, property_path: str, time: float, value: Any) -> Dict[str, Any]:
+    def set_keyframe(
+        self,
+        layer_id: int,
+        property_path: str,
+        time: float,
+        value: Any,
+        in_interp: str | None = None,
+        out_interp: str | None = None,
+        ease_in: Any | None = None,
+        ease_out: Any | None = None,
+    ) -> Dict[str, Any]:
         """Set a keyframe value at a specific time."""
+        payload: Dict[str, Any] = {
+            "layerId": layer_id,
+            "propertyPath": property_path,
+            "time": time,
+            "value": value,
+        }
+        if in_interp is not None:
+            payload["inInterp"] = in_interp
+        if out_interp is not None:
+            payload["outInterp"] = out_interp
+        if ease_in is not None:
+            payload["easeIn"] = ease_in
+        if ease_out is not None:
+            payload["easeOut"] = ease_out
+
         response = requests.post(
             self._url("/keyframes"),
-            json={
-                "layerId": layer_id,
-                "propertyPath": property_path,
-                "time": time,
-                "value": value,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)

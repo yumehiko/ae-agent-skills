@@ -27,7 +27,7 @@ After Effects 操作を `ae-cli` で実行する。
    - `ae-cli set-active-comp --comp-id <id>` または `--comp-name "<name>"`
 4. 更新系は対象確認後に実行する。
    - `ae-cli set-property --layer-id <id> --property-path "<path>" --value "<json>"`
-   - `ae-cli set-keyframe --layer-id <id> --property-path "<path>" --time <sec> --value "<json>"`
+   - `ae-cli set-keyframe --layer-id <id> --property-path "<path>" --time <sec> --value "<json>" [--in-interp linear|bezier|hold] [--out-interp linear|bezier|hold] [--ease-in "<json>"] [--ease-out "<json>"]`
    - `ae-cli set-expression --layer-id <id> --property-path "<path>" --expression "<expr>"`
    - `ae-cli add-effect --layer-id <id> --effect-match-name "<matchName>" [--effect-name "<name>"]`
 5. 複雑な値/式はファイル入力を使う。
@@ -45,6 +45,7 @@ ae-cli layers
 ae-cli properties --layer-id 1 --max-depth 2
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
+ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
 ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ```
@@ -62,4 +63,5 @@ ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effec
   - 対象レイヤーで Effect Parade（`ADBE Effect Parade`）が利用可能か確認する。
 - 値設定・キーフレーム設定に失敗する場合:
   - `--value` が JSON として正しいか確認する（例: `100`, `[960,540]`, `true`）。
+  - `--ease-in` / `--ease-out` は `[speed,influence]` または次元ごとの配列（例: `[[0,80],[0,40]]`）で指定する。
   - キーフレーム可能なプロパティか確認する（`ae-cli properties` で対象を再特定）。

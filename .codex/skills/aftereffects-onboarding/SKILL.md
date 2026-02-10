@@ -67,7 +67,7 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
     - `ae-cli add-layer --layer-type text --name "SmokeText" --text "Hello"`
     - `ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[540,540]"`
     - `ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0 --value "[540,540]"`
-    - `ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1 --value "[540,300]"`
+    - `ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1 --value "[540,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"`
 - 失敗時:
   - `PlayerDebugMode` が有効か再確認する。
   - パネルを再起動する。
@@ -98,4 +98,5 @@ ae-cli selected-properties
 ae-cli properties --layer-id 1 --max-depth 2
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
+ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
 ```

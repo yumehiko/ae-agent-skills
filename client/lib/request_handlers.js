@@ -218,7 +218,7 @@ function handleSetPropertyValue(req, res) {
 }
 
 function handleSetKeyframe(req, res) {
-    readJsonBody(req, res, ({ layerId, propertyPath, time, value }) => {
+    readJsonBody(req, res, ({ layerId, propertyPath, time, value, inInterp, outInterp, easeIn, easeOut }) => {
         if (!layerId || !propertyPath || time === undefined || value === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setKeyframe failed: Missing parameters');
@@ -229,10 +229,28 @@ function handleSetKeyframe(req, res) {
             log('setKeyframe failed: invalid time');
             return;
         }
+        if (inInterp !== undefined && !['linear', 'bezier', 'hold'].includes(inInterp)) {
+            sendBadRequest(res, 'inInterp must be one of: linear, bezier, hold');
+            log('setKeyframe failed: invalid inInterp');
+            return;
+        }
+        if (outInterp !== undefined && !['linear', 'bezier', 'hold'].includes(outInterp)) {
+            sendBadRequest(res, 'outInterp must be one of: linear, bezier, hold');
+            log('setKeyframe failed: invalid outInterp');
+            return;
+        }
 
         const pathLiteral = toExtendScriptStringLiteral(propertyPath);
         const valueLiteral = toExtendScriptStringLiteral(JSON.stringify(value));
-        const script = `setKeyframe(${layerId}, ${pathLiteral}, ${time}, ${valueLiteral})`;
+        const options = {};
+        if (inInterp !== undefined) options.inInterp = inInterp;
+        if (outInterp !== undefined) options.outInterp = outInterp;
+        if (easeIn !== undefined) options.easeIn = easeIn;
+        if (easeOut !== undefined) options.easeOut = easeOut;
+        const optionsLiteral = Object.keys(options).length === 0
+            ? 'null'
+            : toExtendScriptStringLiteral(JSON.stringify(options));
+        const script = `setKeyframe(${layerId}, ${pathLiteral}, ${time}, ${valueLiteral}, ${optionsLiteral})`;
         handleBridgeMutationCall(script, res, 'setKeyframe()', 'Failed to set keyframe');
     });
 }

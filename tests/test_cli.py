@@ -94,6 +94,34 @@ def test_build_parser_parses_set_keyframe_json_value() -> None:
     assert args.time == 0.5
     assert args.value == "[960,540]"
 
+def test_build_parser_parses_set_keyframe_easing_options() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "set-keyframe",
+            "--layer-id",
+            "1",
+            "--property-path",
+            "ADBE Transform Group.ADBE Position",
+            "--time",
+            "1.0",
+            "--value",
+            "[960,300]",
+            "--in-interp",
+            "bezier",
+            "--out-interp",
+            "bezier",
+            "--ease-in",
+            "[0,80]",
+            "--ease-out",
+            "[0,40]",
+        ]
+    )
+    assert args.in_interp == "bezier"
+    assert args.out_interp == "bezier"
+    assert args.ease_in == "[0,80]"
+    assert args.ease_out == "[0,40]"
+
 
 def test_run_command_returns_2_for_unknown_command(capsys) -> None:
     args = SimpleNamespace(command="unknown", base_url="http://x", timeout=1.0)
