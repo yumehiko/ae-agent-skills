@@ -117,12 +117,12 @@ function addShapeRepeater(layerId, optionsJSON) {
 
             var startOpacity = toNumberOrNull(options.startOpacity);
             if (startOpacity !== null) {
-                transform.property("ADBE Vector Repeater Start Opacity").setValue(clamp(startOpacity, 0, 100));
+                transform.property("ADBE Vector Repeater Opacity 1").setValue(clamp(startOpacity, 0, 100));
             }
 
             var endOpacity = toNumberOrNull(options.endOpacity);
             if (endOpacity !== null) {
-                transform.property("ADBE Vector Repeater End Opacity").setValue(clamp(endOpacity, 0, 100));
+                transform.property("ADBE Vector Repeater Opacity 2").setValue(clamp(endOpacity, 0, 100));
             }
         }
 
