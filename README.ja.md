@@ -110,5 +110,15 @@ PYTHONPATH=src pytest
 
 - `host/index.jsx`: モジュールローダー（エントリポイント）
 - `host/lib/common.jsx`: ログ出力・JSON 初期化・共通ヘルパー
+- `host/lib/property_utils.jsx`: プロパティ探索の共通ヘルパー
 - `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`）
 - `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（`setExpression`, `addEffect`, `addLayer`）
+
+### CEP パネル client の構成
+
+- `client/main.js`: 起動エントリポイント
+- `client/lib/runtime.js`: CEP/Node 初期化と host script 呼び出し
+- `client/lib/logging.js`: パネルログ出力ヘルパー
+- `client/lib/bridge_utils.js`: JSON/body 解析と bridge 応答ヘルパー
+- `client/lib/request_handlers.js`: ルーティングとエンドポイントハンドラ
+- `client/lib/server.js`: HTTP サーバーの起動/エラーハンドリング

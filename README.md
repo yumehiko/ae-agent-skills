@@ -110,5 +110,15 @@ PYTHONPATH=src pytest
 
 - `host/index.jsx`: module loader entrypoint
 - `host/lib/common.jsx`: logging/json bootstrap/common helpers
+- `host/lib/property_utils.jsx`: shared property-tree helpers
 - `host/lib/query_handlers.jsx`: read-only handlers (`getLayers`, `getProperties`, `getSelectedProperties`)
 - `host/lib/mutation_handlers.jsx`: write handlers (`setExpression`, `addEffect`, `addLayer`)
+
+### CEP panel client structure
+
+- `client/main.js`: startup entrypoint
+- `client/lib/runtime.js`: CEP/Node bootstrap and host script evaluation
+- `client/lib/logging.js`: panel log output helpers
+- `client/lib/bridge_utils.js`: JSON/body parsing and bridge response helpers
+- `client/lib/request_handlers.js`: route dispatch and endpoint handlers
+- `client/lib/server.js`: HTTP server lifecycle

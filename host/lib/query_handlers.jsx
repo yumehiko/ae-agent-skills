@@ -4,7 +4,7 @@ function getLayers() {
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
             log("getLayers(): Active composition not found.");
-            return encodePayload({ "status": "error", "message": "Active composition not found." });
+            return encodePayload({ status: "error", message: "Active composition not found." });
         }
 
         var layers = [];
@@ -19,7 +19,7 @@ function getLayers() {
         return encodePayload(layers);
     } catch (e) {
         log("getLayers() threw: " + e.toString());
-        return encodePayload({ "status": "error", "message": e.toString() });
+        return encodePayload({ status: "error", message: e.toString() });
     }
 }
 
@@ -81,128 +81,16 @@ function getProperties(layerId, optionsJSON) {
         var includeGroups = normalizeStringArray(options.includeGroups);
         var excludeGroups = normalizeStringArray(options.excludeGroups);
         var maxDepth = parseMaxDepth(options.maxDepth);
-
         var properties = [];
 
-        // NOTE: Using literal numbers for property types because the global constants
-        // (PropertyType.PROPERTY, PropertyType.GROUP) were found to be unreliable in the ExtendScript context.
-        // 6212 corresponds to PropertyType.PROPERTY
-        // 6213 corresponds to PropertyType.GROUP
-        var PROPERTY_TYPE_PROPERTY = 6212;
-        var PROPERTY_TYPE_GROUP = 6213;
-
-        function getPropertyIdentifier(prop, index) {
-            try {
-                if (prop.matchName && prop.matchName.length > 0) {
-                    return prop.matchName;
-                }
-            } catch (e) {}
-            try {
-                if (prop.name && prop.name.length > 0) {
-                    return prop.name;
-                }
-            } catch (e2) {}
-            return "Property_" + index;
-        }
-
-        function arrayContains(arr, value) {
-            if (!arr || !value) {
-                return false;
-            }
-            for (var i = 0; i < arr.length; i++) {
-                if (arr[i] === value) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        function propertyValueToString(prop) {
-            try {
-                var value = prop.value;
-                if (value === null || value === undefined) {
-                    return "";
-                }
-                if (value instanceof Array) {
-                    return value.join(", ");
-                }
-                if (typeof value === "boolean") {
-                    return value ? "true" : "false";
-                }
-                return value.toString();
-            } catch (e) {
-                return "";
-            }
-        }
-
-        function canTraverse(prop) {
-            if (!prop) {
-                return false;
-            }
-            try {
-                if (prop.propertyType === PROPERTY_TYPE_GROUP) {
-                    return true;
-                }
-            } catch (e) {}
-            return typeof prop.numProperties === "number" && prop.numProperties > 0;
-        }
-
-        function isPropertyNode(prop) {
-            if (!prop) {
-                return false;
-            }
-            try {
-                if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
-                    return true;
-                }
-            } catch (e) {}
-            return !canTraverse(prop);
-        }
-
-        function isEnabledProperty(prop) {
-            if (!prop) {
-                return false;
-            }
-            try {
-                if (typeof prop.enabled === "boolean") {
-                    return prop.enabled;
-                }
-            } catch (e) {}
-            return true;
-        }
-
-        function canExposeProperty(prop) {
-            var enabled = isEnabledProperty(prop);
-            if (!enabled) {
-                return false;
-            }
-            try {
-                if (prop.canSetExpression === false) {
-                    return false;
-                }
-                if (prop.canSetExpression === true) {
-                    return true;
-                }
-            } catch (e) {}
-            try {
-                if (typeof prop.canSetValue === "boolean") {
-                    return prop.canSetValue;
-                }
-            } catch (e2) {}
-            return true;
-        }
-
         function shouldSkipTopLevel(matchName, depth) {
-            if (depth !== 0) {
+            if (depth !== 0 || !matchName || matchName.length === 0) {
                 return false;
             }
-            if (!matchName || matchName.length === 0) {
-                return false;
-            }
-            if (includeGroups.length > 0 && !arrayContains(includeGroups, matchName)) {
+            if (includeGroups.length > 0 && !aeArrayContains(includeGroups, matchName)) {
                 return true;
             }
-            if (excludeGroups.length > 0 && arrayContains(excludeGroups, matchName)) {
+            if (excludeGroups.length > 0 && aeArrayContains(excludeGroups, matchName)) {
                 return true;
             }
             return false;
@@ -218,7 +106,7 @@ function getProperties(layerId, optionsJSON) {
                     continue;
                 }
 
-                var identifier = getPropertyIdentifier(prop, i);
+                var identifier = aeGetPropertyIdentifier(prop, i);
                 var currentPath = pathPrefix ? pathPrefix + "." + identifier : identifier;
                 var nextDepth = depth + 1;
 
@@ -230,13 +118,12 @@ function getProperties(layerId, optionsJSON) {
                 if (shouldSkipTopLevel(matchName, depth)) {
                     continue;
                 }
-
                 if (maxDepth !== null && nextDepth > maxDepth) {
                     continue;
                 }
 
-                if (isPropertyNode(prop)) {
-                    if (!canExposeProperty(prop)) {
+                if (aeIsPropertyNode(prop)) {
+                    if (!aeCanExposeProperty(prop)) {
                         continue;
                     }
                     var hasExpression = false;
@@ -246,19 +133,18 @@ function getProperties(layerId, optionsJSON) {
                     properties.push({
                         name: prop.name,
                         path: currentPath,
-                        value: propertyValueToString(prop),
+                        value: aePropertyValueToString(prop),
                         hasExpression: hasExpression
                     });
                 }
 
-                if (canTraverse(prop) && (maxDepth === null || nextDepth < maxDepth)) {
+                if (aeCanTraverseProperty(prop) && (maxDepth === null || nextDepth < maxDepth)) {
                     scanProperties(prop, currentPath, nextDepth);
                 }
             }
         }
 
         scanProperties(layer, "", 0);
-
         return encodePayload(properties);
     } catch (e) {
         log("getProperties() threw: " + e.toString());
@@ -279,101 +165,8 @@ function getSelectedProperties() {
             return encodePayload([]);
         }
 
-        var PROPERTY_TYPE_PROPERTY = 6212;
-        var PROPERTY_TYPE_GROUP = 6213;
-
-        function propertyValueToString(prop) {
-            try {
-                var value = prop.value;
-                if (value === null || value === undefined) {
-                    return "";
-                }
-                if (value instanceof Array) {
-                    return value.join(", ");
-                }
-                if (typeof value === "boolean") {
-                    return value ? "true" : "false";
-                }
-                return value.toString();
-            } catch (e) {
-                return "";
-            }
-        }
-
-        function canTraverse(prop) {
-            if (!prop) {
-                return false;
-            }
-            try {
-                if (prop.propertyType === PROPERTY_TYPE_GROUP) {
-                    return true;
-                }
-            } catch (e) {}
-            return typeof prop.numProperties === "number" && prop.numProperties > 0;
-        }
-
-        function isPropertyNode(prop) {
-            if (!prop) {
-                return false;
-            }
-            try {
-                if (prop.propertyType === PROPERTY_TYPE_PROPERTY) {
-                    return true;
-                }
-            } catch (e) {}
-            return !canTraverse(prop);
-        }
-
-        function isEnabledProperty(prop) {
-            if (!prop) {
-                return false;
-            }
-            try {
-                if (typeof prop.enabled === "boolean") {
-                    return prop.enabled;
-                }
-            } catch (e) {}
-            return true;
-        }
-
-        function canExposeProperty(prop) {
-            var enabled = isEnabledProperty(prop);
-            if (!enabled) {
-                return false;
-            }
-            try {
-                if (prop.canSetExpression === false) {
-                    return false;
-                }
-                if (prop.canSetExpression === true) {
-                    return true;
-                }
-            } catch (e) {}
-            try {
-                if (typeof prop.canSetValue === "boolean") {
-                    return prop.canSetValue;
-                }
-            } catch (e2) {}
-            return true;
-        }
-
         function getPathIdentifier(prop) {
-            try {
-                if (prop.matchName && prop.matchName.length > 0) {
-                    return prop.matchName;
-                }
-            } catch (e) {}
-            try {
-                if (prop.name && prop.name.length > 0) {
-                    return prop.name;
-                }
-            } catch (e2) {}
-            try {
-                if (typeof prop.propertyIndex === "number") {
-                    return "Property_" + prop.propertyIndex;
-                }
-            } catch (e3) {}
-            return "Property";
+            return aeGetPropertyIdentifier(prop, null);
         }
 
         function buildPropertyPath(prop) {
@@ -417,29 +210,26 @@ function getSelectedProperties() {
             }
             for (var j = 0; j < props.length; j++) {
                 var prop = props[j];
-                if (!prop) {
+                if (!prop || !aeIsPropertyNode(prop) || !aeCanExposeProperty(prop)) {
                     continue;
                 }
-                if (!isPropertyNode(prop)) {
-                    continue;
-                }
-                if (!canExposeProperty(prop)) {
-                    continue;
-                }
+
                 var path = buildPropertyPath(prop);
                 if (!path || path.length === 0) {
                     continue;
                 }
+
                 var hasExpression = false;
                 try {
                     hasExpression = prop.expressionEnabled;
                 } catch (eHas) {}
+
                 selectedPropsPayload.push({
                     layerId: layer.index,
                     layerName: layer.name,
                     name: prop.name,
                     path: path,
-                    value: propertyValueToString(prop),
+                    value: aePropertyValueToString(prop),
                     hasExpression: hasExpression
                 });
             }
