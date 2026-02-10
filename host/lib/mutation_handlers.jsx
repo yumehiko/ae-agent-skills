@@ -80,18 +80,15 @@ function findCompByIdOrName(compId, compName) {
     return null;
 }
 
-function setExpression(layerId, propertyPath, expression) {
+function setExpression(layerId, layerName, propertyPath, expression) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return "Error: Active composition not found.";
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return "Error: " + resolvedLayer.error;
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return "Error: Layer with id " + layerId + " not found.";
-        }
+        var layer = resolvedLayer.layer;
 
         var prop = resolveProperty(layer, propertyPath);
         if (!prop) {
@@ -109,18 +106,15 @@ function setExpression(layerId, propertyPath, expression) {
     }
 }
 
-function addEffect(layerId, effectMatchName, effectName) {
+function addEffect(layerId, layerName, effectMatchName, effectName) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return encodePayload({ status: "error", message: "Layer with id " + layerId + " not found." });
-        }
+        var layer = resolvedLayer.layer;
 
         if (!effectMatchName || effectMatchName.length === 0) {
             return encodePayload({ status: "error", message: "effectMatchName is required." });
@@ -143,6 +137,7 @@ function addEffect(layerId, effectMatchName, effectName) {
         var payload = {
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             effectName: effect.name,
             effectMatchName: effect.matchName
@@ -226,18 +221,15 @@ function setActiveComp(compId, compName) {
     }
 }
 
-function setPropertyValue(layerId, propertyPath, valueJSON) {
+function setPropertyValue(layerId, layerName, propertyPath, valueJSON) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return encodePayload({ status: "error", message: "Layer with id " + layerId + " not found." });
-        }
+        var layer = resolvedLayer.layer;
 
         var prop = resolveProperty(layer, propertyPath);
         if (!prop) {
@@ -254,6 +246,7 @@ function setPropertyValue(layerId, propertyPath, valueJSON) {
         return encodePayload({
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             propertyPath: propertyPath
         });
@@ -261,6 +254,35 @@ function setPropertyValue(layerId, propertyPath, valueJSON) {
         log("setPropertyValue() threw: " + e.toString());
         return encodePayload({ status: "error", message: e.toString() });
     }
+}
+
+function getPropertyValueDimensions(prop) {
+    try {
+        var valueType = prop.propertyValueType;
+        if (valueType === PropertyValueType.ThreeD || valueType === PropertyValueType.ThreeD_SPATIAL) {
+            return 3;
+        }
+        if (valueType === PropertyValueType.TwoD || valueType === PropertyValueType.TwoD_SPATIAL) {
+            return 2;
+        }
+        if (valueType === PropertyValueType.COLOR) {
+            return 4;
+        }
+    } catch (eType) {}
+    try {
+        var currentValue = prop.value;
+        if (currentValue instanceof Array) {
+            return currentValue.length;
+        }
+    } catch (eValue) {}
+    return 1;
+}
+
+function getValueDimensions(value) {
+    if (value instanceof Array) {
+        return value.length;
+    }
+    return 1;
 }
 
 function getKeyInterpTypeByName(name) {
@@ -409,18 +431,15 @@ function applyKeyframeTemporalEase(prop, keyIndex, easeInSpec, easeOutSpec) {
     prop.setTemporalEaseAtKey(keyIndex, inEase, outEase);
 }
 
-function setKeyframe(layerId, propertyPath, time, valueJSON, optionsJSON) {
+function setKeyframe(layerId, layerName, propertyPath, time, valueJSON, optionsJSON) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return encodePayload({ status: "error", message: "Layer with id " + layerId + " not found." });
-        }
+        var layer = resolvedLayer.layer;
 
         var prop = resolveProperty(layer, propertyPath);
         if (!prop) {
@@ -440,6 +459,16 @@ function setKeyframe(layerId, propertyPath, time, valueJSON, optionsJSON) {
         }
 
         var value = JSON.parse(valueJSON);
+        var expectedDimensions = getPropertyValueDimensions(prop);
+        var gotDimensions = getValueDimensions(value);
+        if (expectedDimensions !== gotDimensions) {
+            return encodePayload({
+                status: "error",
+                message: "Value dimension mismatch: expected " + expectedDimensions + "D, got " + gotDimensions + "D.",
+                expectedDimensions: expectedDimensions,
+                gotDimensions: gotDimensions
+            });
+        }
         prop.setValueAtTime(timeValue, value);
 
         var options = {};
@@ -465,6 +494,7 @@ function setKeyframe(layerId, propertyPath, time, valueJSON, optionsJSON) {
         return encodePayload({
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             propertyPath: propertyPath,
             time: timeValue,

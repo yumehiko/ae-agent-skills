@@ -7,6 +7,12 @@ import os
 DEFAULT_BRIDGE_URL = os.environ.get("AE_BRIDGE_URL", "http://127.0.0.1:8080")
 
 
+def _add_layer_selector(parser: argparse.ArgumentParser) -> None:
+    selector_group = parser.add_mutually_exclusive_group(required=True)
+    selector_group.add_argument("--layer-id", type=int)
+    selector_group.add_argument("--layer-name")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ae-cli",
@@ -53,20 +59,22 @@ def build_parser() -> argparse.ArgumentParser:
     set_active_group.add_argument("--comp-name")
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
-    properties_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(properties_parser)
     properties_parser.add_argument("--include-group", action="append", default=[])
     properties_parser.add_argument("--exclude-group", action="append", default=[])
     properties_parser.add_argument("--max-depth", type=int)
+    properties_parser.add_argument("--include-group-children", action="store_true")
+    properties_parser.add_argument("--time", type=float, help="Evaluate properties at the specified comp time")
 
     expression_parser = subparsers.add_parser("set-expression", help="Set expression on a property")
-    expression_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(expression_parser)
     expression_parser.add_argument("--property-path", required=True)
     expression_group = expression_parser.add_mutually_exclusive_group(required=True)
     expression_group.add_argument("--expression")
     expression_group.add_argument("--expression-file")
 
     property_value_parser = subparsers.add_parser("set-property", help="Set a property value")
-    property_value_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(property_value_parser)
     property_value_parser.add_argument("--property-path", required=True)
     property_value_group = property_value_parser.add_mutually_exclusive_group(required=True)
     property_value_group.add_argument(
@@ -76,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     property_value_group.add_argument("--value-file", help="Path to a UTF-8 JSON file")
 
     keyframe_parser = subparsers.add_parser("set-keyframe", help="Set a keyframe value at time")
-    keyframe_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(keyframe_parser)
     keyframe_parser.add_argument("--property-path", required=True)
     keyframe_parser.add_argument("--time", type=float, required=True)
     keyframe_group = keyframe_parser.add_mutually_exclusive_group(required=True)
@@ -105,7 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     effect_parser = subparsers.add_parser("add-effect", help="Add an effect to a layer")
-    effect_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(effect_parser)
     effect_parser.add_argument("--effect-match-name", required=True)
     effect_parser.add_argument("--effect-name")
 
@@ -113,7 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
         "add-shape-repeater",
         help="Add a Repeater operator to a shape group",
     )
-    shape_repeater_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(shape_repeater_parser)
     shape_repeater_parser.add_argument(
         "--group-index",
         type=int,
@@ -220,12 +228,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     set_in_out_parser = subparsers.add_parser("set-in-out-point", help="Set layer in/out points")
-    set_in_out_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(set_in_out_parser)
     set_in_out_parser.add_argument("--in-point", type=float)
     set_in_out_parser.add_argument("--out-point", type=float)
 
     move_layer_time_parser = subparsers.add_parser("move-layer-time", help="Move layer timing by delta seconds")
-    move_layer_time_parser.add_argument("--layer-id", type=int, required=True)
+    _add_layer_selector(move_layer_time_parser)
     move_layer_time_parser.add_argument("--delta", type=float, required=True)
 
     set_cti_parser = subparsers.add_parser("set-cti", help="Set current time indicator")

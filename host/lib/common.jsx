@@ -58,3 +58,71 @@ function ensureJSON() {
         $.evalFile(localJson);
     }
 }
+
+function aeNormalizeLayerId(layerId) {
+    if (layerId === null || layerId === undefined || layerId === "") {
+        return null;
+    }
+    var parsed = parseInt(layerId, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+        return null;
+    }
+    return parsed;
+}
+
+function aeTryGetLayerUid(layer) {
+    if (!layer) {
+        return null;
+    }
+    try {
+        if (layer.id !== null && layer.id !== undefined) {
+            return String(layer.id);
+        }
+    } catch (e) {}
+    return null;
+}
+
+function aeResolveLayer(comp, layerId, layerName) {
+    if (!comp || !(comp instanceof CompItem)) {
+        return { layer: null, error: "Active composition not found." };
+    }
+
+    var normalizedId = aeNormalizeLayerId(layerId);
+    var hasLayerId = normalizedId !== null;
+    var hasLayerName = layerName !== null && layerName !== undefined && String(layerName).length > 0;
+    if ((hasLayerId && hasLayerName) || (!hasLayerId && !hasLayerName)) {
+        return { layer: null, error: "Provide exactly one of layerId or layerName." };
+    }
+
+    if (hasLayerId) {
+        var layerById = comp.layer(normalizedId);
+        if (!layerById) {
+            return { layer: null, error: "Layer with id " + normalizedId + " not found." };
+        }
+        return { layer: layerById, error: null };
+    }
+
+    var targetName = String(layerName);
+    var matched = null;
+    var matchCount = 0;
+    for (var i = 1; i <= comp.numLayers; i++) {
+        var candidate = comp.layer(i);
+        if (!candidate) {
+            continue;
+        }
+        if (candidate.name === targetName) {
+            matched = candidate;
+            matchCount += 1;
+        }
+    }
+    if (matchCount === 0 || !matched) {
+        return { layer: null, error: "Layer with name '" + targetName + "' not found." };
+    }
+    if (matchCount > 1) {
+        return {
+            layer: null,
+            error: "Layer name '" + targetName + "' is ambiguous (" + matchCount + " matches). Use layerId."
+        };
+    }
+    return { layer: matched, error: null };
+}

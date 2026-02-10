@@ -1,15 +1,12 @@
-function setInOutPoint(layerId, inPoint, outPoint) {
+function setInOutPoint(layerId, layerName, inPoint, outPoint) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return encodePayload({ status: "error", message: "Layer with id " + layerId + " not found." });
-        }
+        var layer = resolvedLayer.layer;
 
         var hasIn = inPoint !== null && inPoint !== undefined;
         var hasOut = outPoint !== null && outPoint !== undefined;
@@ -36,6 +33,7 @@ function setInOutPoint(layerId, inPoint, outPoint) {
         return encodePayload({
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             inPoint: layer.inPoint,
             outPoint: layer.outPoint
@@ -46,18 +44,15 @@ function setInOutPoint(layerId, inPoint, outPoint) {
     }
 }
 
-function moveLayerTime(layerId, delta) {
+function moveLayerTime(layerId, layerName, delta) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return encodePayload({ status: "error", message: "Layer with id " + layerId + " not found." });
-        }
+        var layer = resolvedLayer.layer;
 
         var deltaValue = Number(delta);
         if (isNaN(deltaValue)) {
@@ -69,6 +64,7 @@ function moveLayerTime(layerId, delta) {
         return encodePayload({
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             startTime: layer.startTime,
             inPoint: layer.inPoint,

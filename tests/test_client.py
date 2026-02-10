@@ -54,6 +54,8 @@ def test_get_properties_builds_query_params(monkeypatch) -> None:
         include_groups=["A", ""],
         exclude_groups=["B"],
         max_depth=3,
+        include_group_children=True,
+        time=1.25,
     )
 
     assert captured["url"] == "http://127.0.0.1:8080/properties"
@@ -63,7 +65,23 @@ def test_get_properties_builds_query_params(monkeypatch) -> None:
         ("includeGroup", "A"),
         ("excludeGroup", "B"),
         ("maxDepth", 3),
+        ("includeGroupChildren", "true"),
+        ("time", 1.25),
     ]
+
+
+def test_get_properties_supports_layer_name(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["params"] = params
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_properties(layer_name="Control")
+    assert captured["params"] == [("layerName", "Control")]
 
 
 def test_create_comp_posts_expected_payload(monkeypatch) -> None:
@@ -291,6 +309,34 @@ def test_move_layer_time_posts_expected_payload(monkeypatch) -> None:
         "layerId": 2,
         "delta": 1.25,
     }
+
+
+def test_move_layer_time_supports_layer_name(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["json"] = json
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.move_layer_time(layer_name="Title", delta=0.5)
+
+    assert captured["json"] == {
+        "layerName": "Title",
+        "delta": 0.5,
+    }
+
+
+def test_layer_selector_payload_raises_when_selector_is_invalid() -> None:
+    client = AEClient()
+    try:
+        client._layer_selector_payload()
+    except ValueError as exc:
+        assert "exactly one" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
 
 
 def test_set_cti_posts_expected_payload(monkeypatch) -> None:

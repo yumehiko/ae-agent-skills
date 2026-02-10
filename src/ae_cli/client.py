@@ -19,16 +19,45 @@ class AEClient:
     base_url: str = "http://127.0.0.1:8080"
     timeout: float = 10.0
 
+    @staticmethod
+    def _layer_selector_payload(layer_id: int | None = None, layer_name: str | None = None) -> Dict[str, Any]:
+        has_id = layer_id is not None
+        has_name = layer_name is not None and len(layer_name) > 0
+        if has_id == has_name:
+            raise ValueError("Provide exactly one of layer_id or layer_name.")
+        payload: Dict[str, Any] = {}
+        if has_id:
+            payload["layerId"] = layer_id
+        else:
+            payload["layerName"] = layer_name
+        return payload
+
     def _url(self, path: str) -> str:
         return f"{self.base_url.rstrip('/')}{path}"
 
     def _handle_response(self, response: requests.Response) -> Any:
-        response.raise_for_status()
-        payload = response.json()
-        if payload.get("status") != "success":
+        payload: Any = None
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+
+        if isinstance(payload, dict) and payload.get("status") != "success":
             message = payload.get("message", "Unknown error from After Effects bridge.")
             raise AEBridgeError(message)
-        return payload.get("data", payload)
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            if isinstance(payload, dict):
+                message = payload.get("message")
+                if message:
+                    raise AEBridgeError(message) from exc
+            raise
+
+        if isinstance(payload, dict):
+            return payload.get("data", payload)
+        return payload
 
     def health(self) -> Dict[str, Any]:
         """Check bridge health endpoint."""
@@ -91,13 +120,21 @@ class AEClient:
 
     def get_properties(
         self,
-        layer_id: int,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
         include_groups: List[str] | None = None,
         exclude_groups: List[str] | None = None,
         max_depth: int | None = None,
+        include_group_children: bool = False,
+        time: float | None = None,
     ) -> List[Dict[str, Any]]:
         """Return the property tree for the specified layer."""
-        params: List[tuple[str, Any]] = [("layerId", layer_id)]
+        params: List[tuple[str, Any]] = []
+        selector = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        if "layerId" in selector:
+            params.append(("layerId", selector["layerId"]))
+        else:
+            params.append(("layerName", selector["layerName"]))
         if include_groups:
             for group in include_groups:
                 if group:
@@ -108,6 +145,10 @@ class AEClient:
                     params.append(("excludeGroup", group))
         if max_depth is not None:
             params.append(("maxDepth", max_depth))
+        if include_group_children:
+            params.append(("includeGroupChildren", "true"))
+        if time is not None:
+            params.append(("time", time))
 
         response = requests.get(
             self._url("/properties"),
@@ -116,50 +157,59 @@ class AEClient:
         )
         return self._handle_response(response)
 
-    def set_expression(self, layer_id: int, property_path: str, expression: str) -> Dict[str, Any]:
+    def set_expression(
+        self,
+        property_path: str,
+        expression: str,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Apply an expression to the given property."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["propertyPath"] = property_path
+        payload["expression"] = expression
         response = requests.post(
             self._url("/expression"),
-            json={
-                "layerId": layer_id,
-                "propertyPath": property_path,
-                "expression": expression,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
 
-    def set_property_value(self, layer_id: int, property_path: str, value: Any) -> Dict[str, Any]:
+    def set_property_value(
+        self,
+        property_path: str,
+        value: Any,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Set a property value on the given property path."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["propertyPath"] = property_path
+        payload["value"] = value
         response = requests.post(
             self._url("/property-value"),
-            json={
-                "layerId": layer_id,
-                "propertyPath": property_path,
-                "value": value,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
 
     def set_keyframe(
         self,
-        layer_id: int,
         property_path: str,
         time: float,
         value: Any,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
         in_interp: str | None = None,
         out_interp: str | None = None,
         ease_in: Any | None = None,
         ease_out: Any | None = None,
     ) -> Dict[str, Any]:
         """Set a keyframe value at a specific time."""
-        payload: Dict[str, Any] = {
-            "layerId": layer_id,
-            "propertyPath": property_path,
-            "time": time,
-            "value": value,
-        }
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["propertyPath"] = property_path
+        payload["time"] = time
+        payload["value"] = value
         if in_interp is not None:
             payload["inInterp"] = in_interp
         if out_interp is not None:
@@ -178,15 +228,14 @@ class AEClient:
 
     def add_effect(
         self,
-        layer_id: int,
         effect_match_name: str,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
         effect_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add an effect to the specified layer."""
-        payload: Dict[str, Any] = {
-            "layerId": layer_id,
-            "effectMatchName": effect_match_name,
-        }
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["effectMatchName"] = effect_match_name
         if effect_name:
             payload["effectName"] = effect_name
 
@@ -199,7 +248,8 @@ class AEClient:
 
     def add_shape_repeater(
         self,
-        layer_id: int,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
         group_index: int = 1,
         name: str | None = None,
         copies: float | None = None,
@@ -211,10 +261,8 @@ class AEClient:
         end_opacity: float | None = None,
     ) -> Dict[str, Any]:
         """Add a shape repeater operator to the specified shape group."""
-        payload: Dict[str, Any] = {
-            "layerId": layer_id,
-            "groupIndex": group_index,
-        }
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["groupIndex"] = group_index
         if name is not None:
             payload["name"] = name
         if copies is not None:
@@ -303,12 +351,13 @@ class AEClient:
 
     def set_in_out_point(
         self,
-        layer_id: int,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
         in_point: float | None = None,
         out_point: float | None = None,
     ) -> Dict[str, Any]:
         """Set in/out points for the specified layer."""
-        payload: Dict[str, Any] = {"layerId": layer_id}
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
         if in_point is not None:
             payload["inPoint"] = in_point
         if out_point is not None:
@@ -321,14 +370,18 @@ class AEClient:
         )
         return self._handle_response(response)
 
-    def move_layer_time(self, layer_id: int, delta: float) -> Dict[str, Any]:
+    def move_layer_time(
+        self,
+        delta: float,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Move layer timing by delta seconds."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["delta"] = delta
         response = requests.post(
             self._url("/layer-time"),
-            json={
-                "layerId": layer_id,
-                "delta": delta,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)

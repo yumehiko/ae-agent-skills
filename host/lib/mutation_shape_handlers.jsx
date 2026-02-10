@@ -1,15 +1,12 @@
-function addShapeRepeater(layerId, optionsJSON) {
+function addShapeRepeater(layerId, layerName, optionsJSON) {
     try {
         ensureJSON();
         var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
         }
-
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            return encodePayload({ status: "error", message: "Layer with id " + layerId + " not found." });
-        }
+        var layer = resolvedLayer.layer;
         if (layer.matchName !== "ADBE Vector Layer") {
             return encodePayload({ status: "error", message: "Target layer is not a shape layer." });
         }
@@ -129,6 +126,7 @@ function addShapeRepeater(layerId, optionsJSON) {
         return encodePayload({
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             groupIndex: groupIndex,
             repeaterName: repeater.name
@@ -348,6 +346,7 @@ function addLayer(layerType, optionsJSON) {
         return encodePayload({
             status: "success",
             layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
             layerName: layer.name,
             layerType: getLayerTypeName(layer),
             shapeType: createdShapeType

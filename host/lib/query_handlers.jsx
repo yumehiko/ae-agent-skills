@@ -12,6 +12,7 @@ function getLayers() {
             var layer = comp.layer(i);
             layers.push({
                 id: layer.index,
+                layerUid: aeTryGetLayerUid(layer),
                 name: layer.name,
                 type: getLayerTypeName(layer)
             });
@@ -68,11 +69,6 @@ function getProperties(layerId, optionsJSON) {
             log("getProperties(): Active composition not found.");
             return encodePayload({ status: "Error", message: "Active composition not found." });
         }
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            log("getProperties(): layer " + layerId + " not found.");
-            return encodePayload({ status: "Error", message: "Layer with id " + layerId + " not found." });
-        }
 
         var options = {};
         if (optionsJSON && optionsJSON !== "null") {
@@ -118,6 +114,25 @@ function getProperties(layerId, optionsJSON) {
         var includeGroups = normalizeStringArray(options.includeGroups);
         var excludeGroups = normalizeStringArray(options.excludeGroups);
         var maxDepth = parseMaxDepth(options.maxDepth);
+        var includeGroupChildren = options.includeGroupChildren === true;
+        var evaluationTime = null;
+        if (options.time !== null && options.time !== undefined) {
+            evaluationTime = Number(options.time);
+            if (isNaN(evaluationTime)) {
+                return encodePayload({ status: "Error", message: "time must be a number." });
+            }
+        }
+
+        var layerName = null;
+        if (options.layerName !== null && options.layerName !== undefined) {
+            layerName = String(options.layerName);
+        }
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            log("getProperties(): " + resolvedLayer.error);
+            return encodePayload({ status: "Error", message: resolvedLayer.error });
+        }
+        var layer = resolvedLayer.layer;
         var properties = [];
 
         function shouldSkipTopLevel(matchName, depth) {
@@ -133,7 +148,7 @@ function getProperties(layerId, optionsJSON) {
             return false;
         }
 
-        function scanProperties(propGroup, pathPrefix, depth) {
+        function scanProperties(propGroup, pathPrefix, depth, forceRecursive) {
             if (!propGroup || typeof propGroup.numProperties !== "number") {
                 return;
             }
@@ -155,7 +170,7 @@ function getProperties(layerId, optionsJSON) {
                 if (shouldSkipTopLevel(matchName, depth)) {
                     continue;
                 }
-                if (maxDepth !== null && nextDepth > maxDepth) {
+                if (!forceRecursive && maxDepth !== null && nextDepth > maxDepth) {
                     continue;
                 }
 
@@ -175,13 +190,31 @@ function getProperties(layerId, optionsJSON) {
                     });
                 }
 
-                if (aeCanTraverseProperty(prop) && (maxDepth === null || nextDepth < maxDepth)) {
-                    scanProperties(prop, currentPath, nextDepth);
+                var shouldRecurse = aeCanTraverseProperty(prop)
+                    && (forceRecursive || maxDepth === null || nextDepth < maxDepth);
+                if (!shouldRecurse) {
+                    continue;
                 }
+                var childForceRecursive = forceRecursive;
+                if (includeGroupChildren && depth === 0 && matchName && aeArrayContains(includeGroups, matchName)) {
+                    childForceRecursive = true;
+                }
+                scanProperties(prop, currentPath, nextDepth, childForceRecursive);
             }
         }
 
-        scanProperties(layer, "", 0);
+        var previousTime = null;
+        if (evaluationTime !== null) {
+            previousTime = comp.time;
+            comp.time = evaluationTime;
+        }
+        try {
+            scanProperties(layer, "", 0, false);
+        } finally {
+            if (evaluationTime !== null && previousTime !== null) {
+                comp.time = previousTime;
+            }
+        }
         return encodePayload(properties);
     } catch (e) {
         log("getProperties() threw: " + e.toString());

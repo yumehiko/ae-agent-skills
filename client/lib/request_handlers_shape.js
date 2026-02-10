@@ -2,10 +2,11 @@ function handleAddShapeRepeater(req, res) {
     readJsonBody(
         req,
         res,
-        ({ layerId, groupIndex, name, copies, offset, position, scale, rotation, startOpacity, endOpacity }) => {
-            if (!layerId || typeof layerId !== 'number') {
-                sendBadRequest(res, 'layerId is required and must be a number');
-                log('addShapeRepeater failed: invalid layerId');
+        ({ layerId, layerName, groupIndex, name, copies, offset, position, scale, rotation, startOpacity, endOpacity }) => {
+            const selector = normalizeLayerSelector(layerId, layerName);
+            if (!selector.ok) {
+                sendBadRequest(res, selector.error);
+                log(`addShapeRepeater failed: ${selector.error}`);
                 return;
             }
             if (groupIndex !== undefined && (!Number.isInteger(groupIndex) || groupIndex <= 0)) {
@@ -74,7 +75,7 @@ function handleAddShapeRepeater(req, res) {
             const optionsLiteral = Object.keys(options).length === 0
                 ? 'null'
                 : toExtendScriptStringLiteral(JSON.stringify(options));
-            const script = `addShapeRepeater(${layerId}, ${optionsLiteral})`;
+            const script = `addShapeRepeater(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${optionsLiteral})`;
             handleBridgeMutationCall(script, res, 'addShapeRepeater()', 'Failed to add shape repeater');
         },
     );

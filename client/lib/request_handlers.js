@@ -52,6 +52,25 @@ function handleBridgeMutationCall(script, res, contextLabel, fallbackMessage) {
     });
 }
 
+function normalizeLayerSelector(layerIdRaw, layerNameRaw) {
+    const hasLayerId = layerIdRaw !== undefined && layerIdRaw !== null;
+    const hasLayerName = typeof layerNameRaw === 'string' && layerNameRaw.trim().length > 0;
+    if ((hasLayerId && hasLayerName) || (!hasLayerId && !hasLayerName)) {
+        return { ok: false, error: 'Provide exactly one of layerId or layerName' };
+    }
+    if (hasLayerId) {
+        if (typeof layerIdRaw !== 'number' || !Number.isInteger(layerIdRaw) || layerIdRaw <= 0) {
+            return { ok: false, error: 'layerId must be a positive integer when specified' };
+        }
+        return { ok: true, layerIdLiteral: String(layerIdRaw), layerNameLiteral: 'null' };
+    }
+    return {
+        ok: true,
+        layerIdLiteral: 'null',
+        layerNameLiteral: toExtendScriptStringLiteral(layerNameRaw.trim()),
+    };
+}
+
 function handleHealth(res) {
     sendJson(res, 200, { status: 'ok' });
     log('Health check responded with ok.');
@@ -137,16 +156,31 @@ function handleSetActiveComp(req, res) {
 }
 
 function handleGetProperties(searchParams, res) {
-    const layerId = searchParams.get('layerId');
-    if (!layerId) {
-        sendBadRequest(res, 'Missing layerId parameter');
-        log('getProperties failed: Missing layerId');
+    const layerIdParam = searchParams.get('layerId');
+    const layerNameParam = searchParams.get('layerName');
+    const hasLayerId = layerIdParam !== null && layerIdParam !== '';
+    const hasLayerName = layerNameParam !== null && layerNameParam.trim() !== '';
+    if ((hasLayerId && hasLayerName) || (!hasLayerId && !hasLayerName)) {
+        sendBadRequest(res, 'Provide exactly one of layerId or layerName');
+        log('getProperties failed: invalid layer selector');
         return;
+    }
+    let layerId = null;
+    if (hasLayerId) {
+        const parsedLayerId = parseInt(layerIdParam, 10);
+        if (isNaN(parsedLayerId) || parsedLayerId <= 0) {
+            sendBadRequest(res, 'layerId must be a positive integer');
+            log('getProperties failed: invalid layerId');
+            return;
+        }
+        layerId = parsedLayerId;
     }
 
     const includeGroups = searchParams.getAll('includeGroup').filter(Boolean);
     const excludeGroups = searchParams.getAll('excludeGroup').filter(Boolean);
     const maxDepthParam = searchParams.get('maxDepth');
+    const includeGroupChildrenParam = searchParams.get('includeGroupChildren');
+    const timeParam = searchParams.get('time');
 
     let maxDepth;
     if (maxDepthParam !== null) {
@@ -158,26 +192,55 @@ function handleGetProperties(searchParams, res) {
         }
         maxDepth = parsedDepth;
     }
+    let includeGroupChildren;
+    if (includeGroupChildrenParam !== null) {
+        if (!['true', 'false'].includes(includeGroupChildrenParam)) {
+            sendBadRequest(res, 'includeGroupChildren must be true or false');
+            log('getProperties failed: invalid includeGroupChildren');
+            return;
+        }
+        includeGroupChildren = includeGroupChildrenParam === 'true';
+    }
+    let time;
+    if (timeParam !== null) {
+        const parsedTime = Number(timeParam);
+        if (!isFinite(parsedTime)) {
+            sendBadRequest(res, 'time must be a finite number');
+            log('getProperties failed: invalid time');
+            return;
+        }
+        time = parsedTime;
+    }
 
     const options = {};
+    if (hasLayerName) options.layerName = layerNameParam.trim();
     if (includeGroups.length > 0) options.includeGroups = includeGroups;
     if (excludeGroups.length > 0) options.excludeGroups = excludeGroups;
     if (maxDepth !== undefined) options.maxDepth = maxDepth;
+    if (includeGroupChildren !== undefined) options.includeGroupChildren = includeGroupChildren;
+    if (time !== undefined) options.time = time;
 
     const optionsLiteral = Object.keys(options).length > 0
         ? toExtendScriptStringLiteral(JSON.stringify(options))
         : 'null';
     const optionsLabel = optionsLiteral === 'null' ? 'null' : 'custom';
-    const script = `getProperties(${layerId}, ${optionsLiteral})`;
+    const layerIdLiteral = layerId === null ? 'null' : String(layerId);
+    const script = `getProperties(${layerIdLiteral}, ${optionsLiteral})`;
 
-    handleBridgeDataCall(script, res, `getProperties(${layerId}, options=${optionsLabel})`);
+    handleBridgeDataCall(script, res, `getProperties(${layerIdLiteral}, options=${optionsLabel})`);
 }
 
 function handleSetExpression(req, res) {
-    readJsonBody(req, res, ({ layerId, propertyPath, expression }) => {
-        if (!layerId || !propertyPath || expression === undefined) {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, expression }) => {
+        if (!propertyPath || expression === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setExpression failed: Missing parameters');
+            return;
+        }
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            log(`setExpression failed: ${selector.error}`);
             return;
         }
         if (typeof expression !== 'string') {
@@ -188,7 +251,7 @@ function handleSetExpression(req, res) {
 
         const escapedPath = escapeForExtendScript(propertyPath);
         const expressionLiteral = toExtendScriptStringLiteral(expression);
-        const script = `setExpression(${layerId}, "${escapedPath}", ${expressionLiteral})`;
+        const script = `setExpression(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, "${escapedPath}", ${expressionLiteral})`;
 
         log(`Calling ExtendScript: ${script}`);
         evalHostScript(script, (result) => {
@@ -204,24 +267,36 @@ function handleSetExpression(req, res) {
 }
 
 function handleSetPropertyValue(req, res) {
-    readJsonBody(req, res, ({ layerId, propertyPath, value }) => {
-        if (!layerId || !propertyPath || value === undefined) {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, value }) => {
+        if (!propertyPath || value === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setPropertyValue failed: Missing parameters');
             return;
         }
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            log(`setPropertyValue failed: ${selector.error}`);
+            return;
+        }
         const pathLiteral = toExtendScriptStringLiteral(propertyPath);
         const valueLiteral = toExtendScriptStringLiteral(JSON.stringify(value));
-        const script = `setPropertyValue(${layerId}, ${pathLiteral}, ${valueLiteral})`;
+        const script = `setPropertyValue(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${pathLiteral}, ${valueLiteral})`;
         handleBridgeMutationCall(script, res, 'setPropertyValue()', 'Failed to set property value');
     });
 }
 
 function handleSetKeyframe(req, res) {
-    readJsonBody(req, res, ({ layerId, propertyPath, time, value, inInterp, outInterp, easeIn, easeOut }) => {
-        if (!layerId || !propertyPath || time === undefined || value === undefined) {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, time, value, inInterp, outInterp, easeIn, easeOut }) => {
+        if (!propertyPath || time === undefined || value === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setKeyframe failed: Missing parameters');
+            return;
+        }
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            log(`setKeyframe failed: ${selector.error}`);
             return;
         }
         if (typeof time !== 'number' || !isFinite(time)) {
@@ -250,16 +325,22 @@ function handleSetKeyframe(req, res) {
         const optionsLiteral = Object.keys(options).length === 0
             ? 'null'
             : toExtendScriptStringLiteral(JSON.stringify(options));
-        const script = `setKeyframe(${layerId}, ${pathLiteral}, ${time}, ${valueLiteral}, ${optionsLiteral})`;
+        const script = `setKeyframe(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${pathLiteral}, ${time}, ${valueLiteral}, ${optionsLiteral})`;
         handleBridgeMutationCall(script, res, 'setKeyframe()', 'Failed to set keyframe');
     });
 }
 
 function handleAddEffect(req, res) {
-    readJsonBody(req, res, ({ layerId, effectMatchName, effectName }) => {
-        if (!layerId || !effectMatchName) {
+    readJsonBody(req, res, ({ layerId, layerName, effectMatchName, effectName }) => {
+        if (!effectMatchName) {
             sendBadRequest(res, 'Missing parameters');
             log('addEffect failed: Missing parameters');
+            return;
+        }
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            log(`addEffect failed: ${selector.error}`);
             return;
         }
         if (effectName !== undefined && typeof effectName !== 'string') {
@@ -272,7 +353,7 @@ function handleAddEffect(req, res) {
         const effectNameLiteral = effectName === undefined
             ? 'null'
             : toExtendScriptStringLiteral(effectName);
-        const script = `addEffect(${layerId}, ${matchNameLiteral}, ${effectNameLiteral})`;
+        const script = `addEffect(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${matchNameLiteral}, ${effectNameLiteral})`;
 
         log(`Calling ExtendScript: ${script}`);
         evalHostScript(script, (result) => {
@@ -297,10 +378,16 @@ function handleAddEffect(req, res) {
 }
 
 function handleSetInOutPoint(req, res) {
-    readJsonBody(req, res, ({ layerId, inPoint, outPoint }) => {
-        if (!layerId || (inPoint === undefined && outPoint === undefined)) {
-            sendBadRequest(res, 'layerId and at least one of inPoint/outPoint are required');
+    readJsonBody(req, res, ({ layerId, layerName, inPoint, outPoint }) => {
+        if (inPoint === undefined && outPoint === undefined) {
+            sendBadRequest(res, 'At least one of inPoint/outPoint is required');
             log('setInOutPoint failed: missing parameters');
+            return;
+        }
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            log(`setInOutPoint failed: ${selector.error}`);
             return;
         }
         if (inPoint !== undefined && (typeof inPoint !== 'number' || !isFinite(inPoint))) {
@@ -316,16 +403,22 @@ function handleSetInOutPoint(req, res) {
 
         const inPointLiteral = inPoint === undefined ? 'null' : String(inPoint);
         const outPointLiteral = outPoint === undefined ? 'null' : String(outPoint);
-        const script = `setInOutPoint(${layerId}, ${inPointLiteral}, ${outPointLiteral})`;
+        const script = `setInOutPoint(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${inPointLiteral}, ${outPointLiteral})`;
         handleBridgeMutationCall(script, res, 'setInOutPoint()', 'Failed to set in/out point');
     });
 }
 
 function handleMoveLayerTime(req, res) {
-    readJsonBody(req, res, ({ layerId, delta }) => {
-        if (!layerId || delta === undefined) {
-            sendBadRequest(res, 'layerId and delta are required');
+    readJsonBody(req, res, ({ layerId, layerName, delta }) => {
+        if (delta === undefined) {
+            sendBadRequest(res, 'delta is required');
             log('moveLayerTime failed: missing parameters');
+            return;
+        }
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            log(`moveLayerTime failed: ${selector.error}`);
             return;
         }
         if (typeof delta !== 'number' || !isFinite(delta)) {
@@ -334,7 +427,7 @@ function handleMoveLayerTime(req, res) {
             return;
         }
 
-        const script = `moveLayerTime(${layerId}, ${delta})`;
+        const script = `moveLayerTime(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${delta})`;
         handleBridgeMutationCall(script, res, 'moveLayerTime()', 'Failed to move layer time');
     });
 }

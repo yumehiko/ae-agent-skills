@@ -41,6 +41,13 @@ def _read_json_optional(raw: str | None, label: str) -> Any:
         raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
 
 
+def _layer_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "layer_id": getattr(args, "layer_id", None),
+        "layer_name": getattr(args, "layer_name", None),
+    }
+
+
 def _run_health(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.health())
 
@@ -77,10 +84,12 @@ def _run_selected_properties(client: AEClient, _args: argparse.Namespace) -> Non
 def _run_properties(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.get_properties(
-            layer_id=args.layer_id,
+            **_layer_selector_kwargs(args),
             include_groups=args.include_group,
             exclude_groups=args.exclude_group,
             max_depth=args.max_depth,
+            include_group_children=args.include_group_children,
+            time=args.time,
         )
     )
 
@@ -89,9 +98,9 @@ def _run_set_expression(client: AEClient, args: argparse.Namespace) -> None:
     expression = _read_expression(args)
     _print_json(
         client.set_expression(
-            layer_id=args.layer_id,
             property_path=args.property_path,
             expression=expression,
+            **_layer_selector_kwargs(args),
         )
     )
 
@@ -100,9 +109,9 @@ def _run_set_property(client: AEClient, args: argparse.Namespace) -> None:
     value = _read_json_value(args)
     _print_json(
         client.set_property_value(
-            layer_id=args.layer_id,
             property_path=args.property_path,
             value=value,
+            **_layer_selector_kwargs(args),
         )
     )
 
@@ -113,7 +122,6 @@ def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
     ease_out = _read_json_optional(args.ease_out, "ease-out")
     _print_json(
         client.set_keyframe(
-            layer_id=args.layer_id,
             property_path=args.property_path,
             time=args.time,
             value=value,
@@ -121,6 +129,7 @@ def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
             out_interp=args.out_interp,
             ease_in=ease_in,
             ease_out=ease_out,
+            **_layer_selector_kwargs(args),
         )
     )
 
@@ -128,9 +137,9 @@ def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
 def _run_add_effect(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.add_effect(
-            layer_id=args.layer_id,
             effect_match_name=args.effect_match_name,
             effect_name=args.effect_name,
+            **_layer_selector_kwargs(args),
         )
     )
 
@@ -138,7 +147,6 @@ def _run_add_effect(client: AEClient, args: argparse.Namespace) -> None:
 def _run_add_shape_repeater(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.add_shape_repeater(
-            layer_id=args.layer_id,
             group_index=args.group_index,
             name=args.name,
             copies=args.copies,
@@ -148,6 +156,7 @@ def _run_add_shape_repeater(client: AEClient, args: argparse.Namespace) -> None:
             rotation=args.rotation,
             start_opacity=args.start_opacity,
             end_opacity=args.end_opacity,
+            **_layer_selector_kwargs(args),
         )
     )
 
@@ -181,15 +190,15 @@ def _run_set_in_out_point(client: AEClient, args: argparse.Namespace) -> None:
         raise ValueError("At least one of --in-point or --out-point is required.")
     _print_json(
         client.set_in_out_point(
-            layer_id=args.layer_id,
             in_point=args.in_point,
             out_point=args.out_point,
+            **_layer_selector_kwargs(args),
         )
     )
 
 
 def _run_move_layer_time(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.move_layer_time(layer_id=args.layer_id, delta=args.delta))
+    _print_json(client.move_layer_time(delta=args.delta, **_layer_selector_kwargs(args)))
 
 
 def _run_set_cti(client: AEClient, args: argparse.Namespace) -> None:

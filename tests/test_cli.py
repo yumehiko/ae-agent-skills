@@ -30,6 +30,28 @@ def test_build_parser_parses_properties_filters() -> None:
     assert args.max_depth == 2
 
 
+def test_build_parser_parses_properties_layer_name_and_time_options() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "properties",
+            "--layer-name",
+            "Control",
+            "--include-group",
+            "ADBE Effect Parade",
+            "--include-group-children",
+            "--time",
+            "1.25",
+        ]
+    )
+    assert args.command == "properties"
+    assert args.layer_id is None
+    assert args.layer_name == "Control"
+    assert args.include_group == ["ADBE Effect Parade"]
+    assert args.include_group_children is True
+    assert args.time == 1.25
+
+
 def test_build_parser_parses_add_layer_color() -> None:
     parser = build_parser()
     args = parser.parse_args(
@@ -182,6 +204,7 @@ def test_build_parser_parses_set_keyframe_json_value() -> None:
     assert args.time == 0.5
     assert args.value == "[960,540]"
 
+
 def test_build_parser_parses_set_keyframe_easing_options() -> None:
     parser = build_parser()
     args = parser.parse_args(
@@ -227,6 +250,23 @@ def test_build_parser_parses_set_in_out_point() -> None:
     assert args.layer_id == 5
     assert args.in_point == 1.2
     assert args.out_point == 4.8
+
+
+def test_build_parser_parses_move_layer_time_with_layer_name() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "move-layer-time",
+            "--layer-name",
+            "Title",
+            "--delta",
+            "0.25",
+        ]
+    )
+    assert args.command == "move-layer-time"
+    assert args.layer_id is None
+    assert args.layer_name == "Title"
+    assert args.delta == 0.25
 
 
 def test_build_parser_parses_precompose_multi_layers() -> None:

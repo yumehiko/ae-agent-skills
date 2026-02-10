@@ -75,8 +75,8 @@ ae-cli list-comps
 ae-cli create-comp --name "Main" --width 1920 --height 1080 --duration 8 --frame-rate 30
 ae-cli set-active-comp --comp-name "Main"
 ae-cli selected-properties
-ae-cli properties --layer-id 1 --max-depth 3
-ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
+ae-cli properties --layer-name "Title" --include-group "ADBE Effect Parade" --include-group-children --time 2.0
+ae-cli set-expression --layer-name "Title" --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
@@ -84,9 +84,9 @@ ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effec
 ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
 ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
 ae-cli add-layer --layer-type shape --name "BurstCircle" --shape-type ellipse --shape-size 720 720 --shape-fill-color 255 128 0 --shape-stroke-color 255 255 255 --shape-stroke-width 8
-ae-cli add-shape-repeater --layer-id 1 --group-index 1 --copies 12 --rotation 30 --end-opacity 0
-ae-cli set-in-out-point --layer-id 1 --in-point 0.5 --out-point 6.5
-ae-cli move-layer-time --layer-id 1 --delta 0.25
+ae-cli add-shape-repeater --layer-name "BurstCircle" --group-index 1 --copies 12 --rotation 30 --end-opacity 0
+ae-cli set-in-out-point --layer-name "Title" --in-point 0.5 --out-point 6.5
+ae-cli move-layer-time --layer-name "Title" --delta 0.25
 ae-cli set-cti --time 2.0
 ae-cli set-work-area --start 1.0 --duration 4.0
 ae-cli parent-layer --child-layer-id 2 --parent-layer-id 1
