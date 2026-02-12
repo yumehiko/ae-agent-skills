@@ -9,12 +9,14 @@ English README は [README.md](README.md) を参照してください。
 - English README: [README.md](README.md)
 - 日本語 README: [README.ja.md](README.ja.md)
 - Onboarding skill: [.codex/skills/aftereffects-onboarding/SKILL.md](.codex/skills/aftereffects-onboarding/SKILL.md)
-- CLI skill: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)
+- 宣言型 skill: [.codex/skills/aftereffects-declarative/SKILL.md](.codex/skills/aftereffects-declarative/SKILL.md)
+- レガシー CLI skill: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)
 
 ## このリポジトリでできること
 
 - `ae-cli` で以下を実行
   - レイヤー/プロパティ取得
+  - expression エラー診断（`expression-errors`）
   - expression 適用
   - エフェクト追加
   - Essential Graphics プロパティ追加
@@ -77,6 +79,7 @@ ae-cli list-comps
 ae-cli create-comp --name "Main" --width 1920 --height 1080 --duration 8 --frame-rate 30
 ae-cli set-active-comp --comp-name "Main"
 ae-cli selected-properties
+ae-cli expression-errors
 ae-cli properties --layer-name "Title" --include-group "ADBE Effect Parade" --include-group-children --time 2.0
 ae-cli set-expression --layer-name "Title" --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
@@ -158,6 +161,11 @@ ae-cli apply-scene --scene-file examples/scene.example.json
 - `composition`: 対象 comp の指定/作成設定（`compId`, `compName`, `name`, `width`, `height`, `duration`, `frameRate`, `pixelAspect`, `createIfMissing`, `setActive`）
 - `layers[]`: レイヤー定義（`type`, `name`, `text`, shape/solid オプション, `timing`, `transform`, `propertyValues`, `effects`, `animations`）
 - `layers[].id`: upsert 再利用用の安定ID。既存IDが見つかった場合は新規作成せず、そのレイヤーを更新します。
+- `layers[].parentId`: scene id を使った親子定義（`null` 指定で親解除）
+- `layers[].expressions[]`: expression 定義（`propertyPath`, `expression`）
+- `layers[].essentialProperties[]`: Essential Graphics 追加（`propertyPath`, 任意で `essentialName`）
+- `layers[].repeaters[]`: shape の Repeater 定義（`add-shape-repeater` 相当オプション）
+- `layers[].effects[].params[]`: effect パラメータ設定（`propertyPath` / `matchName` / `propertyIndex` のいずれか + `value`）
 - 3D ベクトル系プロパティに対しては、`[x, y]` の2次元入力を `[x, y, 0]` として自動補完します。
 
 ## 開発向け
@@ -186,7 +194,7 @@ PYTHONPATH=src pytest
 - `host/index.jsx`: モジュールローダー（エントリポイント）
 - `host/lib/common.jsx`: ログ出力・JSON 初期化・共通ヘルパー
 - `host/lib/property_utils.jsx`: プロパティ探索の共通ヘルパー
-- `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`）
+- `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`, `getExpressionErrors`）
 - `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（コア: `setExpression`, `addEffect`, `addEssentialProperty`, `setPropertyValue`, `createComp`, `setActiveComp`）
 - `host/lib/mutation_keyframe_handlers.jsx`: キーフレーム系ハンドラ（`setKeyframe`）と補間/ease ヘルパー
 - `host/lib/mutation_shape_handlers.jsx`: shape 系ハンドラ（`addLayer`, `addShapeRepeater`）

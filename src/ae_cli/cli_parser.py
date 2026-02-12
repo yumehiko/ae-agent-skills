@@ -36,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("layers", help="Get active composition layers")
     subparsers.add_parser("list-comps", help="List compositions in the current project")
     subparsers.add_parser("selected-properties", help="Get currently selected properties")
+    subparsers.add_parser("expression-errors", help="Get expression errors in the active composition")
 
     create_comp_parser = subparsers.add_parser("create-comp", help="Create a composition")
     create_comp_parser.add_argument("--name", required=True)

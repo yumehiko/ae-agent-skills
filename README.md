@@ -9,12 +9,14 @@ Japanese README is available at [README.ja.md](README.ja.md).
 - English README: [README.md](README.md)
 - Japanese README: [README.ja.md](README.ja.md)
 - Onboarding skill: [.codex/skills/aftereffects-onboarding/SKILL.md](.codex/skills/aftereffects-onboarding/SKILL.md)
-- CLI skill: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)
+- Declarative skill: [.codex/skills/aftereffects-declarative/SKILL.md](.codex/skills/aftereffects-declarative/SKILL.md)
+- Legacy CLI skill: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)
 
 ## What this repo includes
 
 - `ae-cli` for:
   - listing layers/properties
+  - expression error diagnostics (`expression-errors`)
   - applying expressions
   - adding effects
   - adding Essential Graphics properties
@@ -77,6 +79,7 @@ ae-cli list-comps
 ae-cli create-comp --name "Main" --width 1920 --height 1080 --duration 8 --frame-rate 30
 ae-cli set-active-comp --comp-name "Main"
 ae-cli selected-properties
+ae-cli expression-errors
 ae-cli properties --layer-name "Title" --include-group "ADBE Effect Parade" --include-group-children --time 2.0
 ae-cli set-expression --layer-name "Title" --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
@@ -158,6 +161,11 @@ Top-level fields:
 - `composition`: target comp options (`compId`, `compName`, `name`, `width`, `height`, `duration`, `frameRate`, `pixelAspect`, `createIfMissing`, `setActive`)
 - `layers[]`: layer specs (`type`, `name`, `text`, shape/solid options, `timing`, `transform`, `propertyValues`, `effects`, `animations`)
 - `layers[].id`: stable scene id for upsert reuse. If the id already exists, `apply-scene` updates that layer instead of creating a new one.
+- `layers[].parentId`: declarative parent relation by scene id (`null` to clear parent)
+- `layers[].expressions[]`: expression bindings (`propertyPath`, `expression`)
+- `layers[].essentialProperties[]`: Essential Graphics exports (`propertyPath`, optional `essentialName`)
+- `layers[].repeaters[]`: shape repeater definitions (same options as `add-shape-repeater`)
+- `layers[].effects[].params[]`: effect parameter assignments (selector: one of `propertyPath`/`matchName`/`propertyIndex`, plus `value`)
 - For 3D vector properties, 2D input like `[x, y]` is accepted and normalized to `[x, y, 0]`.
 
 ## Development
@@ -186,7 +194,7 @@ PYTHONPATH=src pytest
 - `host/index.jsx`: module loader entrypoint
 - `host/lib/common.jsx`: logging/json bootstrap/common helpers
 - `host/lib/property_utils.jsx`: shared property-tree helpers
-- `host/lib/query_handlers.jsx`: read-only handlers (`getLayers`, `getProperties`, `getSelectedProperties`)
+- `host/lib/query_handlers.jsx`: read-only handlers (`getLayers`, `getProperties`, `getSelectedProperties`, `getExpressionErrors`)
 - `host/lib/mutation_handlers.jsx`: write handlers core (`setExpression`, `addEffect`, `addEssentialProperty`, `setPropertyValue`, `createComp`, `setActiveComp`)
 - `host/lib/mutation_keyframe_handlers.jsx`: keyframe handlers (`setKeyframe`) and interpolation/ease helpers
 - `host/lib/mutation_shape_handlers.jsx`: shape write handlers (`addLayer`, `addShapeRepeater`)

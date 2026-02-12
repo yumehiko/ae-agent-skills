@@ -85,7 +85,8 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 
 ## 完了時の案内
 
-- 通常操作は `aftereffects-cli` skill を使うよう案内する。
+- 通常操作は `aftereffects-declarative` skill を使うよう案内する。
+- 命令型での個別編集が必要な場合のみ `aftereffects-cli-legacy` skill を使うよう案内する。
 - 現状この skill を利用するには、このリポジトリを `cwd` にする必要があると案内する。
 - グローバルに利用したい場合は、`$CODEX_HOME/skills` への導入希望を伝えてもらうよう案内する。
 - 最初の操作例として以下を提示する。

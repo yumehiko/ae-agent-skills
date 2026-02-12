@@ -125,6 +125,11 @@ function aeFindUntaggedLayerByNameAndType(comp, name, expectedType) {
 }
 
 function aeNormalizeLayerTypeForScene(layer) {
+    try {
+        if (layer && layer.nullLayer === true) {
+            return "null";
+        }
+    } catch (eNullType) {}
     var typeName = String(getLayerTypeName(layer)).toLowerCase();
     if (typeName === "video") {
         return "solid";
@@ -165,6 +170,137 @@ function aeFindExistingEffect(layer, matchName, effectName) {
         if (effect.name === effectName) {
             return effect;
         }
+    }
+    return null;
+}
+
+function aeApplyExpression(layerId, propertyPath, expression) {
+    var result = setExpression(layerId, null, propertyPath, expression);
+    if (result !== "success") {
+        throw new Error(String(result));
+    }
+}
+
+function aeTryAddEssentialProperty(layerId, propertyPath, essentialName) {
+    try {
+        aeInvokeMutation(
+            addEssentialProperty,
+            [layerId, null, propertyPath, essentialName !== undefined ? essentialName : null],
+            "addEssentialProperty"
+        );
+        return true;
+    } catch (e) {
+        var msg = String(e);
+        if (
+            msg.indexOf("Property cannot be added to Essential Graphics") >= 0
+            || msg.indexOf("Failed to add property to Essential Graphics") >= 0
+            || msg.indexOf("Property cannot be added to Essential Graphics in this AE version") >= 0
+        ) {
+            // Treat as idempotent no-op when it is already exported or unavailable in context.
+            return false;
+        }
+        throw e;
+    }
+}
+
+function aeNormalizeSetValueInputForProp(prop, value) {
+    if (!(value instanceof Array)) {
+        return value;
+    }
+    try {
+        var currentValue = prop.value;
+        if (currentValue instanceof Array && currentValue.length === 3 && value.length === 2) {
+            return [value[0], value[1], 0];
+        }
+    } catch (eCurrentValue) {}
+    return value;
+}
+
+function aeResolveChildPropertyByMatchName(group, matchName) {
+    if (!group || !matchName) {
+        return null;
+    }
+    for (var i = 1; i <= group.numProperties; i++) {
+        var child = group.property(i);
+        if (child && child.matchName === matchName) {
+            return child;
+        }
+    }
+    return null;
+}
+
+function aeResolveEffectParamProperty(effect, paramSpec) {
+    if (!effect || !paramSpec) {
+        return null;
+    }
+    if (paramSpec.propertyPath !== undefined) {
+        return resolveProperty(effect, String(paramSpec.propertyPath));
+    }
+    if (paramSpec.matchName !== undefined) {
+        return aeResolveChildPropertyByMatchName(effect, String(paramSpec.matchName));
+    }
+    if (paramSpec.propertyIndex !== undefined) {
+        var idx = parseInt(paramSpec.propertyIndex, 10);
+        if (!isNaN(idx) && idx > 0) {
+            return effect.property(idx);
+        }
+    }
+    return null;
+}
+
+function aeApplyEffectParams(effect, paramSpecs) {
+    if (!(paramSpecs instanceof Array)) {
+        return 0;
+    }
+    var count = 0;
+    for (var i = 0; i < paramSpecs.length; i++) {
+        var paramSpec = paramSpecs[i];
+        var prop = aeResolveEffectParamProperty(effect, paramSpec);
+        if (!prop) {
+            throw new Error("Effect parameter target was not found.");
+        }
+        if (typeof prop.setValue !== "function") {
+            throw new Error("Effect parameter does not support setValue().");
+        }
+        var value = aeNormalizeSetValueInputForProp(prop, paramSpec.value);
+        prop.setValue(value);
+        count += 1;
+    }
+    return count;
+}
+
+function aeFindShapeRepeater(layer, groupIndex, repeaterName) {
+    if (!layer || layer.matchName !== "ADBE Vector Layer") {
+        return null;
+    }
+    var rootVectors = layer.property("ADBE Root Vectors Group");
+    if (!rootVectors) {
+        return null;
+    }
+    var targetIndex = groupIndex !== undefined ? parseInt(groupIndex, 10) : 1;
+    if (isNaN(targetIndex) || targetIndex <= 0) {
+        targetIndex = 1;
+    }
+    var targetGroup = rootVectors.property(targetIndex);
+    if (!targetGroup || targetGroup.matchName !== "ADBE Vector Group") {
+        return null;
+    }
+    var contents = targetGroup.property("ADBE Vectors Group");
+    if (!contents) {
+        return null;
+    }
+    for (var i = 1; i <= contents.numProperties; i++) {
+        var prop = contents.property(i);
+        if (!prop || prop.matchName !== "ADBE Vector Filter - Repeater") {
+            continue;
+        }
+        if (repeaterName !== undefined && repeaterName !== null && String(repeaterName).length > 0) {
+            if (prop.name === String(repeaterName)) {
+                return prop;
+            }
+            continue;
+        }
+        return prop;
     }
     return null;
 }
@@ -278,6 +414,10 @@ function aeValidateSceneSpec(scene) {
                     errors.push(prefix + ".transform must be an object when specified.");
                 }
 
+                if (layer.parentId !== undefined && layer.parentId !== null && typeof layer.parentId !== "string") {
+                    errors.push(prefix + ".parentId must be a string or null when specified.");
+                }
+
                 var propertyValues = layer.propertyValues;
                 if (propertyValues !== undefined) {
                     if (!(propertyValues instanceof Array)) {
@@ -317,6 +457,105 @@ function aeValidateSceneSpec(scene) {
                             }
                             if (effect.name !== undefined && typeof effect.name !== "string") {
                                 errors.push(effectPrefix + ".name must be a string when specified.");
+                            }
+                            if (effect.params !== undefined) {
+                                if (!(effect.params instanceof Array)) {
+                                    errors.push(effectPrefix + ".params must be an array when specified.");
+                                } else {
+                                    for (var p = 0; p < effect.params.length; p++) {
+                                        var param = effect.params[p];
+                                        var paramPrefix = effectPrefix + ".params[" + p + "]";
+                                        if (!param || typeof param !== "object" || param instanceof Array) {
+                                            errors.push(paramPrefix + " must be an object.");
+                                            continue;
+                                        }
+                                        if (param.value === undefined) {
+                                            errors.push(paramPrefix + ".value is required.");
+                                        }
+                                        var hasParamPath = typeof param.propertyPath === "string" && param.propertyPath.length > 0;
+                                        var hasParamMatchName = typeof param.matchName === "string" && param.matchName.length > 0;
+                                        var hasParamIndex = param.propertyIndex !== undefined;
+                                        var selectorCount = 0;
+                                        if (hasParamPath) selectorCount += 1;
+                                        if (hasParamMatchName) selectorCount += 1;
+                                        if (hasParamIndex) selectorCount += 1;
+                                        if (selectorCount !== 1) {
+                                            errors.push(paramPrefix + " must specify exactly one of propertyPath, matchName, propertyIndex.");
+                                        }
+                                        if (hasParamIndex) {
+                                            var parsedIndex = parseInt(param.propertyIndex, 10);
+                                            if (isNaN(parsedIndex) || parsedIndex <= 0) {
+                                                errors.push(paramPrefix + ".propertyIndex must be a positive integer.");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                var repeaters = layer.repeaters;
+                if (repeaters !== undefined) {
+                    if (!(repeaters instanceof Array)) {
+                        errors.push(prefix + ".repeaters must be an array when specified.");
+                    } else {
+                        for (var rp = 0; rp < repeaters.length; rp++) {
+                            var repeater = repeaters[rp];
+                            var repeaterPrefix = prefix + ".repeaters[" + rp + "]";
+                            if (!repeater || typeof repeater !== "object" || repeater instanceof Array) {
+                                errors.push(repeaterPrefix + " must be an object.");
+                                continue;
+                            }
+                            if (
+                                repeater.groupIndex !== undefined
+                                && (!aeIsFiniteNumber(repeater.groupIndex) || repeater.groupIndex <= 0)
+                            ) {
+                                errors.push(repeaterPrefix + ".groupIndex must be a positive number when specified.");
+                            }
+                        }
+                    }
+                }
+
+                var expressions = layer.expressions;
+                if (expressions !== undefined) {
+                    if (!(expressions instanceof Array)) {
+                        errors.push(prefix + ".expressions must be an array when specified.");
+                    } else {
+                        for (var e = 0; e < expressions.length; e++) {
+                            var exp = expressions[e];
+                            var expPrefix = prefix + ".expressions[" + e + "]";
+                            if (!exp || typeof exp !== "object" || exp instanceof Array) {
+                                errors.push(expPrefix + " must be an object.");
+                                continue;
+                            }
+                            if (typeof exp.propertyPath !== "string" || exp.propertyPath.length === 0) {
+                                errors.push(expPrefix + ".propertyPath is required and must be a string.");
+                            }
+                            if (typeof exp.expression !== "string") {
+                                errors.push(expPrefix + ".expression is required and must be a string.");
+                            }
+                        }
+                    }
+                }
+
+                var essentialProperties = layer.essentialProperties;
+                if (essentialProperties !== undefined) {
+                    if (!(essentialProperties instanceof Array)) {
+                        errors.push(prefix + ".essentialProperties must be an array when specified.");
+                    } else {
+                        for (var q = 0; q < essentialProperties.length; q++) {
+                            var ep = essentialProperties[q];
+                            var epPrefix = prefix + ".essentialProperties[" + q + "]";
+                            if (!ep || typeof ep !== "object" || ep instanceof Array) {
+                                errors.push(epPrefix + " must be an object.");
+                                continue;
+                            }
+                            if (typeof ep.propertyPath !== "string" || ep.propertyPath.length === 0) {
+                                errors.push(epPrefix + ".propertyPath is required and must be a string.");
+                            }
+                            if (ep.essentialName !== undefined && typeof ep.essentialName !== "string") {
+                                errors.push(epPrefix + ".essentialName must be a string when specified.");
                             }
                         }
                     }
@@ -616,6 +855,52 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex) {
                 "addEffect"
             );
             operationCount += 1;
+            existingEffect = aeFindExistingEffect(layer, effect.matchName, effectName);
+            if (!existingEffect) {
+                throw new Error("Added effect could not be resolved for parameter updates.");
+            }
+        }
+        if (effect.params !== undefined) {
+            operationCount += aeApplyEffectParams(existingEffect, effect.params);
+        }
+    }
+
+    var repeaters = layerSpec.repeaters || [];
+    for (var rr = 0; rr < repeaters.length; rr++) {
+        var repeaterSpec = repeaters[rr];
+        var repeaterName = repeaterSpec.name;
+        if (repeaterName !== undefined && repeaterName !== null && String(repeaterName).length > 0) {
+            var existingRepeater = aeFindShapeRepeater(layer, repeaterSpec.groupIndex, repeaterName);
+            if (existingRepeater) {
+                existingRepeater.remove();
+                operationCount += 1;
+            }
+        }
+        aeInvokeMutation(
+            addShapeRepeater,
+            [layerId, null, JSON.stringify(repeaterSpec)],
+            "addShapeRepeater"
+        );
+        operationCount += 1;
+    }
+
+    var expressions = layerSpec.expressions || [];
+    for (var p = 0; p < expressions.length; p++) {
+        var expressionSpec = expressions[p];
+        aeApplyExpression(layerId, expressionSpec.propertyPath, expressionSpec.expression);
+        operationCount += 1;
+    }
+
+    var essentialProperties = layerSpec.essentialProperties || [];
+    for (var r = 0; r < essentialProperties.length; r++) {
+        var essentialSpec = essentialProperties[r];
+        var addedEssential = aeTryAddEssentialProperty(
+            layerId,
+            essentialSpec.propertyPath,
+            essentialSpec.essentialName
+        );
+        if (addedEssential) {
+            operationCount += 1;
         }
     }
 
@@ -649,6 +934,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex) {
     return {
         id: resolved.sceneId,
         created: resolved.created,
+        parentId: layerSpec.parentId !== undefined ? layerSpec.parentId : undefined,
         layerId: layerId,
         layerUid: layer ? aeTryGetLayerUid(layer) : null,
         layerName: layer ? layer.name : null,
@@ -696,7 +982,17 @@ function applyScene(sceneJSON, optionsJSON) {
                 operationsPlanned += 1;
             }
             operationsPlanned += (layer.propertyValues || []).length;
-            operationsPlanned += (layer.effects || []).length;
+            var layerEffects = layer.effects || [];
+            operationsPlanned += layerEffects.length;
+            for (var ef = 0; ef < layerEffects.length; ef++) {
+                operationsPlanned += (layerEffects[ef].params || []).length;
+            }
+            operationsPlanned += (layer.repeaters || []).length;
+            operationsPlanned += (layer.expressions || []).length;
+            operationsPlanned += (layer.essentialProperties || []).length;
+            if (layer.parentId !== undefined) {
+                operationsPlanned += 1;
+            }
             var animations = layer.animations || [];
             for (var j = 0; j < animations.length; j++) {
                 operationsPlanned += (animations[j].keyframes || []).length;
@@ -750,6 +1046,7 @@ function applyScene(sceneJSON, optionsJSON) {
         var appliedLayers = [];
         var createdCount = 0;
         var reusedCount = 0;
+        var parentAppliedCount = 0;
         var sceneLayerIndex = aeBuildSceneLayerIndex(comp);
         app.beginUndoGroup("Apply Scene");
         try {
@@ -761,6 +1058,52 @@ function applyScene(sceneJSON, optionsJSON) {
                 } else {
                     reusedCount += 1;
                 }
+            }
+
+            for (var t = 0; t < appliedLayers.length; t++) {
+                var normalizedApplied = appliedLayers[t];
+                if (!normalizedApplied.id) {
+                    continue;
+                }
+                var normalizedLayerSet = sceneLayerIndex[normalizedApplied.id] || [];
+                if (normalizedLayerSet.length >= 1 && normalizedLayerSet[0]) {
+                    normalizedApplied.layerId = normalizedLayerSet[0].index;
+                    normalizedApplied.layerUid = aeTryGetLayerUid(normalizedLayerSet[0]);
+                    normalizedApplied.layerName = normalizedLayerSet[0].name;
+                }
+            }
+
+            var sceneIdToLayerId = {};
+            for (var u = 0; u < appliedLayers.length; u++) {
+                var appliedLayer = appliedLayers[u];
+                if (appliedLayer.id) {
+                    sceneIdToLayerId[appliedLayer.id] = appliedLayer.layerId;
+                }
+            }
+            for (var v = 0; v < layers.length; v++) {
+                var layerSpec = layers[v];
+                if (layerSpec.parentId === undefined) {
+                    continue;
+                }
+                var childApplied = appliedLayers[v];
+                var parentLayerId = null;
+                if (layerSpec.parentId !== null) {
+                    parentLayerId = sceneIdToLayerId[String(layerSpec.parentId)];
+                    if (!parentLayerId) {
+                        throw new Error("parentId '" + layerSpec.parentId + "' was not found in scene layers.");
+                    }
+                }
+                if (parentLayerId !== null && parentLayerId === childApplied.layerId) {
+                    // Already in desired state for scene identity mapping.
+                    continue;
+                }
+                aeInvokeMutation(
+                    parentLayer,
+                    [childApplied.layerId, parentLayerId],
+                    "parentLayer"
+                );
+                childApplied.operations += 1;
+                parentAppliedCount += 1;
             }
         } finally {
             app.endUndoGroup();
@@ -774,6 +1117,7 @@ function applyScene(sceneJSON, optionsJSON) {
             operationsPlanned: operationsPlanned,
             createdCount: createdCount,
             reusedCount: reusedCount,
+            parentAppliedCount: parentAppliedCount,
             createdLayers: appliedLayers,
             appliedLayers: appliedLayers
         });

@@ -183,6 +183,12 @@ def test_build_parser_parses_create_comp() -> None:
     assert args.pixel_aspect == 1.0
 
 
+def test_build_parser_parses_expression_errors() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["expression-errors"])
+    assert args.command == "expression-errors"
+
+
 def test_build_parser_parses_set_keyframe_json_value() -> None:
     parser = build_parser()
     args = parser.parse_args(

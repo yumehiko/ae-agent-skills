@@ -84,6 +84,23 @@ def test_get_properties_supports_layer_name(monkeypatch) -> None:
     assert captured["params"] == [("layerName", "Control")]
 
 
+def test_get_expression_errors_calls_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"count": 0, "issues": []}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_expression_errors()
+
+    assert captured["url"] == "http://127.0.0.1:8080/expression-errors"
+    assert captured["timeout"] == 5.0
+
+
 def test_create_comp_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

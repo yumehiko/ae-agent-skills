@@ -118,6 +118,11 @@ class AEClient:
         response = requests.get(self._url("/selected-properties"), timeout=self.timeout)
         return self._handle_response(response)
 
+    def get_expression_errors(self) -> Dict[str, Any]:
+        """Return expression error diagnostics for the active composition."""
+        response = requests.get(self._url("/expression-errors"), timeout=self.timeout)
+        return self._handle_response(response)
+
     def get_properties(
         self,
         layer_id: int | None = None,

@@ -88,6 +88,10 @@ function handleGetSelectedProperties(res) {
     handleBridgeDataCall('getSelectedProperties()', res, 'getSelectedProperties()');
 }
 
+function handleGetExpressionErrors(res) {
+    handleBridgeDataCall('getExpressionErrors()', res, 'getExpressionErrors()');
+}
+
 function handleCreateComp(req, res) {
     readJsonBody(req, res, ({ name, width, height, duration, frameRate, pixelAspect }) => {
         if (!name || typeof name !== 'string') {
@@ -427,6 +431,10 @@ function routeRequest(req, res) {
     }
     if (pathname === '/selected-properties' && method === 'GET') {
         handleGetSelectedProperties(res);
+        return;
+    }
+    if (pathname === '/expression-errors' && method === 'GET') {
+        handleGetExpressionErrors(res);
         return;
     }
     if (pathname === '/expression' && method === 'POST') {

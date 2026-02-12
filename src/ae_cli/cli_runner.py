@@ -89,6 +89,10 @@ def _run_selected_properties(client: AEClient, _args: argparse.Namespace) -> Non
     _print_json(client.get_selected_properties())
 
 
+def _run_expression_errors(client: AEClient, _args: argparse.Namespace) -> None:
+    _print_json(client.get_expression_errors())
+
+
 def _run_properties(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.get_properties(
@@ -290,6 +294,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "create-comp": _run_create_comp,
     "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,
+    "expression-errors": _run_expression_errors,
     "properties": _run_properties,
     "set-expression": _run_set_expression,
     "set-property": _run_set_property,
