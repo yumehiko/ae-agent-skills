@@ -520,13 +520,19 @@ class AEClient:
         )
         return self._handle_response(response)
 
-    def apply_scene(self, scene: Dict[str, Any], validate_only: bool = False) -> Dict[str, Any]:
+    def apply_scene(
+        self,
+        scene: Dict[str, Any],
+        validate_only: bool = False,
+        mode: str = "merge",
+    ) -> Dict[str, Any]:
         """Apply a declarative scene JSON payload."""
         response = requests.post(
             self._url("/scene"),
             json={
                 "scene": scene,
                 "validateOnly": validate_only,
+                "mode": mode,
             },
             timeout=self.timeout,
         )

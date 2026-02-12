@@ -383,6 +383,33 @@ def test_apply_scene_posts_expected_payload(monkeypatch) -> None:
             "layers": [{"id": "title", "type": "text", "text": "Hello"}],
         },
         "validateOnly": True,
+        "mode": "merge",
+    }
+
+
+def test_apply_scene_posts_mode_override(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"mode": "apply"}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.apply_scene(
+        scene={"layers": [{"id": "cross", "type": "shape"}]},
+        mode="clear-all",
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/scene"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "scene": {"layers": [{"id": "cross", "type": "shape"}]},
+        "validateOnly": False,
+        "mode": "clear-all",
     }
 
 

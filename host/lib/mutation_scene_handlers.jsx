@@ -31,6 +31,9 @@ function aeRequireFiniteNumber(value, fieldPath, errors) {
 }
 
 var AE_SCENE_ID_PREFIX = "aeSceneId:";
+var AE_SCENE_APPLY_MODE_MERGE = "merge";
+var AE_SCENE_APPLY_MODE_REPLACE_MANAGED = "replace-managed";
+var AE_SCENE_APPLY_MODE_CLEAR_ALL = "clear-all";
 
 function aeExtractSceneIdFromComment(comment) {
     if (comment === null || comment === undefined) {
@@ -90,6 +93,89 @@ function aeBuildSceneLayerIndex(comp) {
         index[sceneId].push(layer);
     }
     return index;
+}
+
+function aeNormalizeSceneApplyMode(mode) {
+    if (mode === null || mode === undefined || mode === "") {
+        return AE_SCENE_APPLY_MODE_MERGE;
+    }
+    var raw = String(mode).toLowerCase();
+    if (
+        raw === AE_SCENE_APPLY_MODE_MERGE
+        || raw === AE_SCENE_APPLY_MODE_REPLACE_MANAGED
+        || raw === AE_SCENE_APPLY_MODE_CLEAR_ALL
+    ) {
+        return raw;
+    }
+    throw new Error(
+        "Invalid scene apply mode '" + raw
+        + "'. Use one of: merge, replace-managed, clear-all."
+    );
+}
+
+function aeBuildDeclaredSceneIdSet(sceneLayers) {
+    var ids = {};
+    for (var i = 0; i < sceneLayers.length; i++) {
+        var layerSpec = sceneLayers[i];
+        if (!layerSpec || layerSpec.id === undefined || layerSpec.id === null) {
+            continue;
+        }
+        ids[String(layerSpec.id)] = true;
+    }
+    return ids;
+}
+
+function aeCollectLayersForSceneApplyMode(comp, mode, declaredSceneIds) {
+    var targets = [];
+    for (var i = 1; i <= comp.numLayers; i++) {
+        var layer = comp.layer(i);
+        if (!layer) {
+            continue;
+        }
+        var sceneId = aeExtractSceneIdFromComment(layer.comment);
+        var shouldDelete = false;
+        if (mode === AE_SCENE_APPLY_MODE_CLEAR_ALL) {
+            shouldDelete = true;
+        } else if (mode === AE_SCENE_APPLY_MODE_REPLACE_MANAGED) {
+            shouldDelete = !!sceneId && !declaredSceneIds[sceneId];
+        }
+        if (!shouldDelete) {
+            continue;
+        }
+        targets.push({
+            layerRef: layer,
+            layerId: layer.index,
+            layerName: layer.name,
+            sceneId: sceneId
+        });
+    }
+    return targets;
+}
+
+function aeSortLayerDeleteTargetsDescending(targets) {
+    targets.sort(function(a, b) {
+        return b.layerId - a.layerId;
+    });
+    return targets;
+}
+
+function aeDeleteLayerTargets(targets) {
+    var deleted = [];
+    var orderedTargets = aeSortLayerDeleteTargetsDescending(targets);
+    for (var i = 0; i < orderedTargets.length; i++) {
+        var target = orderedTargets[i];
+        var layerRef = target.layerRef;
+        if (!layerRef) {
+            continue;
+        }
+        layerRef.remove();
+        deleted.push({
+            layerId: target.layerId,
+            layerName: target.layerName,
+            sceneId: target.sceneId
+        });
+    }
+    return deleted;
 }
 
 function aeFindUntaggedLayerByNameAndType(comp, name, expectedType) {
@@ -953,6 +1039,7 @@ function applyScene(sceneJSON, optionsJSON) {
             options = JSON.parse(optionsJSON);
         }
         var validateOnly = options.validateOnly === true;
+        var applyMode = aeNormalizeSceneApplyMode(options.mode);
 
         var validation = aeValidateSceneSpec(scene);
         if (!validation.ok) {
@@ -1033,13 +1120,19 @@ function applyScene(sceneJSON, optionsJSON) {
             };
         }
 
+        var declaredSceneIds = aeBuildDeclaredSceneIdSet(layers);
+        var deleteTargets = comp ? aeCollectLayersForSceneApplyMode(comp, applyMode, declaredSceneIds) : [];
+        operationsPlanned += deleteTargets.length;
+
         if (validateOnly) {
             return encodePayload({
                 status: "success",
                 mode: "validate",
+                applyMode: applyMode,
                 composition: compSummary,
                 layerCount: layers.length,
-                operationsPlanned: operationsPlanned
+                operationsPlanned: operationsPlanned,
+                deletedCount: deleteTargets.length
             });
         }
 
@@ -1047,9 +1140,11 @@ function applyScene(sceneJSON, optionsJSON) {
         var createdCount = 0;
         var reusedCount = 0;
         var parentAppliedCount = 0;
-        var sceneLayerIndex = aeBuildSceneLayerIndex(comp);
+        var deletedLayers = [];
         app.beginUndoGroup("Apply Scene");
         try {
+            deletedLayers = aeDeleteLayerTargets(deleteTargets);
+            var sceneLayerIndex = aeBuildSceneLayerIndex(comp);
             for (var m = 0; m < layers.length; m++) {
                 var applied = aeApplySceneLayer(comp, layers[m], m, sceneLayerIndex);
                 appliedLayers.push(applied);
@@ -1113,11 +1208,14 @@ function applyScene(sceneJSON, optionsJSON) {
             status: "success",
             mode: "apply",
             composition: compSummary,
+            applyMode: applyMode,
             layerCount: appliedLayers.length,
             operationsPlanned: operationsPlanned,
             createdCount: createdCount,
             reusedCount: reusedCount,
             parentAppliedCount: parentAppliedCount,
+            deletedCount: deletedLayers.length,
+            deletedLayers: deletedLayers,
             createdLayers: appliedLayers,
             appliedLayers: appliedLayers
         });

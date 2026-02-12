@@ -1,0 +1,103 @@
+{
+  "composition": {
+    "name": "AccentCross640",
+    "width": 640,
+    "height": 640,
+    "duration": 3,
+    "frameRate": 30,
+    "pixelAspect": 1,
+    "createIfMissing": true,
+    "setActive": true
+  },
+  "layers": [
+    {
+      "id": "controller",
+      "type": "null",
+      "name": "Controller",
+      "transform": {
+        "position": [320, 320]
+      },
+      "effects": [
+        {
+          "matchName": "ADBE Slider Control",
+          "name": "Motion",
+          "params": [
+            {
+              "propertyIndex": 1,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "matchName": "ADBE Color Control",
+          "name": "Cross Color",
+          "params": [
+            {
+              "propertyIndex": 1,
+              "value": [255, 255, 255]
+            }
+          ]
+        }
+      ],
+      "essentialProperties": [
+        {
+          "propertyPath": "ADBE Effect Parade.Motion.ADBE Slider Control-0001",
+          "essentialName": "動作スライダー"
+        },
+        {
+          "propertyPath": "ADBE Effect Parade.Cross Color.ADBE Color Control-0001",
+          "essentialName": "十字の色"
+        }
+      ]
+    },
+    {
+      "id": "cross_h",
+      "type": "shape",
+      "name": "Cross",
+      "shapeType": "rect",
+      "shapeSize": [128, 32],
+      "shapePosition": [0, 0],
+      "shapeRoundness": 16,
+      "shapeFillColor": [255, 255, 255],
+      "shapeFillOpacity": 100,
+      "repeaters": [
+        {
+          "groupIndex": 1,
+          "name": "Cross Repeater",
+          "copies": 2,
+          "position": [0, 0],
+          "scale": [100, 100],
+          "rotation": 90
+        }
+      ],
+      "transform": {
+        "position": [320, 320],
+        "scale": [100, 100],
+        "rotation": 0,
+        "opacity": 100
+      },
+      "expressions": [
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Position",
+          "expression": "t = clamp(thisComp.layer(\"Controller\").effect(\"Motion\")(\"ADBE Slider Control-0001\"), 0, 100);\noffset = (t < 50) ? linear(t, 0, 50, -128, 0) : linear(t, 50, 100, 0, 128);\n[320 + offset, 320];"
+        },
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Scale",
+          "expression": "t = clamp(thisComp.layer(\"Controller\").effect(\"Motion\")(\"ADBE Slider Control-0001\"), 0, 100);\ns = linear(t, 0, 100, 80, 100);\n[s, s];"
+        },
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Rotate Z",
+          "expression": "t = clamp(thisComp.layer(\"Controller\").effect(\"Motion\")(\"ADBE Slider Control-0001\"), 0, 100);\nlinear(t, 0, 100, 0, 180);"
+        },
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Opacity",
+          "expression": "t = clamp(thisComp.layer(\"Controller\").effect(\"Motion\")(\"ADBE Slider Control-0001\"), 0, 100);\n(t < 20) ? linear(t, 0, 20, 0, 100) : ((t < 70) ? 100 : linear(t, 70, 100, 100, 0));"
+        },
+        {
+          "propertyPath": "ADBE Root Vectors Group.ADBE Vector Group.ADBE Vectors Group.ADBE Vector Graphic - Fill.ADBE Vector Fill Color",
+          "expression": "thisComp.layer(\"Controller\").effect(\"Cross Color\")(\"ADBE Color Control-0001\");"
+        }
+      ]
+    }
+  ]
+}

@@ -28,9 +28,17 @@ After Effects を宣言型 JSON で構築する標準スキル。
 ae-cli health
 ae-cli apply-scene --scene-file <scene.json> --validate-only
 ae-cli apply-scene --scene-file <scene.json>
+ae-cli apply-scene --scene-file <scene.json> --mode replace-managed
+ae-cli apply-scene --scene-file <scene.json> --mode clear-all
 ae-cli layers
 ae-cli expression-errors
 ```
+
+### apply mode 指針
+
+- `merge`（既定）: 既存維持 + 宣言分だけ upsert
+- `replace-managed`: `aeSceneId:*` の管理対象だけ差し替え
+- `clear-all`: comp を空にして完全再宣言
 
 ## scene 設計ルール
 
@@ -43,6 +51,7 @@ ae-cli expression-errors
 - Effect 値は `layers[].effects[].params[]`
 - expression は `layers[].expressions[]`
 - Essential Graphics は `layers[].essentialProperties[]`
+- expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
 
 ## トラブル時
 
@@ -52,5 +61,7 @@ ae-cli expression-errors
   - `ae-cli expression-errors`
 - 意図しない新規レイヤー作成:
   - `layers[].id` 未指定/変更を確認
+- 旧レイヤーが残る:
+  - `apply-scene --mode replace-managed` または `--mode clear-all` を使う
 - 宣言型で表現できない操作が必要:
   - `aftereffects-cli-legacy` へ切り替え

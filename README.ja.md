@@ -105,6 +105,8 @@ ae-cli delete-layer --layer-id 4
 ae-cli delete-comp --comp-name "Shot_A"
 ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
+ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
+ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
 ```
 
 `ae-cli` が `PATH` にない場合は、次で実行できます。
@@ -122,6 +124,8 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 ```bash
 ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
+ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
+ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
 ```
 
 スキーマ参照:
@@ -171,6 +175,16 @@ ae-cli apply-scene --scene-file examples/scene.example.json
 - `layers[].repeaters[]`: shape の Repeater 定義（`add-shape-repeater` 相当オプション）
 - `layers[].effects[].params[]`: effect パラメータ設定（`propertyPath` / `matchName` / `propertyIndex` のいずれか + `value`）
 - 3D ベクトル系プロパティに対しては、`[x, y]` の2次元入力を `[x, y, 0]` として自動補完します。
+
+`apply-scene` の mode:
+
+- `merge`（デフォルト）: upsert のみ。宣言したレイヤーは更新/作成、未宣言レイヤーは保持。
+- `replace-managed`: 現在の scene に含まれない管理対象レイヤー（`aeSceneId:*`）だけ削除してから適用。
+- `clear-all`: 対象 comp の全レイヤーを削除してから適用。
+
+expression の移植性メモ:
+
+- effect パラメータ参照は、表示名（例: `(\"Slider\")`）よりも matchName（例: `(\"ADBE Slider Control-0001\")`）を優先する。
 
 ## 開発向け
 

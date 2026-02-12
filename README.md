@@ -105,6 +105,8 @@ ae-cli delete-layer --layer-id 4
 ae-cli delete-comp --comp-name "Shot_A"
 ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
+ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
+ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
 ```
 
 If `ae-cli` is not on your `PATH`, run it with:
@@ -122,6 +124,8 @@ Use one JSON file to apply a composition/layer setup in batch:
 ```bash
 ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
+ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
+ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
 ```
 
 Schema reference:
@@ -171,6 +175,16 @@ Top-level fields:
 - `layers[].repeaters[]`: shape repeater definitions (same options as `add-shape-repeater`)
 - `layers[].effects[].params[]`: effect parameter assignments (selector: one of `propertyPath`/`matchName`/`propertyIndex`, plus `value`)
 - For 3D vector properties, 2D input like `[x, y]` is accepted and normalized to `[x, y, 0]`.
+
+`apply-scene` modes:
+
+- `merge` (default): upsert only. Declared layers are updated/created, undeclared layers are kept.
+- `replace-managed`: delete only managed layers (`aeSceneId:*`) that are not in the current scene, then apply.
+- `clear-all`: delete all layers in the target comp, then apply.
+
+Expression portability tip:
+
+- Prefer matchName-based references in expressions for effect params (for example `("ADBE Slider Control-0001")`), rather than localized display names like `("Slider")`.
 
 ## Development
 

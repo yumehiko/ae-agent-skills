@@ -370,6 +370,24 @@ def test_build_parser_parses_apply_scene() -> None:
     assert args.command == "apply-scene"
     assert args.scene_file == "examples/scene.example.json"
     assert args.validate_only is True
+    assert args.mode == "merge"
+
+
+def test_build_parser_parses_apply_scene_mode() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "apply-scene",
+            "--scene-file",
+            "examples/scene.example.json",
+            "--mode",
+            "clear-all",
+        ]
+    )
+    assert args.command == "apply-scene"
+    assert args.scene_file == "examples/scene.example.json"
+    assert args.validate_only is False
+    assert args.mode == "clear-all"
 
 
 def test_run_command_returns_2_for_unknown_command(capsys) -> None:

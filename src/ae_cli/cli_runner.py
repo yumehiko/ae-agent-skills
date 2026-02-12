@@ -281,6 +281,7 @@ def _run_apply_scene(client: AEClient, args: argparse.Namespace) -> None:
         client.apply_scene(
             scene=scene,
             validate_only=args.validate_only,
+            mode=args.mode,
         )
     )
 

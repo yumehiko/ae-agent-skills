@@ -303,5 +303,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate and plan without mutating the active project",
     )
+    apply_scene_parser.add_argument(
+        "--mode",
+        choices=["merge", "replace-managed", "clear-all"],
+        default="merge",
+        help=(
+            "Scene apply strategy: merge (upsert only), replace-managed "
+            "(delete managed layers not declared), clear-all (delete all comp layers first)"
+        ),
+    )
 
     return parser
