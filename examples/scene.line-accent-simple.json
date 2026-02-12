@@ -1,0 +1,83 @@
+{
+  "composition": {
+    "name": "LineAccent640",
+    "width": 640,
+    "height": 640,
+    "duration": 3,
+    "frameRate": 30,
+    "pixelAspect": 1,
+    "createIfMissing": true,
+    "setActive": true
+  },
+  "layers": [
+    {
+      "id": "controller",
+      "type": "null",
+      "name": "Controller",
+      "transform": {
+        "position": [320, 320]
+      },
+      "effects": [
+        {
+          "matchName": "ADBE Slider Control",
+          "name": "Motion",
+          "params": [
+            {
+              "propertyIndex": 1,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "matchName": "ADBE Color Control",
+          "name": "Line Color",
+          "params": [
+            {
+              "propertyIndex": 1,
+              "value": [255, 255, 255]
+            }
+          ]
+        }
+      ],
+      "essentialProperties": [
+        {
+          "propertyPath": "ADBE Effect Parade.Line Color.ADBE Color Control-0001",
+          "essentialName": "色"
+        },
+        {
+          "propertyPath": "ADBE Effect Parade.Motion.ADBE Slider Control-0001",
+          "essentialName": "動作制御スライダー"
+        }
+      ]
+    },
+    {
+      "id": "line",
+      "type": "shape",
+      "name": "Line",
+      "shapeType": "rect",
+      "shapeSize": [1, 16],
+      "shapePosition": [0, 0],
+      "shapeRoundness": 8,
+      "shapeFillColor": [255, 255, 255],
+      "shapeFillOpacity": 100,
+      "transform": {
+        "position": [320, 320],
+        "opacity": 100
+      },
+      "expressions": [
+        {
+          "propertyPath": "ADBE Root Vectors Group.ADBE Vector Group.ADBE Vectors Group.ADBE Vector Shape - Rect.ADBE Vector Rect Size",
+          "expression": "t = clamp(thisComp.layer(\"Controller\").effect(\"Motion\")(\"ADBE Slider Control-0001\"), 0, 100);\nstartX = -64;\nendX = 64;\nif (t < 50) {\n  head = linear(t, 0, 50, startX, endX);\n  tail = startX;\n} else {\n  head = endX;\n  tail = linear(t, 50, 100, startX, endX);\n}\nlen = Math.max(0.001, Math.abs(head - tail));\n[len, 16];"
+        },
+        {
+          "propertyPath": "ADBE Root Vectors Group.ADBE Vector Group.ADBE Vectors Group.ADBE Vector Shape - Rect.ADBE Vector Rect Position",
+          "expression": "t = clamp(thisComp.layer(\"Controller\").effect(\"Motion\")(\"ADBE Slider Control-0001\"), 0, 100);\nstartX = -64;\nendX = 64;\nif (t < 50) {\n  head = linear(t, 0, 50, startX, endX);\n  tail = startX;\n} else {\n  head = endX;\n  tail = linear(t, 50, 100, startX, endX);\n}\n[(head + tail) / 2, 0];"
+        },
+        {
+          "propertyPath": "ADBE Root Vectors Group.ADBE Vector Group.ADBE Vectors Group.ADBE Vector Graphic - Fill.ADBE Vector Fill Color",
+          "expression": "thisComp.layer(\"Controller\").effect(\"Line Color\")(\"ADBE Color Control-0001\");"
+        }
+      ]
+    }
+  ]
+}

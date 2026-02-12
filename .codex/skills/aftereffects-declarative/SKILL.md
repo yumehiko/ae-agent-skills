@@ -31,6 +31,7 @@ ae-cli apply-scene --scene-file <scene.json>
 ae-cli apply-scene --scene-file <scene.json> --mode replace-managed
 ae-cli apply-scene --scene-file <scene.json> --mode clear-all
 ae-cli layers
+ae-cli properties --layer-name <layer> --include-group <group> --include-group-children
 ae-cli expression-errors
 ```
 
@@ -52,6 +53,27 @@ ae-cli expression-errors
 - expression は `layers[].expressions[]`
 - Essential Graphics は `layers[].essentialProperties[]`
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
+
+## propertyPath 運用ルール（汎用）
+
+- 目的: 実装コードを読まずに `propertyPath` を安定して決める。
+- `propertyPath` は基本的に matchName ベースで指定する（表示名依存を避ける）。
+- 適用前に `ae-cli properties` で対象レイヤーの実パスを確認し、出力に合わせて JSON へ転記する。
+- Shape 内部プロパティは次の順で辿る:
+  - `ADBE Root Vectors Group`（Contents）
+  - `ADBE Vector Group`
+  - `ADBE Vectors Group`
+  - 各要素（例: Shape Path / Fill / Stroke / Filter）
+- Effect パラメータ参照は `layers[].effects[].params[]` でも expression でも matchName 優先にする。
+- 迷ったら「推測で書く」のではなく、先に `properties` 出力を正として合わせる。
+
+## 標準デバッグ手順（実装コードを読まない）
+
+1. `ae-cli apply-scene --scene-file <scene.json> --validate-only`
+2. `ae-cli apply-scene --scene-file <scene.json>`
+3. `ae-cli expression-errors` で失敗箇所を確認
+4. 対象レイヤーに対して `ae-cli properties --layer-name <layer> --include-group <group> --include-group-children` を実行し、`propertyPath` を再特定
+5. scene JSON の `propertyPath` を修正して再適用
 
 ## トラブル時
 
