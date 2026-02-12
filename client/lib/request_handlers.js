@@ -410,6 +410,9 @@ function routeRequest(req, res) {
     if (typeof routeShapeRequest === 'function' && routeShapeRequest(pathname, method, req, res)) {
         return;
     }
+    if (typeof routeSceneRequest === 'function' && routeSceneRequest(pathname, method, req, res)) {
+        return;
+    }
     if (pathname === '/comps' && method === 'POST') {
         handleCreateComp(req, res);
         return;

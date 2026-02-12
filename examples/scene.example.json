@@ -1,0 +1,46 @@
+{
+  "composition": {
+    "name": "Main",
+    "width": 1920,
+    "height": 1080,
+    "duration": 8,
+    "frameRate": 30,
+    "pixelAspect": 1,
+    "createIfMissing": true,
+    "setActive": true
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "solid",
+      "name": "BG",
+      "width": 1920,
+      "height": 1080,
+      "color": [18, 34, 56],
+      "timing": {
+        "inPoint": 0,
+        "outPoint": 8
+      }
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "name": "Title",
+      "text": "Hello Agent",
+      "transform": {
+        "position": [960, 540],
+        "scale": [100, 100],
+        "opacity": 100
+      },
+      "animations": [
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Position",
+          "keyframes": [
+            { "time": 0, "value": [960, 760], "outInterp": "bezier", "easeOut": [0, 70] },
+            { "time": 0.8, "value": [960, 540], "inInterp": "bezier", "easeIn": [0, 80] }
+          ]
+        }
+      ]
+    }
+  ]
+}

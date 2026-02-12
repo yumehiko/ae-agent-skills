@@ -288,4 +288,19 @@ def build_parser() -> argparse.ArgumentParser:
     delete_comp_group.add_argument("--comp-id", type=int)
     delete_comp_group.add_argument("--comp-name")
 
+    apply_scene_parser = subparsers.add_parser(
+        "apply-scene",
+        help="Apply a declarative scene JSON to After Effects",
+    )
+    apply_scene_parser.add_argument(
+        "--scene-file",
+        required=True,
+        help="Path to a UTF-8 scene JSON file",
+    )
+    apply_scene_parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Validate and plan without mutating the active project",
+    )
+
     return parser

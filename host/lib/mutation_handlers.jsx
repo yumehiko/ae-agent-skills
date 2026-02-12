@@ -329,6 +329,19 @@ function setPropertyValue(layerId, layerName, propertyPath, valueJSON) {
         }
 
         var value = JSON.parse(valueJSON);
+        if (value instanceof Array) {
+            try {
+                var currentValue = prop.value;
+                if (
+                    currentValue instanceof Array
+                    && currentValue.length === 3
+                    && value.length === 2
+                ) {
+                    // Allow natural 2D input for 3D vector properties by filling Z with 0.
+                    value = [value[0], value[1], 0];
+                }
+            } catch (eDim) {}
+        }
         prop.setValue(value);
 
         return encodePayload({

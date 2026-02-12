@@ -514,3 +514,15 @@ class AEClient:
             timeout=self.timeout,
         )
         return self._handle_response(response)
+
+    def apply_scene(self, scene: Dict[str, Any], validate_only: bool = False) -> Dict[str, Any]:
+        """Apply a declarative scene JSON payload."""
+        response = requests.post(
+            self._url("/scene"),
+            json={
+                "scene": scene,
+                "validateOnly": validate_only,
+            },
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)

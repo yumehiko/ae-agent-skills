@@ -351,6 +351,21 @@ def test_build_parser_parses_delete_comp_by_name() -> None:
     assert args.comp_id is None
 
 
+def test_build_parser_parses_apply_scene() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "apply-scene",
+            "--scene-file",
+            "examples/scene.example.json",
+            "--validate-only",
+        ]
+    )
+    assert args.command == "apply-scene"
+    assert args.scene_file == "examples/scene.example.json"
+    assert args.validate_only is True
+
+
 def test_run_command_returns_2_for_unknown_command(capsys) -> None:
     args = SimpleNamespace(command="unknown", base_url="http://x", timeout=1.0)
     code = run_command(args)

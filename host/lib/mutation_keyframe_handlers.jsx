@@ -27,6 +27,17 @@ function getValueDimensions(value) {
     return 1;
 }
 
+function normalizeValueDimensions(value, expectedDimensions, gotDimensions) {
+    if (expectedDimensions === gotDimensions) {
+        return value;
+    }
+    // Allow natural 2D input for 3D vector properties by filling Z with 0.
+    if (expectedDimensions === 3 && gotDimensions === 2 && value instanceof Array) {
+        return [value[0], value[1], 0];
+    }
+    return null;
+}
+
 function getKeyInterpTypeByName(name) {
     if (!name || typeof name !== "string") {
         return null;
@@ -203,7 +214,8 @@ function setKeyframe(layerId, layerName, propertyPath, time, valueJSON, optionsJ
         var value = JSON.parse(valueJSON);
         var expectedDimensions = getPropertyValueDimensions(prop);
         var gotDimensions = getValueDimensions(value);
-        if (expectedDimensions !== gotDimensions) {
+        var normalizedValue = normalizeValueDimensions(value, expectedDimensions, gotDimensions);
+        if (normalizedValue === null) {
             return encodePayload({
                 status: "error",
                 message: "Value dimension mismatch: expected " + expectedDimensions + "D, got " + gotDimensions + "D.",
@@ -211,7 +223,7 @@ function setKeyframe(layerId, layerName, propertyPath, time, valueJSON, optionsJ
                 gotDimensions: gotDimensions
             });
         }
-        prop.setValueAtTime(timeValue, value);
+        prop.setValueAtTime(timeValue, normalizedValue);
 
         var options = {};
         if (optionsJSON && optionsJSON !== "null") {

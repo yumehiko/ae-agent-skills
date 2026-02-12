@@ -41,6 +41,14 @@ def _read_json_optional(raw: str | None, label: str) -> Any:
         raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
 
 
+def _read_json_file(path: str, label: str) -> Any:
+    raw = Path(path).read_text(encoding="utf-8")
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
+
+
 def _layer_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "layer_id": getattr(args, "layer_id", None),
@@ -263,6 +271,16 @@ def _run_delete_comp(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(client.delete_comp(comp_id=args.comp_id, comp_name=args.comp_name))
 
 
+def _run_apply_scene(client: AEClient, args: argparse.Namespace) -> None:
+    scene = _read_json_file(args.scene_file, "scene-file")
+    _print_json(
+        client.apply_scene(
+            scene=scene,
+            validate_only=args.validate_only,
+        )
+    )
+
+
 CommandHandler = Callable[[AEClient, argparse.Namespace], None]
 
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
@@ -290,6 +308,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "move-layer-order": _run_move_layer_order,
     "delete-layer": _run_delete_layer,
     "delete-comp": _run_delete_comp,
+    "apply-scene": _run_apply_scene,
 }
 
 

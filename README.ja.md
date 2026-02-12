@@ -19,6 +19,7 @@ English README は [README.md](README.md) を参照してください。
   - エフェクト追加
   - Essential Graphics プロパティ追加
   - レイヤー追加
+  - 宣言的シーン適用（`apply-scene`）
   - タイムライン操作（`set-in-out-point`, `move-layer-time`, `set-cti`, `set-work-area`）
   - レイヤー構造操作（`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`）
 - Codex/Gemini 向け skill を同梱
@@ -99,6 +100,8 @@ ae-cli move-layer-order --layer-id 4 --to-top
 ae-cli move-layer-order --layer-id 4 --before-layer-id 2
 ae-cli delete-layer --layer-id 4
 ae-cli delete-comp --comp-name "Shot_A"
+ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.example.json
 ```
 
 `ae-cli` が `PATH` にない場合は、次で実行できます。
@@ -108,6 +111,54 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 ```
 
 `--base-url` 未指定時は `AE_BRIDGE_URL`、なければ `http://127.0.0.1:8080` を使用します。
+
+### 宣言的 Scene JSON（`apply-scene`）
+
+1つの JSON で comp/layer 構成を一括適用できます。
+
+```bash
+ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.example.json
+```
+
+最小構成の例:
+
+```json
+{
+  "composition": {
+    "name": "Main",
+    "width": 1920,
+    "height": 1080,
+    "duration": 8,
+    "frameRate": 30
+  },
+  "layers": [
+    {
+      "id": "title",
+      "type": "text",
+      "name": "Title",
+      "text": "Hello Agent",
+      "transform": { "position": [960, 540] },
+      "animations": [
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Position",
+          "keyframes": [
+            { "time": 0, "value": [960, 700] },
+            { "time": 1, "value": [960, 540], "inInterp": "bezier", "easeIn": [0, 80] }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+主なトップレベル項目:
+
+- `composition`: 対象 comp の指定/作成設定（`compId`, `compName`, `name`, `width`, `height`, `duration`, `frameRate`, `pixelAspect`, `createIfMissing`, `setActive`）
+- `layers[]`: レイヤー定義（`type`, `name`, `text`, shape/solid オプション, `timing`, `transform`, `propertyValues`, `effects`, `animations`）
+- `layers[].id`: upsert 再利用用の安定ID。既存IDが見つかった場合は新規作成せず、そのレイヤーを更新します。
+- 3D ベクトル系プロパティに対しては、`[x, y]` の2次元入力を `[x, y, 0]` として自動補完します。
 
 ## 開発向け
 
@@ -141,6 +192,7 @@ PYTHONPATH=src pytest
 - `host/lib/mutation_shape_handlers.jsx`: shape 系ハンドラ（`addLayer`, `addShapeRepeater`）
 - `host/lib/mutation_timeline_handlers.jsx`: タイムライン操作ハンドラ（`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`）
 - `host/lib/mutation_layer_structure_handlers.jsx`: レイヤー構造操作ハンドラ（`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`）
+- `host/lib/mutation_scene_handlers.jsx`: 宣言的 scene 一括適用ハンドラ（`applyScene`）
 
 ### CEP パネル client の構成
 
@@ -149,6 +201,7 @@ PYTHONPATH=src pytest
 - `client/lib/logging.js`: パネルログ出力ヘルパー
 - `client/lib/bridge_utils.js`: JSON/body 解析と bridge 応答ヘルパー
 - `client/lib/request_handlers_shape.js`: shape 系リクエストハンドラ（`addLayer`, `addShapeRepeater`）
+- `client/lib/request_handlers_scene.js`: 宣言的 scene リクエストハンドラ（`applyScene`）
 - `client/lib/request_handlers_essential.js`: Essential Graphics 系ハンドラ（`addEssentialProperty`）
 - `client/lib/request_handlers_timeline.js`: タイムライン系ハンドラ（`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`）
 - `client/lib/request_handlers_layer_structure.js`: レイヤー構造系ハンドラ（`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`）

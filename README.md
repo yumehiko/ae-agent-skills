@@ -19,6 +19,7 @@ Japanese README is available at [README.ja.md](README.ja.md).
   - adding effects
   - adding Essential Graphics properties
   - adding layers
+  - declarative scene apply (`apply-scene`)
   - timeline operations (`set-in-out-point`, `move-layer-time`, `set-cti`, `set-work-area`)
   - layer structure operations (`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`)
 - Agent skills for Codex/Gemini workflows:
@@ -99,6 +100,8 @@ ae-cli move-layer-order --layer-id 4 --to-top
 ae-cli move-layer-order --layer-id 4 --before-layer-id 2
 ae-cli delete-layer --layer-id 4
 ae-cli delete-comp --comp-name "Shot_A"
+ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.example.json
 ```
 
 If `ae-cli` is not on your `PATH`, run it with:
@@ -108,6 +111,54 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 ```
 
 By default, the CLI uses `AE_BRIDGE_URL` or falls back to `http://127.0.0.1:8080`.
+
+### Declarative Scene JSON (`apply-scene`)
+
+Use one JSON file to apply a composition/layer setup in batch:
+
+```bash
+ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.example.json
+```
+
+Minimal shape:
+
+```json
+{
+  "composition": {
+    "name": "Main",
+    "width": 1920,
+    "height": 1080,
+    "duration": 8,
+    "frameRate": 30
+  },
+  "layers": [
+    {
+      "id": "title",
+      "type": "text",
+      "name": "Title",
+      "text": "Hello Agent",
+      "transform": { "position": [960, 540] },
+      "animations": [
+        {
+          "propertyPath": "ADBE Transform Group.ADBE Position",
+          "keyframes": [
+            { "time": 0, "value": [960, 700] },
+            { "time": 1, "value": [960, 540], "inInterp": "bezier", "easeIn": [0, 80] }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Top-level fields:
+
+- `composition`: target comp options (`compId`, `compName`, `name`, `width`, `height`, `duration`, `frameRate`, `pixelAspect`, `createIfMissing`, `setActive`)
+- `layers[]`: layer specs (`type`, `name`, `text`, shape/solid options, `timing`, `transform`, `propertyValues`, `effects`, `animations`)
+- `layers[].id`: stable scene id for upsert reuse. If the id already exists, `apply-scene` updates that layer instead of creating a new one.
+- For 3D vector properties, 2D input like `[x, y]` is accepted and normalized to `[x, y, 0]`.
 
 ## Development
 
@@ -141,6 +192,7 @@ PYTHONPATH=src pytest
 - `host/lib/mutation_shape_handlers.jsx`: shape write handlers (`addLayer`, `addShapeRepeater`)
 - `host/lib/mutation_timeline_handlers.jsx`: timeline handlers (`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`)
 - `host/lib/mutation_layer_structure_handlers.jsx`: layer structure handlers (`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`)
+- `host/lib/mutation_scene_handlers.jsx`: declarative scene apply handler (`applyScene`)
 
 ### CEP panel client structure
 
@@ -149,6 +201,7 @@ PYTHONPATH=src pytest
 - `client/lib/logging.js`: panel log output helpers
 - `client/lib/bridge_utils.js`: JSON/body parsing and bridge response helpers
 - `client/lib/request_handlers_shape.js`: shape-specific request handlers (`addLayer`, `addShapeRepeater`)
+- `client/lib/request_handlers_scene.js`: declarative scene request handler (`applyScene`)
 - `client/lib/request_handlers_essential.js`: Essential Graphics handlers (`addEssentialProperty`)
 - `client/lib/request_handlers_timeline.js`: timeline handlers (`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`)
 - `client/lib/request_handlers_layer_structure.js`: layer structure handlers (`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`)

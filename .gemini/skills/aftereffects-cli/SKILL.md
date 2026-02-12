@@ -26,6 +26,7 @@ After Effects 操作を `ae-cli` で実行する。
    - `ae-cli create-comp --name "<name>" --width <w> --height <h> --duration <sec> --frame-rate <fps> [--pixel-aspect <ratio>]`
    - `ae-cli set-active-comp --comp-id <id>` または `--comp-name "<name>"`
 4. 更新系は対象確認後に実行する。
+   - まとまった実装は `ae-cli apply-scene --scene-file <path> [--validate-only]` を優先する。
    - `ae-cli add-layer --layer-type shape --name "<name>" [--shape-type ellipse|rect] [--shape-size <w> <h>] [--shape-position <x> <y>] [--shape-fill-color <r> <g> <b>] [--shape-fill-opacity <0-100>] [--shape-stroke-color <r> <g> <b>] [--shape-stroke-opacity <0-100>] [--shape-stroke-width <px>] [--shape-stroke-line-cap butt|round|projecting] [--shape-roundness <px>]`
    - `ae-cli add-shape-repeater --layer-id <id> [--group-index <1-based>] [--name "<name>"] [--copies <n>] [--offset <v>] [--position <x> <y>] [--scale <x> <y>] [--rotation <deg>] [--start-opacity <0-100>] [--end-opacity <0-100>]`
    - `ae-cli set-property --layer-id <id> --property-path "<path>" --value "<json>"`
@@ -74,6 +75,8 @@ ae-cli duplicate-layer --layer-id 1
 ae-cli move-layer-order --layer-id 4 --to-top
 ae-cli delete-layer --layer-id 4
 ae-cli delete-comp --comp-name "Shot_A"
+ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.example.json
 ```
 
 ## トラブルシュート
@@ -100,3 +103,8 @@ ae-cli delete-comp --comp-name "Shot_A"
   - 対象は shape レイヤーのみ（text/solid/null には追加不可）。
   - `--group-index` は shape の Contents 配下にあるグループの 1 始まり。
   - `ae-cli properties --layer-id <id> --include-group "ADBE Root Vectors Group" --max-depth 6` で Repeater 追加結果を確認する。
+- `apply-scene` で失敗する場合:
+  - まず `--validate-only` で JSON の妥当性を確認する。
+  - `composition` を省略する場合は AE 側で active comp が開いている必要がある。
+  - `layers[].type` は `text/null/solid/shape` のいずれかにする。
+  - 再実行でレイヤーを再利用したい場合は `layers[].id` を必ず指定する（未指定だと新規追加になる）。

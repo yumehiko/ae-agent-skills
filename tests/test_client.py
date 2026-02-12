@@ -338,6 +338,37 @@ def test_move_layer_time_posts_expected_payload(monkeypatch) -> None:
     }
 
 
+def test_apply_scene_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"mode": "validate"}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.apply_scene(
+        scene={
+            "composition": {"name": "Main"},
+            "layers": [{"id": "title", "type": "text", "text": "Hello"}],
+        },
+        validate_only=True,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/scene"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "scene": {
+            "composition": {"name": "Main"},
+            "layers": [{"id": "title", "type": "text", "text": "Hello"}],
+        },
+        "validateOnly": True,
+    }
+
+
 def test_move_layer_time_supports_layer_name(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
