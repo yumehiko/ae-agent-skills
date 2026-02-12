@@ -233,6 +233,26 @@ def test_build_parser_parses_set_keyframe_easing_options() -> None:
     assert args.ease_in == "[0,80]"
     assert args.ease_out == "[0,40]"
 
+
+def test_build_parser_parses_add_essential_property() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "add-essential-property",
+            "--layer-name",
+            "SearchText",
+            "--property-path",
+            "ADBE Text Properties.ADBE Text Document",
+            "--essential-name",
+            "Search Word",
+        ]
+    )
+    assert args.command == "add-essential-property"
+    assert args.layer_name == "SearchText"
+    assert args.property_path == "ADBE Text Properties.ADBE Text Document"
+    assert args.essential_name == "Search Word"
+
+
 def test_build_parser_parses_set_in_out_point() -> None:
     parser = build_parser()
     args = parser.parse_args(

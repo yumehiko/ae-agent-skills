@@ -226,6 +226,25 @@ class AEClient:
         )
         return self._handle_response(response)
 
+    def add_essential_property(
+        self,
+        property_path: str,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+        essential_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Add a layer property to Essential Graphics in the active comp."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["propertyPath"] = property_path
+        if essential_name is not None:
+            payload["essentialName"] = essential_name
+        response = requests.post(
+            self._url("/essential-property"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def add_effect(
         self,
         effect_match_name: str,

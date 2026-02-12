@@ -83,6 +83,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     property_value_group.add_argument("--value-file", help="Path to a UTF-8 JSON file")
 
+    essential_property_parser = subparsers.add_parser(
+        "add-essential-property",
+        help="Add a layer property to Essential Graphics",
+    )
+    _add_layer_selector(essential_property_parser)
+    essential_property_parser.add_argument("--property-path", required=True)
+    essential_property_parser.add_argument(
+        "--essential-name",
+        help="Display name in Essential Graphics panel",
+    )
+
     keyframe_parser = subparsers.add_parser("set-keyframe", help="Set a keyframe value at time")
     _add_layer_selector(keyframe_parser)
     keyframe_parser.add_argument("--property-path", required=True)

@@ -30,6 +30,7 @@ After Effects 操作を `ae-cli` で実行する。
    - `ae-cli add-shape-repeater --layer-id <id> [--group-index <1-based>] [--name "<name>"] [--copies <n>] [--offset <v>] [--position <x> <y>] [--scale <x> <y>] [--rotation <deg>] [--start-opacity <0-100>] [--end-opacity <0-100>]`
    - `ae-cli set-property --layer-id <id> --property-path "<path>" --value "<json>"`
    - `ae-cli set-keyframe --layer-id <id> --property-path "<path>" --time <sec> --value "<json>" [--in-interp linear|bezier|hold] [--out-interp linear|bezier|hold] [--ease-in "<json>"] [--ease-out "<json>"]`
+   - `ae-cli add-essential-property --layer-id <id> --property-path "<path>" [--essential-name "<displayName>"]`
    - `ae-cli set-expression --layer-id <id> --property-path "<path>" --expression "<expr>"`
    - `ae-cli add-effect --layer-id <id> --effect-match-name "<matchName>" [--effect-name "<name>"]`
    - `ae-cli set-in-out-point --layer-id <id> [--in-point <sec>] [--out-point <sec>]`
@@ -58,6 +59,7 @@ ae-cli properties --layer-id 1 --max-depth 2
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
+ae-cli add-essential-property --layer-id 1 --property-path "ADBE Text Properties.ADBE Text Document" --essential-name "Search Word"
 ae-cli set-expression --layer-id 1 --property-path "Transform > Position" --expression "wiggle(2,30)"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ae-cli add-layer --layer-type shape --name "BurstCircle" --shape-type ellipse --shape-size 720 720 --shape-fill-color 255 128 0 --shape-stroke-color 255 255 255 --shape-stroke-width 8 --shape-stroke-line-cap round

@@ -17,6 +17,7 @@ English README は [README.md](README.md) を参照してください。
   - レイヤー/プロパティ取得
   - expression 適用
   - エフェクト追加
+  - Essential Graphics プロパティ追加
   - レイヤー追加
   - タイムライン操作（`set-in-out-point`, `move-layer-time`, `set-cti`, `set-work-area`）
   - レイヤー構造操作（`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`）
@@ -80,6 +81,7 @@ ae-cli set-expression --layer-name "Title" --property-path "Transform > Position
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
+ae-cli add-essential-property --layer-name "Title" --property-path "ADBE Text Properties.ADBE Text Document" --essential-name "Search Word"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
 ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
@@ -134,7 +136,8 @@ PYTHONPATH=src pytest
 - `host/lib/common.jsx`: ログ出力・JSON 初期化・共通ヘルパー
 - `host/lib/property_utils.jsx`: プロパティ探索の共通ヘルパー
 - `host/lib/query_handlers.jsx`: 読み取り系ハンドラ（`getLayers`, `getProperties`, `getSelectedProperties`）
-- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（コア: `setExpression`, `addEffect`, `setPropertyValue`, `setKeyframe`, `createComp`, `setActiveComp`）
+- `host/lib/mutation_handlers.jsx`: 更新系ハンドラ（コア: `setExpression`, `addEffect`, `addEssentialProperty`, `setPropertyValue`, `createComp`, `setActiveComp`）
+- `host/lib/mutation_keyframe_handlers.jsx`: キーフレーム系ハンドラ（`setKeyframe`）と補間/ease ヘルパー
 - `host/lib/mutation_shape_handlers.jsx`: shape 系ハンドラ（`addLayer`, `addShapeRepeater`）
 - `host/lib/mutation_timeline_handlers.jsx`: タイムライン操作ハンドラ（`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`）
 - `host/lib/mutation_layer_structure_handlers.jsx`: レイヤー構造操作ハンドラ（`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`）
@@ -146,5 +149,8 @@ PYTHONPATH=src pytest
 - `client/lib/logging.js`: パネルログ出力ヘルパー
 - `client/lib/bridge_utils.js`: JSON/body 解析と bridge 応答ヘルパー
 - `client/lib/request_handlers_shape.js`: shape 系リクエストハンドラ（`addLayer`, `addShapeRepeater`）
-- `client/lib/request_handlers.js`: ルーティングとエンドポイントハンドラ
+- `client/lib/request_handlers_essential.js`: Essential Graphics 系ハンドラ（`addEssentialProperty`）
+- `client/lib/request_handlers_timeline.js`: タイムライン系ハンドラ（`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`）
+- `client/lib/request_handlers_layer_structure.js`: レイヤー構造系ハンドラ（`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`）
+- `client/lib/request_handlers.js`: コアルーターと共通エンドポイントハンドラ
 - `client/lib/server.js`: HTTP サーバーの起動/エラーハンドリング

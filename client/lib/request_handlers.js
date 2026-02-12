@@ -377,255 +377,6 @@ function handleAddEffect(req, res) {
     });
 }
 
-function handleSetInOutPoint(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, inPoint, outPoint }) => {
-        if (inPoint === undefined && outPoint === undefined) {
-            sendBadRequest(res, 'At least one of inPoint/outPoint is required');
-            log('setInOutPoint failed: missing parameters');
-            return;
-        }
-        const selector = normalizeLayerSelector(layerId, layerName);
-        if (!selector.ok) {
-            sendBadRequest(res, selector.error);
-            log(`setInOutPoint failed: ${selector.error}`);
-            return;
-        }
-        if (inPoint !== undefined && (typeof inPoint !== 'number' || !isFinite(inPoint))) {
-            sendBadRequest(res, 'inPoint must be a finite number when specified');
-            log('setInOutPoint failed: invalid inPoint');
-            return;
-        }
-        if (outPoint !== undefined && (typeof outPoint !== 'number' || !isFinite(outPoint))) {
-            sendBadRequest(res, 'outPoint must be a finite number when specified');
-            log('setInOutPoint failed: invalid outPoint');
-            return;
-        }
-
-        const inPointLiteral = inPoint === undefined ? 'null' : String(inPoint);
-        const outPointLiteral = outPoint === undefined ? 'null' : String(outPoint);
-        const script = `setInOutPoint(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${inPointLiteral}, ${outPointLiteral})`;
-        handleBridgeMutationCall(script, res, 'setInOutPoint()', 'Failed to set in/out point');
-    });
-}
-
-function handleMoveLayerTime(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, delta }) => {
-        if (delta === undefined) {
-            sendBadRequest(res, 'delta is required');
-            log('moveLayerTime failed: missing parameters');
-            return;
-        }
-        const selector = normalizeLayerSelector(layerId, layerName);
-        if (!selector.ok) {
-            sendBadRequest(res, selector.error);
-            log(`moveLayerTime failed: ${selector.error}`);
-            return;
-        }
-        if (typeof delta !== 'number' || !isFinite(delta)) {
-            sendBadRequest(res, 'delta must be a finite number');
-            log('moveLayerTime failed: invalid delta');
-            return;
-        }
-
-        const script = `moveLayerTime(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${delta})`;
-        handleBridgeMutationCall(script, res, 'moveLayerTime()', 'Failed to move layer time');
-    });
-}
-
-function handleSetCti(req, res) {
-    readJsonBody(req, res, ({ time }) => {
-        if (time === undefined) {
-            sendBadRequest(res, 'time is required');
-            log('setCTI failed: missing time');
-            return;
-        }
-        if (typeof time !== 'number' || !isFinite(time)) {
-            sendBadRequest(res, 'time must be a finite number');
-            log('setCTI failed: invalid time');
-            return;
-        }
-
-        const script = `setCTI(${time})`;
-        handleBridgeMutationCall(script, res, 'setCTI()', 'Failed to set CTI');
-    });
-}
-
-function handleSetWorkArea(req, res) {
-    readJsonBody(req, res, ({ start, duration }) => {
-        if (start === undefined || duration === undefined) {
-            sendBadRequest(res, 'start and duration are required');
-            log('setWorkArea failed: missing parameters');
-            return;
-        }
-        if (typeof start !== 'number' || !isFinite(start)) {
-            sendBadRequest(res, 'start must be a finite number');
-            log('setWorkArea failed: invalid start');
-            return;
-        }
-        if (typeof duration !== 'number' || !isFinite(duration)) {
-            sendBadRequest(res, 'duration must be a finite number');
-            log('setWorkArea failed: invalid duration');
-            return;
-        }
-
-        const script = `setWorkArea(${start}, ${duration})`;
-        handleBridgeMutationCall(script, res, 'setWorkArea()', 'Failed to set work area');
-    });
-}
-
-function handleParentLayer(req, res) {
-    readJsonBody(req, res, ({ childLayerId, parentLayerId }) => {
-        if (!childLayerId) {
-            sendBadRequest(res, 'childLayerId is required');
-            log('parentLayer failed: missing childLayerId');
-            return;
-        }
-        if (parentLayerId !== undefined && parentLayerId !== null && typeof parentLayerId !== 'number') {
-            sendBadRequest(res, 'parentLayerId must be a number when specified');
-            log('parentLayer failed: invalid parentLayerId');
-            return;
-        }
-
-        const parentLiteral = parentLayerId === undefined || parentLayerId === null
-            ? 'null'
-            : String(parentLayerId);
-        const script = `parentLayer(${childLayerId}, ${parentLiteral})`;
-        handleBridgeMutationCall(script, res, 'parentLayer()', 'Failed to set parent layer');
-    });
-}
-
-function handlePrecompose(req, res) {
-    readJsonBody(req, res, ({ layerIds, name, moveAllAttributes }) => {
-        if (!Array.isArray(layerIds) || layerIds.length === 0 || !name || typeof name !== 'string') {
-            sendBadRequest(res, 'layerIds (non-empty array) and name (string) are required');
-            log('precompose failed: invalid layerIds or name');
-            return;
-        }
-        const allNumbers = layerIds.every((id) => typeof id === 'number');
-        if (!allNumbers) {
-            sendBadRequest(res, 'layerIds must be an array of numbers');
-            log('precompose failed: invalid layerIds values');
-            return;
-        }
-        if (moveAllAttributes !== undefined && typeof moveAllAttributes !== 'boolean') {
-            sendBadRequest(res, 'moveAllAttributes must be boolean when specified');
-            log('precompose failed: invalid moveAllAttributes');
-            return;
-        }
-
-        const layerIdsLiteral = toExtendScriptStringLiteral(JSON.stringify(layerIds));
-        const nameLiteral = toExtendScriptStringLiteral(name);
-        const moveLiteral = moveAllAttributes === undefined ? 'false' : String(moveAllAttributes);
-        const script = `precomposeLayers(${layerIdsLiteral}, ${nameLiteral}, ${moveLiteral})`;
-        handleBridgeMutationCall(script, res, 'precomposeLayers()', 'Failed to precompose layers');
-    });
-}
-
-function handleDuplicateLayer(req, res) {
-    readJsonBody(req, res, ({ layerId }) => {
-        if (!layerId) {
-            sendBadRequest(res, 'layerId is required');
-            log('duplicateLayer failed: missing layerId');
-            return;
-        }
-        const script = `duplicateLayer(${layerId})`;
-        handleBridgeMutationCall(script, res, 'duplicateLayer()', 'Failed to duplicate layer');
-    });
-}
-
-function handleMoveLayerOrder(req, res) {
-    readJsonBody(req, res, ({ layerId, beforeLayerId, afterLayerId, toTop, toBottom }) => {
-        if (!layerId) {
-            sendBadRequest(res, 'layerId is required');
-            log('moveLayerOrder failed: missing layerId');
-            return;
-        }
-
-        let specified = 0;
-        if (beforeLayerId !== undefined) specified += 1;
-        if (afterLayerId !== undefined) specified += 1;
-        if (toTop === true) specified += 1;
-        if (toBottom === true) specified += 1;
-        if (specified !== 1) {
-            sendBadRequest(res, 'Specify exactly one of beforeLayerId, afterLayerId, toTop, toBottom');
-            log('moveLayerOrder failed: invalid target selector');
-            return;
-        }
-        if (beforeLayerId !== undefined && typeof beforeLayerId !== 'number') {
-            sendBadRequest(res, 'beforeLayerId must be a number');
-            log('moveLayerOrder failed: invalid beforeLayerId');
-            return;
-        }
-        if (afterLayerId !== undefined && typeof afterLayerId !== 'number') {
-            sendBadRequest(res, 'afterLayerId must be a number');
-            log('moveLayerOrder failed: invalid afterLayerId');
-            return;
-        }
-        if (toTop !== undefined && typeof toTop !== 'boolean') {
-            sendBadRequest(res, 'toTop must be boolean when specified');
-            log('moveLayerOrder failed: invalid toTop');
-            return;
-        }
-        if (toBottom !== undefined && typeof toBottom !== 'boolean') {
-            sendBadRequest(res, 'toBottom must be boolean when specified');
-            log('moveLayerOrder failed: invalid toBottom');
-            return;
-        }
-
-        const beforeLiteral = beforeLayerId === undefined ? 'null' : String(beforeLayerId);
-        const afterLiteral = afterLayerId === undefined ? 'null' : String(afterLayerId);
-        const topLiteral = toTop === true ? 'true' : 'false';
-        const bottomLiteral = toBottom === true ? 'true' : 'false';
-        const script = `moveLayerOrder(${layerId}, ${beforeLiteral}, ${afterLiteral}, ${topLiteral}, ${bottomLiteral})`;
-        handleBridgeMutationCall(script, res, 'moveLayerOrder()', 'Failed to move layer order');
-    });
-}
-
-function handleDeleteLayer(req, res) {
-    readJsonBody(req, res, ({ layerId }) => {
-        if (!layerId) {
-            sendBadRequest(res, 'layerId is required');
-            log('deleteLayer failed: missing layerId');
-            return;
-        }
-        if (typeof layerId !== 'number') {
-            sendBadRequest(res, 'layerId must be a number');
-            log('deleteLayer failed: invalid layerId');
-            return;
-        }
-
-        const script = `deleteLayer(${layerId})`;
-        handleBridgeMutationCall(script, res, 'deleteLayer()', 'Failed to delete layer');
-    });
-}
-
-function handleDeleteComp(req, res) {
-    readJsonBody(req, res, ({ compId, compName }) => {
-        const hasCompId = compId !== undefined;
-        const hasCompName = compName !== undefined && compName !== null && compName !== '';
-        if ((hasCompId && hasCompName) || (!hasCompId && !hasCompName)) {
-            sendBadRequest(res, 'Provide exactly one of compId or compName');
-            log('deleteComp failed: invalid selector');
-            return;
-        }
-        if (hasCompId && typeof compId !== 'number') {
-            sendBadRequest(res, 'compId must be a number');
-            log('deleteComp failed: compId must be number');
-            return;
-        }
-        if (hasCompName && typeof compName !== 'string') {
-            sendBadRequest(res, 'compName must be a string');
-            log('deleteComp failed: compName must be string');
-            return;
-        }
-
-        const compIdLiteral = hasCompId ? String(compId) : 'null';
-        const compNameLiteral = hasCompName ? toExtendScriptStringLiteral(compName) : 'null';
-        const script = `deleteComp(${compIdLiteral}, ${compNameLiteral})`;
-        handleBridgeMutationCall(script, res, 'deleteComp()', 'Failed to delete comp');
-    });
-}
-
 function handleNotFound(req, res) {
     sendJson(res, 404, { status: 'error', message: 'Not Found' });
     log(`404 Not Found: ${req.method} ${req.url}`);
@@ -656,8 +407,7 @@ function routeRequest(req, res) {
         handleGetComps(res);
         return;
     }
-    if (pathname === '/layers' && method === 'POST') {
-        handleAddLayer(req, res);
+    if (typeof routeShapeRequest === 'function' && routeShapeRequest(pathname, method, req, res)) {
         return;
     }
     if (pathname === '/comps' && method === 'POST') {
@@ -688,52 +438,18 @@ function routeRequest(req, res) {
         handleSetKeyframe(req, res);
         return;
     }
+    if (typeof routeEssentialRequest === 'function' && routeEssentialRequest(pathname, method, req, res)) {
+        return;
+    }
     if (pathname === '/effects' && method === 'POST') {
         handleAddEffect(req, res);
         return;
     }
-    if (pathname === '/shape-repeater' && method === 'POST') {
-        handleAddShapeRepeater(req, res);
+    if (typeof routeTimelineRequest === 'function' && routeTimelineRequest(pathname, method, req, res)) {
         return;
     }
-    if (pathname === '/layer-in-out' && method === 'POST') {
-        handleSetInOutPoint(req, res);
-        return;
-    }
-    if (pathname === '/layer-time' && method === 'POST') {
-        handleMoveLayerTime(req, res);
-        return;
-    }
-    if (pathname === '/cti' && method === 'POST') {
-        handleSetCti(req, res);
-        return;
-    }
-    if (pathname === '/work-area' && method === 'POST') {
-        handleSetWorkArea(req, res);
-        return;
-    }
-    if (pathname === '/layer-parent' && method === 'POST') {
-        handleParentLayer(req, res);
-        return;
-    }
-    if (pathname === '/precompose' && method === 'POST') {
-        handlePrecompose(req, res);
-        return;
-    }
-    if (pathname === '/duplicate-layer' && method === 'POST') {
-        handleDuplicateLayer(req, res);
-        return;
-    }
-    if (pathname === '/layer-order' && method === 'POST') {
-        handleMoveLayerOrder(req, res);
-        return;
-    }
-    if (pathname === '/delete-layer' && method === 'POST') {
-        handleDeleteLayer(req, res);
-        return;
-    }
-    if (pathname === '/delete-comp' && method === 'POST') {
-        handleDeleteComp(req, res);
+    if (typeof routeLayerStructureRequest === 'function'
+        && routeLayerStructureRequest(pathname, method, req, res)) {
         return;
     }
 

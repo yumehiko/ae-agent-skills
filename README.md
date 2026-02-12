@@ -17,6 +17,7 @@ Japanese README is available at [README.ja.md](README.ja.md).
   - listing layers/properties
   - applying expressions
   - adding effects
+  - adding Essential Graphics properties
   - adding layers
   - timeline operations (`set-in-out-point`, `move-layer-time`, `set-cti`, `set-work-area`)
   - layer structure operations (`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`)
@@ -80,6 +81,7 @@ ae-cli set-expression --layer-name "Title" --property-path "Transform > Position
 ae-cli set-property --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 0.5 --value "[960,540]"
 ae-cli set-keyframe --layer-id 1 --property-path "ADBE Transform Group.ADBE Position" --time 1.0 --value "[960,300]" --in-interp bezier --out-interp bezier --ease-in "[0,80]" --ease-out "[0,40]"
+ae-cli add-essential-property --layer-name "Title" --property-path "ADBE Text Properties.ADBE Text Document" --essential-name "Search Word"
 ae-cli add-effect --layer-id 1 --effect-match-name "ADBE Slider Control" --effect-name "Speed"
 ae-cli add-layer --layer-type text --name "Title" --text "Hello from CLI"
 ae-cli add-layer --layer-type solid --name "BG" --width 1920 --height 1080 --color 32 64 128 --duration 10
@@ -134,7 +136,8 @@ PYTHONPATH=src pytest
 - `host/lib/common.jsx`: logging/json bootstrap/common helpers
 - `host/lib/property_utils.jsx`: shared property-tree helpers
 - `host/lib/query_handlers.jsx`: read-only handlers (`getLayers`, `getProperties`, `getSelectedProperties`)
-- `host/lib/mutation_handlers.jsx`: write handlers core (`setExpression`, `addEffect`, `setPropertyValue`, `setKeyframe`, `createComp`, `setActiveComp`)
+- `host/lib/mutation_handlers.jsx`: write handlers core (`setExpression`, `addEffect`, `addEssentialProperty`, `setPropertyValue`, `createComp`, `setActiveComp`)
+- `host/lib/mutation_keyframe_handlers.jsx`: keyframe handlers (`setKeyframe`) and interpolation/ease helpers
 - `host/lib/mutation_shape_handlers.jsx`: shape write handlers (`addLayer`, `addShapeRepeater`)
 - `host/lib/mutation_timeline_handlers.jsx`: timeline handlers (`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`)
 - `host/lib/mutation_layer_structure_handlers.jsx`: layer structure handlers (`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`)
@@ -146,5 +149,8 @@ PYTHONPATH=src pytest
 - `client/lib/logging.js`: panel log output helpers
 - `client/lib/bridge_utils.js`: JSON/body parsing and bridge response helpers
 - `client/lib/request_handlers_shape.js`: shape-specific request handlers (`addLayer`, `addShapeRepeater`)
-- `client/lib/request_handlers.js`: route dispatch and endpoint handlers
+- `client/lib/request_handlers_essential.js`: Essential Graphics handlers (`addEssentialProperty`)
+- `client/lib/request_handlers_timeline.js`: timeline handlers (`setInOutPoint`, `moveLayerTime`, `setCTI`, `setWorkArea`)
+- `client/lib/request_handlers_layer_structure.js`: layer structure handlers (`parentLayer`, `precomposeLayers`, `duplicateLayer`, `moveLayerOrder`, `deleteLayer`, `deleteComp`)
+- `client/lib/request_handlers.js`: core route dispatch and shared endpoint handlers
 - `client/lib/server.js`: HTTP server lifecycle

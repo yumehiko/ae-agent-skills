@@ -274,3 +274,15 @@ function handleAddLayer(req, res) {
         },
     );
 }
+
+function routeShapeRequest(pathname, method, req, res) {
+    if (pathname === '/shape-repeater' && method === 'POST') {
+        handleAddShapeRepeater(req, res);
+        return true;
+    }
+    if (pathname === '/layers' && method === 'POST') {
+        handleAddLayer(req, res);
+        return true;
+    }
+    return false;
+}

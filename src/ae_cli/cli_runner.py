@@ -134,6 +134,16 @@ def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_add_essential_property(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(
+        client.add_essential_property(
+            property_path=args.property_path,
+            essential_name=args.essential_name,
+            **_layer_selector_kwargs(args),
+        )
+    )
+
+
 def _run_add_effect(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.add_effect(
@@ -266,6 +276,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "set-expression": _run_set_expression,
     "set-property": _run_set_property,
     "set-keyframe": _run_set_keyframe,
+    "add-essential-property": _run_add_essential_property,
     "add-effect": _run_add_effect,
     "add-shape-repeater": _run_add_shape_repeater,
     "add-layer": _run_add_layer,

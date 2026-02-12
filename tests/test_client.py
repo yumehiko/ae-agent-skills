@@ -145,6 +145,33 @@ def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
     }
 
 
+def test_add_essential_property_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"essentialName": "Search Word"}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.add_essential_property(
+        layer_name="SearchText",
+        property_path="ADBE Text Properties.ADBE Text Document",
+        essential_name="Search Word",
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/essential-property"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "layerName": "SearchText",
+        "propertyPath": "ADBE Text Properties.ADBE Text Document",
+        "essentialName": "Search Word",
+    }
+
+
 def test_add_layer_posts_shape_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
