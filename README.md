@@ -124,6 +124,10 @@ ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
 ```
 
+Schema reference:
+
+- `schemas/scene.schema.json`
+
 Minimal shape:
 
 ```json

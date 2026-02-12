@@ -124,6 +124,10 @@ ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
 ```
 
+スキーマ参照:
+
+- `schemas/scene.schema.json`
+
 最小構成の例:
 
 ```json

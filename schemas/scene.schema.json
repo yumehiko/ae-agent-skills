@@ -1,0 +1,454 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/ae-agent-skills/scene.schema.json",
+  "title": "AE Declarative Scene",
+  "type": "object",
+  "required": [
+    "layers"
+  ],
+  "properties": {
+    "composition": {
+      "$ref": "#/$defs/composition"
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/layer"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "numberArray2": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "number"
+      }
+    },
+    "numberArray3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    },
+    "numberArray2or3": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/numberArray2"
+        },
+        {
+          "$ref": "#/$defs/numberArray3"
+        }
+      ]
+    },
+    "composition": {
+      "type": "object",
+      "properties": {
+        "compId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "compName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "frameRate": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "pixelAspect": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "createIfMissing": {
+          "type": "boolean"
+        },
+        "setActive": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "timing": {
+      "type": "object",
+      "properties": {
+        "inPoint": {
+          "type": "number"
+        },
+        "outPoint": {
+          "type": "number"
+        },
+        "startTime": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "anchorPoint": {
+          "$ref": "#/$defs/numberArray2or3"
+        },
+        "position": {
+          "$ref": "#/$defs/numberArray2or3"
+        },
+        "scale": {
+          "$ref": "#/$defs/numberArray2or3"
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "opacity": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "propertyValue": {
+      "type": "object",
+      "required": [
+        "propertyPath",
+        "value"
+      ],
+      "properties": {
+        "propertyPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {}
+      },
+      "additionalProperties": false
+    },
+    "effectParam": {
+      "type": "object",
+      "required": [
+        "value"
+      ],
+      "properties": {
+        "propertyPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matchName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "propertyIndex": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "value": {}
+      },
+      "oneOf": [
+        {
+          "required": [
+            "propertyPath"
+          ]
+        },
+        {
+          "required": [
+            "matchName"
+          ]
+        },
+        {
+          "required": [
+            "propertyIndex"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "effect": {
+      "type": "object",
+      "required": [
+        "matchName"
+      ],
+      "properties": {
+        "matchName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/effectParam"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "keyframe": {
+      "type": "object",
+      "required": [
+        "time",
+        "value"
+      ],
+      "properties": {
+        "time": {
+          "type": "number"
+        },
+        "value": {},
+        "inInterp": {
+          "type": "string",
+          "enum": [
+            "linear",
+            "bezier",
+            "hold"
+          ]
+        },
+        "outInterp": {
+          "type": "string",
+          "enum": [
+            "linear",
+            "bezier",
+            "hold"
+          ]
+        },
+        "easeIn": {},
+        "easeOut": {}
+      },
+      "additionalProperties": false
+    },
+    "animation": {
+      "type": "object",
+      "required": [
+        "propertyPath",
+        "keyframes"
+      ],
+      "properties": {
+        "propertyPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keyframes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/keyframe"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "expressionBinding": {
+      "type": "object",
+      "required": [
+        "propertyPath",
+        "expression"
+      ],
+      "properties": {
+        "propertyPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expression": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "essentialProperty": {
+      "type": "object",
+      "required": [
+        "propertyPath"
+      ],
+      "properties": {
+        "propertyPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "essentialName": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "repeater": {
+      "type": "object",
+      "properties": {
+        "groupIndex": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "copies": {
+          "type": "number"
+        },
+        "offset": {
+          "type": "number"
+        },
+        "position": {
+          "$ref": "#/$defs/numberArray2"
+        },
+        "scale": {
+          "$ref": "#/$defs/numberArray2"
+        },
+        "rotation": {
+          "type": "number"
+        },
+        "startOpacity": {
+          "type": "number"
+        },
+        "endOpacity": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "layer": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "null",
+            "solid",
+            "shape"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "color": {
+          "$ref": "#/$defs/numberArray3"
+        },
+        "duration": {
+          "type": "number"
+        },
+        "shapeType": {
+          "type": "string",
+          "enum": [
+            "ellipse",
+            "rect"
+          ]
+        },
+        "shapeSize": {
+          "$ref": "#/$defs/numberArray2"
+        },
+        "shapePosition": {
+          "$ref": "#/$defs/numberArray2"
+        },
+        "shapeFillColor": {
+          "$ref": "#/$defs/numberArray3"
+        },
+        "shapeFillOpacity": {
+          "type": "number"
+        },
+        "shapeStrokeColor": {
+          "$ref": "#/$defs/numberArray3"
+        },
+        "shapeStrokeOpacity": {
+          "type": "number"
+        },
+        "shapeStrokeWidth": {
+          "type": "number"
+        },
+        "shapeStrokeLineCap": {
+          "type": "string",
+          "enum": [
+            "butt",
+            "round",
+            "projecting"
+          ]
+        },
+        "shapeRoundness": {
+          "type": "number"
+        },
+        "timing": {
+          "$ref": "#/$defs/timing"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "propertyValues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/propertyValue"
+          }
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/effect"
+          }
+        },
+        "animations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/animation"
+          }
+        },
+        "expressions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/expressionBinding"
+          }
+        },
+        "essentialProperties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/essentialProperty"
+          }
+        },
+        "repeaters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repeater"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

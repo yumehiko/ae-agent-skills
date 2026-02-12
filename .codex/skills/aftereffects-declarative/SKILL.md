@@ -34,6 +34,7 @@ ae-cli expression-errors
 
 ## scene 設計ルール
 
+- 正式スキーマは `schemas/scene.schema.json` を参照
 - `layers[].id` は必須推奨（upsert の安定キー）
 - `layers[].parentId` は scene id を参照
 - アニメーション対象プロパティは `animations` で管理
