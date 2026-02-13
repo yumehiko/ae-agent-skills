@@ -22,3 +22,7 @@ pip-wheel-metadata/
 # Editor/IDE
 .vscode/
 .idea/
+
+# Scene JSON workspace (user-local artifacts)
+work/
+done/

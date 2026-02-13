@@ -17,10 +17,20 @@ After Effects を宣言型 JSON で構築する標準スキル。
 ## 基本フロー
 
 1. 疎通確認: `ae-cli health`
-2. scene JSON を作成/更新
+2. scene JSON を作成/更新（作業中は `work/` 配下）
 3. `--validate-only` で検証
 4. 実適用
 5. `layers` / `properties` / `expression-errors` で確認
+6. 完了版は `done/` 配下へコピーして保管
+
+## ファイル運用ルール（重要）
+
+- `work/`: 作業中の scene JSON を置くディレクトリ
+- `done/`: 完了した scene JSON の保管ディレクトリ
+- どちらもリポジトリにはコミットしない（`.gitignore` 前提）
+- 例:
+  - `ae-cli apply-scene --scene-file work/main.scene.json --validate-only`
+  - `ae-cli apply-scene --scene-file work/main.scene.json`
 
 ## コマンド
 

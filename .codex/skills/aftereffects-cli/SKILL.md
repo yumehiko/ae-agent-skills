@@ -53,3 +53,4 @@ description: Legacy low-level After Effects operations via ae-cli command-by-com
 
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。
+- scene JSON を一時的に作る場合は `work/`（作業中）と `done/`（完了保管）を使い、どちらもコミットしない。

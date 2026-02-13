@@ -20,6 +20,8 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 
 - ユーザーに `ae-agent-skills` のローカルパスを確認する。
 - 以降のコマンドはそのパスを `cwd` として扱う。
+- scene JSON の運用ディレクトリとして `work/`（作業中）と `done/`（完了保管）を案内する。
+- `work/` と `done/` は `.gitignore` 前提で、コミット対象にしないことを明示する。
 
 ### Step 2: CEP extensions への配置確認
 
