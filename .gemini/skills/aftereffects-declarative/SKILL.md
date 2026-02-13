@@ -6,13 +6,26 @@ description: Primary After Effects workflow using ae-cli apply-scene with declar
 # aftereffects-declarative
 
 After Effects を宣言型 JSON で構築する標準スキル。  
-**原則このスキルを優先**し、命令型の個別コマンドはレガシースキルへフォールバックする。
+**新規構築・再実行性の高い編集でこのスキルを優先**し、既存シーンの外科的な部分修正は命令型スキルを優先する。
 
 ## 目的
 
 - 1ファイルの scene JSON で comp 構成を一括適用
 - 再実行時は `layers[].id` で upsert 再利用
 - 人手編集後も再適用しやすい運用に寄せる
+
+## 使い分け（重要）
+
+- 宣言型を使う:
+  - 新規 comp / 新規レイヤー群を組み上げる
+  - 同種変更を複数箇所へ展開する
+  - scene JSON を成果物として残し、再実行可能にしたい
+- 命令型（`aftereffects-cli-legacy`）を使う:
+  - 人間が作った既存シーン（scene JSON 未管理）へ部分修正を入れる
+  - 複雑な既存レイヤーに expression をピンポイント適用する
+  - comp 全体の再宣言を避け、局所的に安全修正したい
+- 併用方針:
+  - まず命令型で調査・局所修正し、安定して繰り返す段階で宣言型へ移行する
 
 ## 基本フロー
 
@@ -95,5 +108,5 @@ ae-cli expression-errors
   - `layers[].id` 未指定/変更を確認
 - 旧レイヤーが残る:
   - `apply-scene --mode replace-managed` または `--mode clear-all` を使う
-- 宣言型で表現できない操作が必要:
+- 既存シーンへ局所修正したい / 宣言型で表現しづらい:
   - `aftereffects-cli-legacy` へ切り替え
