@@ -8,7 +8,6 @@ Japanese README is available at [README.ja.md](README.ja.md).
 
 - English README: [README.md](README.md)
 - Japanese README: [README.ja.md](README.ja.md)
-- Onboarding skill: [.codex/skills/aftereffects-onboarding/SKILL.md](.codex/skills/aftereffects-onboarding/SKILL.md)
 - Declarative skill: [.codex/skills/aftereffects-declarative/SKILL.md](.codex/skills/aftereffects-declarative/SKILL.md)
 - Legacy CLI skill: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)
 
@@ -26,7 +25,7 @@ Japanese README is available at [README.ja.md](README.ja.md).
   - layer structure operations (`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`)
 - Agent skills for Codex/Gemini workflows:
   - `.codex/skills/aftereffects-cli/SKILL.md`
-  - `.codex/skills/aftereffects-onboarding/SKILL.md`
+  - `.codex/skills/aftereffects-declarative/SKILL.md`
 
 ## Requirements
 
@@ -39,7 +38,7 @@ Japanese README is available at [README.ja.md](README.ja.md).
 If you want a clone-free onboarding path, run:
 
 ```bash
-npx github:yumehiko/ae-agent-skills install
+npx ae-agent-skills install
 ```
 
 Notes:
@@ -48,7 +47,7 @@ Notes:
 - The installer attempts: signed ZXP install (UPIA/ExManCmd) -> `ae-cli` install -> skill install.
 - You can force a target via `--agent codex` (or `gemini`, `both`).
 
-### CEP Debug Setting (for unsigned extensions)
+### CEP Debug Setting (local development only)
 
 This extension is intended for development use, so some environments require `PlayerDebugMode=1`.
 
@@ -62,26 +61,17 @@ After setting it, fully quit and relaunch After Effects.
 
 ## Quick Start (Recommended)
 
-Use an agent and ask it to run onboarding for this repository.
-
-Example prompts:
-
-- `Please run aftereffects-onboarding for this repository.`
-- `このリポジトリで aftereffects-onboarding を進めて。`
-
-The onboarding flow covers:
-
-- CEP extension placement/linking
-- Python virtual environment setup
-- `pip install -e .`
-- bridge connectivity checks (`ae-cli health`, `ae-cli layers`)
-
-## Clone
+Run:
 
 ```bash
-git clone https://github.com/yumehiko/ae-agent-skills.git
-cd ae-agent-skills
+npx ae-agent-skills install
 ```
+
+Then:
+
+1. Fully restart After Effects.
+2. Open the panel: `Window > Extensions (Beta) > ae-agent-skill`.
+3. Run `ae-cli health`.
 
 ## Manual CLI usage
 

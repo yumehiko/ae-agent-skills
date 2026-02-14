@@ -4,6 +4,7 @@
   "description": "One-command installer for the ae-agent-skill After Effects extension and CLI.",
   "type": "module",
   "bin": {
+    "ae-agent-skills": "bin/ae-agent-setup.mjs",
     "ae-agent-setup": "bin/ae-agent-setup.mjs"
   },
   "files": [

@@ -8,7 +8,6 @@ English README は [README.md](README.md) を参照してください。
 
 - English README: [README.md](README.md)
 - 日本語 README: [README.ja.md](README.ja.md)
-- Onboarding skill: [.codex/skills/aftereffects-onboarding/SKILL.md](.codex/skills/aftereffects-onboarding/SKILL.md)
 - 宣言型 skill: [.codex/skills/aftereffects-declarative/SKILL.md](.codex/skills/aftereffects-declarative/SKILL.md)
 - レガシー CLI skill: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)
 
@@ -26,7 +25,7 @@ English README は [README.md](README.md) を参照してください。
   - レイヤー構造操作（`parent-layer`, `precompose`, `duplicate-layer`, `move-layer-order`, `delete-layer`, `delete-comp`）
 - Codex/Gemini 向け skill を同梱
   - `.codex/skills/aftereffects-cli/SKILL.md`
-  - `.codex/skills/aftereffects-onboarding/SKILL.md`
+  - `.codex/skills/aftereffects-declarative/SKILL.md`
 
 ## 前提
 
@@ -39,7 +38,7 @@ English README は [README.md](README.md) を参照してください。
 clone なしで導入する場合は次を実行します。
 
 ```bash
-npx github:yumehiko/ae-agent-skills install
+npx ae-agent-skills install
 ```
 
 補足:
@@ -48,7 +47,7 @@ npx github:yumehiko/ae-agent-skills install
 - 処理は「署名済み ZXP 導入（UPIA/ExManCmd） -> `ae-cli` 導入 -> skill 導入」を順に試みます。
 - 固定する場合は `--agent codex`（または `gemini`, `both`）を指定します。
 
-### CEP Debug 設定（未署名拡張向け）
+### CEP Debug 設定（ローカル開発向け）
 
 このリポジトリの拡張は開発用途を想定しているため、環境によっては `PlayerDebugMode=1` が必要です。
 
@@ -62,26 +61,17 @@ defaults write com.adobe.CSXS.11 PlayerDebugMode 1
 
 ## クイックスタート（推奨）
 
-エージェントに onboarding を依頼してください。
-
-依頼例:
-
-- `このリポジトリで aftereffects-onboarding を進めて。`
-- `Please run aftereffects-onboarding for this repository.`
-
-onboarding では次を段階的に確認します。
-
-- CEP extension の配置/リンク
-- Python 仮想環境構築
-- `pip install -e .`
-- ブリッジ疎通確認（`ae-cli health`, `ae-cli layers`）
-
-## クローン
+次を実行:
 
 ```bash
-git clone https://github.com/yumehiko/ae-agent-skills.git
-cd ae-agent-skills
+npx ae-agent-skills install
 ```
+
+実行後:
+
+1. After Effects を完全再起動する。
+2. `ウィンドウ > 機能拡張 (ベータ) > ae-agent-skill` を開く。
+3. `ae-cli health` を実行する。
 
 ## 手動で CLI を使う場合
 
