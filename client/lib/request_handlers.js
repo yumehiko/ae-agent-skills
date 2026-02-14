@@ -36,10 +36,14 @@ function handleBridgeMutationCall(script, res, contextLabel, fallbackMessage) {
         try {
             const parsedResult = parseBridgeResult(result);
             if (parsedResult && parsedResult.status === 'error') {
-                sendJson(res, 500, {
+                const payload = {
                     status: 'error',
                     message: parsedResult.message || fallbackMessage,
-                });
+                };
+                if (parsedResult.error !== undefined) payload.error = parsedResult.error;
+                if (parsedResult.errors !== undefined) payload.errors = parsedResult.errors;
+                if (parsedResult.details !== undefined) payload.details = parsedResult.details;
+                sendJson(res, 500, payload);
                 log(`${contextLabel} failed: ${parsedResult.message || 'Unknown error'}`);
                 return;
             }

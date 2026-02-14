@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any, Dict, List
 
 import requests
@@ -10,6 +11,73 @@ import requests
 
 class AEBridgeError(RuntimeError):
     """Raised when the CEP bridge returns an error payload."""
+
+    def __init__(self, message: str, payload: Dict[str, Any] | None = None):
+        super().__init__(message)
+        self.payload = payload
+
+
+def _compact_json(value: Any, max_len: int = 120) -> str:
+    if isinstance(value, str):
+        text = value
+    else:
+        text = json.dumps(value, ensure_ascii=False)
+    if len(text) <= max_len:
+        return text
+    return f"{text[:max_len - 3]}..."
+
+
+def _format_error_entry(entry: Any) -> str:
+    if not isinstance(entry, dict):
+        return _compact_json(entry)
+
+    path = entry.get("path")
+    if path in (None, ""):
+        path = entry.get("instancePath")
+    if path in (None, ""):
+        path = entry.get("dataPath")
+
+    message = entry.get("message") or entry.get("error")
+    expected = entry.get("expected")
+    actual = entry.get("actual")
+
+    parts: List[str] = []
+    if path not in (None, ""):
+        parts.append(f"path={path}")
+    if message:
+        parts.append(str(message))
+    if expected is not None:
+        parts.append(f"expected={_compact_json(expected, max_len=80)}")
+    if actual is not None:
+        parts.append(f"actual={_compact_json(actual, max_len=80)}")
+
+    if parts:
+        return ", ".join(parts)
+    return _compact_json(entry)
+
+
+def _format_bridge_error_message(payload: Dict[str, Any]) -> str:
+    message = str(payload.get("message", "Unknown error from After Effects bridge."))
+    lines: List[str] = [message]
+
+    errors = payload.get("errors")
+    if isinstance(errors, list) and errors:
+        lines.append("Validation errors:")
+        max_items = 10
+        for idx, entry in enumerate(errors[:max_items], start=1):
+            lines.append(f"  {idx}. {_format_error_entry(entry)}")
+        if len(errors) > max_items:
+            lines.append(f"  ... and {len(errors) - max_items} more")
+
+    error_text = payload.get("error")
+    if error_text:
+        lines.append(f"Error: {error_text}")
+
+    details = payload.get("details")
+    if details:
+        lines.append(f"Details: {_compact_json(details)}")
+
+    return "\n".join(lines)
 
 
 @dataclass
@@ -43,16 +111,13 @@ class AEClient:
             payload = None
 
         if isinstance(payload, dict) and payload.get("status") != "success":
-            message = payload.get("message", "Unknown error from After Effects bridge.")
-            raise AEBridgeError(message)
+            raise AEBridgeError(_format_bridge_error_message(payload), payload=payload)
 
         try:
             response.raise_for_status()
         except requests.HTTPError as exc:
             if isinstance(payload, dict):
-                message = payload.get("message")
-                if message:
-                    raise AEBridgeError(message) from exc
+                raise AEBridgeError(_format_bridge_error_message(payload), payload=payload) from exc
             raise
 
         if isinstance(payload, dict):

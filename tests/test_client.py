@@ -37,6 +37,36 @@ def test_handle_response_raises_for_bridge_error() -> None:
         raise AssertionError("AEBridgeError was not raised")
 
 
+def test_handle_response_formats_validation_errors() -> None:
+    client = AEClient()
+    response = DummyResponse(
+        {
+            "status": "error",
+            "message": "Scene validation failed.",
+            "errors": [
+                {
+                    "path": "layers[1].shape",
+                    "message": "must be object",
+                    "expected": "object",
+                    "actual": "null",
+                }
+            ],
+        }
+    )
+    try:
+        client._handle_response(response)
+    except AEBridgeError as exc:
+        text = str(exc)
+        assert "Scene validation failed." in text
+        assert "Validation errors:" in text
+        assert "path=layers[1].shape" in text
+        assert "must be object" in text
+        assert "expected=object" in text
+        assert "actual=null" in text
+    else:
+        raise AssertionError("AEBridgeError was not raised")
+
+
 def test_get_properties_builds_query_params(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
