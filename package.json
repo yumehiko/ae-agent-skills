@@ -1,5 +1,5 @@
 {
-  "name": "ae-agent-setup",
+  "name": "ae-agent-skills",
   "version": "0.2.0",
   "description": "One-command installer for the ae-agent-skill After Effects extension and CLI.",
   "type": "module",
