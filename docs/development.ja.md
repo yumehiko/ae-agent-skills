@@ -25,6 +25,73 @@ python3 -m pip install -e ".[dev]"
 PYTHONPATH=src pytest
 ```
 
+## ZXPビルドと公開手順
+
+`0.2.6` 以降は `package.json` の `version` を正として、`npm version` 実行時に `CSXS/manifest.xml` へ自動同期します。
+
+### 1) バージョン更新
+
+```bash
+npm version 0.2.7 --no-git-tag-version
+```
+
+### 2) 署名付き ZXP ビルド
+
+前提:
+- `ZXPSignCmd` が `PATH` 上にある、または `ZXPSIGNCMD_BIN` で実体パスを指定できる
+- 署名証明書 (`.p12`) とパスワードを用意済み
+
+```bash
+SIGN_CERT_P12=certs/dev-cert.p12 \
+SIGN_CERT_PASSWORD='your-password' \
+./scripts/signing/build-zxp.sh
+```
+
+必要なら `ZXPSIGNCMD_BIN` を指定:
+
+```bash
+ZXPSIGNCMD_BIN=/absolute/path/to/ZXPSignCmd \
+SIGN_CERT_P12=certs/dev-cert.p12 \
+SIGN_CERT_PASSWORD='your-password' \
+./scripts/signing/build-zxp.sh
+```
+
+出力先:
+- `dist/ae-agent-skill-<version>.zxp`
+
+### 3) コミット・タグ・push
+
+```bash
+git add package.json CSXS/manifest.xml
+git commit -m "release: v0.2.7"
+git tag v0.2.7
+git push origin HEAD
+git push origin v0.2.7
+```
+
+### 4) npm 公開
+
+```bash
+npm publish
+```
+
+### 5) GitHub Release 作成（ZXP添付）
+
+`npx ae-agent-skills install` は latest release の `.zxp` を参照するため、Release に ZXP を添付します。
+
+```bash
+gh release create v0.2.7 dist/ae-agent-skill-0.2.7.zxp \
+  --title v0.2.7 \
+  --notes "Release notes"
+```
+
+### 6) 公開後確認
+
+```bash
+npm view ae-agent-skills version dist-tags.latest --json
+gh release view --repo yumehiko/ae-agent-skills --json tagName,assets
+```
+
 ## プロジェクト構成
 
 ### Python CLI
