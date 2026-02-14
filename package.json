@@ -7,6 +7,10 @@
     "ae-agent-skills": "bin/ae-agent-setup.mjs",
     "ae-agent-setup": "bin/ae-agent-setup.mjs"
   },
+  "scripts": {
+    "sync:version": "node scripts/release/sync-version.mjs",
+    "version": "npm run sync:version"
+  },
   "files": [
     "bin",
     "templates",
