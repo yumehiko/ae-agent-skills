@@ -66,7 +66,6 @@ ae-cli expression-errors
 
 ## scene 設計ルール
 
-- 正式スキーマは `schemas/scene.schema.json` を参照
 - `layers[].id` は必須推奨（upsert の安定キー）
 - `layers[].parentId` は scene id を参照
 - アニメーション対象プロパティは `animations` で管理
@@ -76,6 +75,42 @@ ae-cli expression-errors
 - expression は `layers[].expressions[]`
 - Essential Graphics は `layers[].essentialProperties[]`
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
+
+## 最小テンプレート（このまま使える）
+
+以下を `work/min.scene.json` として保存して、そのまま `validate/apply` できる。
+
+```json
+{
+  "composition": {
+    "name": "Skill_Minimal_Test",
+    "width": 1280,
+    "height": 720,
+    "duration": 3,
+    "frameRate": 30,
+    "pixelAspect": 1,
+    "createIfMissing": true,
+    "setActive": true
+  },
+  "layers": [
+    {
+      "id": "t1",
+      "type": "text",
+      "name": "Hello",
+      "text": "Skill only test",
+      "transform": {
+        "position": [640, 360],
+        "opacity": 100
+      }
+    }
+  ]
+}
+```
+
+```bash
+ae-cli apply-scene --scene-file work/min.scene.json --validate-only
+ae-cli apply-scene --scene-file work/min.scene.json
+```
 
 ## propertyPath 運用ルール（汎用）
 

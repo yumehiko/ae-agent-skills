@@ -66,6 +66,18 @@ description: Command-by-command After Effects editing via ae-cli. Best for surgi
   - `ae-cli move-layer-order ...`
   - `ae-cli delete-layer ...`
 
+## 最小手順（このまま使える）
+
+リポジトリのファイルに依存せず、命令型だけで comp と text レイヤーを作る最小例。
+
+```bash
+ae-cli health
+ae-cli create-comp --name "Skill_CLI_Minimal_Test" --width 1280 --height 720 --duration 3 --frame-rate 30
+ae-cli set-active-comp --comp-name "Skill_CLI_Minimal_Test"
+ae-cli add-layer --type text --name "Hello" --text "CLI skill test"
+ae-cli layers
+```
+
 ## 注意
 
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
