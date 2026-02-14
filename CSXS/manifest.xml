@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.yumehiko.aeagentskill" ExtensionBundleVersion="0.2.0" ExtensionBundleName="ae-agent-skill" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.yumehiko.aeagentskill" ExtensionBundleVersion="0.2.6" ExtensionBundleName="ae-agent-skill" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <ExtensionList>
-        <Extension Id="com.yumehiko.aeagentskill.panel" Version="0.2.0" />
+        <Extension Id="com.yumehiko.aeagentskill.panel" Version="0.2.6" />
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
