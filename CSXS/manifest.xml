@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.gemini.llmvideoagent" ExtensionBundleVersion="1.0.2" ExtensionBundleName="LLM Video Agent" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.yumehiko.aeagentskill" ExtensionBundleVersion="0.2.0" ExtensionBundleName="ae-agent-skill" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <ExtensionList>
-        <Extension Id="com.gemini.llmvideoagent.panel" Version="1.0.2" />
+        <Extension Id="com.yumehiko.aeagentskill.panel" Version="0.2.0" />
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
@@ -15,7 +15,7 @@
         </RequiredRuntimeList>
     </ExecutionEnvironment>
     <DispatchInfoList>
-        <Extension Id="com.gemini.llmvideoagent.panel">
+        <Extension Id="com.yumehiko.aeagentskill.panel">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./client/index.html</MainPath>
@@ -30,7 +30,7 @@
                 </Lifecycle>
                 <UI>
                     <Type>Panel</Type>
-                    <Menu>LLM Video Agent</Menu>
+                    <Menu>ae-agent-skill</Menu>
                     <Geometry>
                         <Size>
                             <Height>500</Height>

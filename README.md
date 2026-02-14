@@ -34,6 +34,20 @@ Japanese README is available at [README.ja.md](README.ja.md).
 - Adobe After Effects (CEP-capable environment)
 - Python 3.10+
 
+## One-line setup (No clone)
+
+If you want a clone-free onboarding path, run:
+
+```bash
+npx github:yumehiko/ae-agent-skills install
+```
+
+Notes:
+
+- If `--agent` is omitted, the installer shows an interactive agent choice (`codex` / `gemini` / `both`) in English.
+- The installer attempts: signed ZXP install (UPIA/ExManCmd) -> `ae-cli` install -> skill install.
+- You can force a target via `--agent codex` (or `gemini`, `both`).
+
 ### CEP Debug Setting (for unsigned extensions)
 
 This extension is intended for development use, so some environments require `PlayerDebugMode=1`.

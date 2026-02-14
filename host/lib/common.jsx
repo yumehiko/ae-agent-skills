@@ -1,6 +1,6 @@
 function log(message) {
     try {
-        $.writeln("[LLM Video Agent] " + message);
+        $.writeln("[ae-agent-skill] " + message);
     } catch (err) {}
 }
 

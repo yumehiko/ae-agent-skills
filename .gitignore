@@ -18,10 +18,17 @@ build/
 dist/
 *.egg-info/
 pip-wheel-metadata/
+certs/
+*.p12
+*.key.pem
+*.crt.pem
+ZXPSignCmd
 
 # Editor/IDE
 .vscode/
 .idea/
+node_modules/
+*.tgz
 
 # Scene JSON workspace (user-local artifacts)
 work/

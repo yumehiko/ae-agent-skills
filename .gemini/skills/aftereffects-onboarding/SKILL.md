@@ -28,7 +28,7 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
 - まずユーザー領域を案内する:
   - `~/Library/Application Support/Adobe/CEP/extensions`
 - 未配置なら次を案内する:
-  - `ln -s "<repo-path>" "$HOME/Library/Application Support/Adobe/CEP/extensions/llm-video-agent"`
+  - `ln -s "<repo-path>" "$HOME/Library/Application Support/Adobe/CEP/extensions/ae-agent-skill"`
 - 既存リンクやディレクトリがある場合:
   - 中身がこのリポジトリか確認させる。
   - 不一致ならユーザーに整理方針を選んでもらう（置換または別名）。
@@ -53,7 +53,7 @@ description: `ae-agent-skills` の初期導入を対話で進める手順。`ae-
   - 設定後は After Effects を完全終了して再起動する。
 - ユーザーに依頼する:
   1. After Effects を起動する。
-  2. `ウィンドウ > 機能拡張 (ベータ) > LLM Video Agent` を開く。
+  2. `ウィンドウ > 機能拡張 (ベータ) > ae-agent-skill` を開く。
 - パネル表示後、ブリッジ待受中か確認するよう依頼する。
 
 ### Step 5: 疎通確認

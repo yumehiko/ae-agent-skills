@@ -34,6 +34,20 @@ English README は [README.md](README.md) を参照してください。
 - Adobe After Effects（CEP 拡張が動作する環境）
 - Python 3.10+
 
+## 1コマンド導入（clone不要）
+
+clone なしで導入する場合は次を実行します。
+
+```bash
+npx github:yumehiko/ae-agent-skills install
+```
+
+補足:
+
+- `--agent` を省略すると、インストーラーが英語でエージェント選択（`codex` / `gemini` / `both`）を表示します。
+- 処理は「署名済み ZXP 導入（UPIA/ExManCmd） -> `ae-cli` 導入 -> skill 導入」を順に試みます。
+- 固定する場合は `--agent codex`（または `gemini`, `both`）を指定します。
+
 ### CEP Debug 設定（未署名拡張向け）
 
 このリポジトリの拡張は開発用途を想定しているため、環境によっては `PlayerDebugMode=1` が必要です。
