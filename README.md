@@ -15,6 +15,7 @@ What happens:
 1. The installer asks which agent to configure (`codex` / `gemini` / `both`) if `--agent` is omitted.
 2. It installs the signed ZXP extension via `UPIA` or `ExManCmd`.
 3. It installs `ae-cli` and agent skills.
+4. It initializes `~/ae-agent-skills/` with `work/`, `done/`, `scene.schema.json`, and `references/`.
 
 ## Run with your agent
 

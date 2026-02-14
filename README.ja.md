@@ -15,6 +15,7 @@ npx ae-agent-skills install
 1. `--agent` 未指定なら、`codex` / `gemini` / `both` の選択を表示します。
 2. 署名済み ZXP を `UPIA` または `ExManCmd` でインストールします。
 3. `ae-cli` と agent skill をインストールします。
+4. `~/ae-agent-skills/` を初期化し、`work/`・`done/`・`scene.schema.json`・`references/` を配置します。
 
 ## エージェントで実行
 

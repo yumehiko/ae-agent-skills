@@ -10,6 +10,9 @@
   "files": [
     "bin",
     "templates",
+    "schemas",
+    "examples",
+    "docs",
     "scripts/signing",
     "CSXS",
     "client",

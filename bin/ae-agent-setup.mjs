@@ -8,9 +8,16 @@ import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_REPO = 'yumehiko/ae-agent-skills';
+const AGENT_WORKSPACE_NAME = 'ae-agent-skills';
 const SKILL_SOURCES = [
   { sourceName: 'aftereffects-cli.SKILL.md', destinationName: 'aftereffects-cli' },
   { sourceName: 'aftereffects-declarative.SKILL.md', destinationName: 'aftereffects-declarative' },
+];
+const WORKSPACE_RESOURCE_SOURCES = [
+  { source: ['schemas', 'scene.schema.json'], destination: ['scene.schema.json'] },
+  { source: ['examples', 'scene.example.json'], destination: ['references', 'scene.example.json'] },
+  { source: ['docs', 'cli.ja.md'], destination: ['references', 'cli.ja.md'] },
+  { source: ['docs', 'cli.md'], destination: ['references', 'cli.md'] },
 ];
 
 function printHelp() {
@@ -255,6 +262,29 @@ function installSkills(agent) {
   }
 }
 
+function setupAgentWorkspace() {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const workspaceRoot = path.join(os.homedir(), AGENT_WORKSPACE_NAME);
+  const workDir = path.join(workspaceRoot, 'work');
+  const doneDir = path.join(workspaceRoot, 'done');
+  const refsDir = path.join(workspaceRoot, 'references');
+
+  fs.mkdirSync(workDir, { recursive: true });
+  fs.mkdirSync(doneDir, { recursive: true });
+  fs.mkdirSync(refsDir, { recursive: true });
+
+  for (const resource of WORKSPACE_RESOURCE_SOURCES) {
+    const source = path.join(root, ...resource.source);
+    const destination = path.join(workspaceRoot, ...resource.destination);
+    if (!fs.existsSync(source)) {
+      throw new Error(`Workspace resource not found: ${source}`);
+    }
+    fs.copyFileSync(source, destination);
+  }
+
+  console.log(`Prepared workspace: ${workspaceRoot}`);
+}
+
 function installCli(repo) {
   if (!commandExists('python3')) {
     throw new Error('python3 is required to install ae-cli.');
@@ -272,6 +302,7 @@ function installCli(repo) {
 
 async function installCommand(opts) {
   console.log('Starting ae-agent setup...');
+  setupAgentWorkspace();
 
   const agent = await resolveAgent(opts.agent);
   console.log(`Selected agent target: ${agent}`);
@@ -308,6 +339,7 @@ async function installCommand(opts) {
   console.log('  1) Fully restart After Effects.');
   console.log('  2) Open the panel: Window > Extensions (Beta) > ae-agent-skill.');
   console.log('  3) Run: ae-cli health');
+  console.log(`  4) Use workspace: ${path.join(os.homedir(), AGENT_WORKSPACE_NAME)}`);
 }
 
 async function main() {

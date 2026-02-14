@@ -30,20 +30,27 @@ After Effects を宣言型 JSON で構築する標準スキル。
 ## 基本フロー
 
 1. 疎通確認: `ae-cli health`
-2. scene JSON を作成/更新（作業中は `work/` 配下）
-3. `--validate-only` で検証
-4. 実適用
-5. `layers` / `properties` / `expression-errors` で確認
-6. 完了版は `done/` 配下へコピーして保管
+2. `~/ae-agent-skills/scene.schema.json` と `~/ae-agent-skills/references/scene.example.json` を確認
+3. scene JSON を作成/更新（作業中は `~/ae-agent-skills/work/` 配下）
+4. `--validate-only` で検証
+5. 実適用
+6. `layers` / `properties` / `expression-errors` で確認
+7. 完了版は `~/ae-agent-skills/done/` 配下へコピーして保管
+
+## 参照ファイル（固定）
+
+- schema: `~/ae-agent-skills/scene.schema.json`
+- サンプル: `~/ae-agent-skills/references/scene.example.json`
+- CLIリファレンス（日本語）: `~/ae-agent-skills/references/cli.ja.md`
+- CLIリファレンス（英語）: `~/ae-agent-skills/references/cli.md`
 
 ## ファイル運用ルール（重要）
 
-- `work/`: 作業中の scene JSON を置くディレクトリ
-- `done/`: 完了した scene JSON の保管ディレクトリ
-- どちらもリポジトリにはコミットしない（`.gitignore` 前提）
+- `~/ae-agent-skills/work/`: 作業中の scene JSON を置くディレクトリ
+- `~/ae-agent-skills/done/`: 完了した scene JSON の保管ディレクトリ
 - 例:
-  - `ae-cli apply-scene --scene-file work/main.scene.json --validate-only`
-  - `ae-cli apply-scene --scene-file work/main.scene.json`
+  - `ae-cli apply-scene --scene-file ~/ae-agent-skills/work/main.scene.json --validate-only`
+  - `ae-cli apply-scene --scene-file ~/ae-agent-skills/work/main.scene.json`
 
 ## コマンド
 
@@ -68,6 +75,7 @@ ae-cli expression-errors
 
 - `layers[].id` は必須推奨（upsert の安定キー）
 - `layers[].parentId` は scene id を参照
+- 推測でキーを作らず、必ず `~/ae-agent-skills/scene.schema.json` を正として合わせる
 - アニメーション対象プロパティは `animations` で管理
 - 3Dベクトルには2D入力可（`[x,y] -> [x,y,0]` 自動補完）
 - Repeater は `layers[].repeaters[]`
@@ -78,7 +86,7 @@ ae-cli expression-errors
 
 ## 最小テンプレート（このまま使える）
 
-以下を `work/min.scene.json` として保存して、そのまま `validate/apply` できる。
+以下を `~/ae-agent-skills/work/min.scene.json` として保存して、そのまま `validate/apply` できる。
 
 ```json
 {
@@ -108,8 +116,8 @@ ae-cli expression-errors
 ```
 
 ```bash
-ae-cli apply-scene --scene-file work/min.scene.json --validate-only
-ae-cli apply-scene --scene-file work/min.scene.json
+ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json --validate-only
+ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json
 ```
 
 ## propertyPath 運用ルール（汎用）

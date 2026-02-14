@@ -33,6 +33,13 @@ description: Command-by-command After Effects editing via ae-cli. Best for surgi
 3. 必要な更新コマンドを最小回数で実行
 4. 変更後に `layers` / `properties` で結果確認
 
+## 参照ファイル（固定）
+
+- schema: `~/ae-agent-skills/scene.schema.json`
+- サンプル: `~/ae-agent-skills/references/scene.example.json`
+- CLIリファレンス（日本語）: `~/ae-agent-skills/references/cli.ja.md`
+- CLIリファレンス（英語）: `~/ae-agent-skills/references/cli.md`
+
 ## 宣言型へ切り替える目安
 
 - 同種の変更を複数レイヤーへ繰り返す
@@ -83,4 +90,4 @@ ae-cli layers
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。
-- scene JSON を一時的に作る場合は `work/`（作業中）と `done/`（完了保管）を使い、どちらもコミットしない。
+- scene JSON を一時的に作る場合は `~/ae-agent-skills/work/`（作業中）と `~/ae-agent-skills/done/`（完了保管）を使う。
