@@ -1,31 +1,42 @@
 # ae-agent-skills
 
-`ae-agent-skill`（After Effects CEP パネル）、`ae-cli`、Codex/Gemini 向け skill を1コマンドで導入するリポジトリです。
+`ae-agent-skills`は、コーディングエージェント（Codex / Gemini）からAdobe After Effectsを操作できるようにするためのリポジトリです。
+`ae-agent-skill`（After Effects CEP パネル）、`ae-cli`、エージェント向け skill を導入し、コンポジション作成や既存シーン編集をエージェントに依頼できるようになります。
 
 English README: [README.md](README.md)
 
-## インストール（clone不要）
+## クイックスタート
+
+1. インストールする。
 
 ```bash
 npx ae-agent-skills install
 ```
 
-実行内容:
+2. After Effects を再起動し、`ウィンドウ > 機能拡張 (ベータ) > ae-agent-skill` を開く。
+3. Codex または Gemini を起動し、After Effects操作を依頼する。
+
+最初の依頼例（コンポジション作成）:
+
+```text
+$aftereffects-declarative を使って、1920x1080 / 30fps / 5秒のコンポジションを作成して。
+背景はダークグレー、中央に「Hello AE Agent」のテキストを配置し、
+0.5秒でフェードインするアニメーションを追加して。
+```
+
+4. エージェントの処理完了後、After Effects 上でコンポジションが作成されたことを確認する。
+
+## インストール時に行われること
 
 1. `--agent` 未指定なら、`codex` / `gemini` / `both` の選択を表示します。
 2. 署名済み ZXP を `UPIA` または `ExManCmd` でインストールします。
 3. `ae-cli` と agent skill をインストールします。
 4. `~/ae-agent-skills/` を初期化し、`work/`・`done/`・`scene.schema.json`・`references/` を配置します。
 
-## エージェントで実行
+## どの skill を使うか
 
-導入後:
-
-1. After Effects を再起動する。
-2. `ウィンドウ > 機能拡張 (ベータ) > ae-agent-skill` を開く。
-3. コーディングエージェントで以下の skill を呼び出す。
-- `$aftereffects-declarative`（通常の構成作成向け）
-- `$aftereffects-cli`（個別編集・デバッグ向け）
+- `$aftereffects-declarative`: 新規コンポジション作成や全体構成を作るとき（通常はこちら）
+- `$aftereffects-cli`: 既存シーンの一部修正、プロパティ単位の調整、デバッグ
 
 ## ドキュメント
 
