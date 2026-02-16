@@ -315,6 +315,32 @@ def export_scene(
         except Exception as exc:  # noqa: BLE001
             warnings.append(f"Failed to export effects for layer '{layer.get('name')}': {exc}")
 
+        try:
+            repeaters = client.get_repeaters(layer_id=layer_id)
+            repeater_items: List[Dict[str, Any]] = []
+            for repeater in repeaters:
+                item: Dict[str, Any] = {}
+                if isinstance(repeater.get("groupIndex"), int):
+                    item["groupIndex"] = repeater["groupIndex"]
+                name = repeater.get("name")
+                if isinstance(name, str) and len(name) > 0:
+                    item["name"] = name
+                for field in ("copies", "offset", "rotation", "startOpacity", "endOpacity"):
+                    value = repeater.get(field)
+                    if isinstance(value, (int, float)):
+                        item[field] = value
+                for field in ("position", "scale"):
+                    value = repeater.get(field)
+                    if isinstance(value, list) and len(value) == 2:
+                        if all(isinstance(v, (int, float)) for v in value):
+                            item[field] = value
+                if item:
+                    repeater_items.append(item)
+            if repeater_items:
+                scene_layer["repeaters"] = repeater_items
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"Failed to export repeaters for layer '{layer.get('name')}': {exc}")
+
         if scene_type == "solid":
             if isinstance(layer.get("sourceWidth"), (int, float)):
                 scene_layer["width"] = layer["sourceWidth"]

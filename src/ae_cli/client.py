@@ -392,6 +392,25 @@ class AEClient:
         )
         return self._handle_response(response)
 
+    def get_repeaters(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Return shape repeater operators for a layer."""
+        params: List[tuple[str, Any]] = []
+        selector = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        if "layerId" in selector:
+            params.append(("layerId", selector["layerId"]))
+        else:
+            params.append(("layerName", selector["layerName"]))
+        response = requests.get(
+            self._url("/repeaters"),
+            params=params,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def add_shape_repeater(
         self,
         layer_id: int | None = None,

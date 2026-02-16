@@ -188,6 +188,25 @@ def test_get_effects_supports_layer_id(monkeypatch) -> None:
     assert captured["timeout"] == 5.0
 
 
+def test_get_repeaters_supports_layer_name(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_repeaters(layer_name="Shape 1")
+
+    assert captured["url"] == "http://127.0.0.1:8080/repeaters"
+    assert captured["params"] == [("layerName", "Shape 1")]
+    assert captured["timeout"] == 5.0
+
+
 def test_create_comp_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

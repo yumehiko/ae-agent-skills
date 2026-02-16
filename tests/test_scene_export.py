@@ -56,6 +56,16 @@ class FakeClient:
                 "sourceDuration": 8.0,
                 "solidColor": [0.1, 0.2, 0.3],
             },
+            {
+                "id": 4,
+                "name": "Burst",
+                "type": "Shape",
+                "parentLayerId": None,
+                "inPoint": 0.0,
+                "outPoint": 8.0,
+                "startTime": 0.0,
+                "nullLayer": False,
+            },
             {"id": 3, "name": "Camera 1", "type": "Camera", "parentLayerId": None, "nullLayer": False},
         ]
 
@@ -114,12 +124,29 @@ class FakeClient:
             }
         ]
 
+    def get_repeaters(self, layer_id: int, **_kwargs: Any) -> list[dict[str, Any]]:
+        if layer_id != 4:
+            return []
+        return [
+            {
+                "groupIndex": 1,
+                "name": "BurstRepeater",
+                "copies": 12,
+                "offset": 0.5,
+                "position": [0, -30],
+                "scale": [100, 100],
+                "rotation": 20,
+                "startOpacity": 100,
+                "endOpacity": 0,
+            }
+        ]
+
 
 def test_export_scene_builds_supported_layers_and_warnings() -> None:
     scene, warnings = export_scene(FakeClient())
 
     assert scene["composition"]["name"] == "Main"
-    assert len(scene["layers"]) == 2
+    assert len(scene["layers"]) == 3
     assert scene["layers"][0]["type"] == "text"
     assert scene["layers"][0]["text"] == "Hello"
     assert scene["layers"][0]["timing"]["inPoint"] == 0.0
@@ -135,4 +162,7 @@ def test_export_scene_builds_supported_layers_and_warnings() -> None:
     assert scene["layers"][1]["width"] == 1920
     assert scene["layers"][1]["color"] == [0.1, 0.2, 0.3]
     assert scene["layers"][1]["transform"]["scale"] == [100, 100, 100]
+    assert scene["layers"][2]["type"] == "shape"
+    assert scene["layers"][2]["repeaters"][0]["name"] == "BurstRepeater"
+    assert scene["layers"][2]["repeaters"][0]["copies"] == 12
     assert any("Skipped unsupported layer 'Camera 1'" in warning for warning in warnings)

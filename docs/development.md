@@ -45,6 +45,7 @@ PYTHONPATH=src pytest
 - `host/lib/query_expressions_handlers.jsx`
 - `host/lib/query_animations_handlers.jsx`
 - `host/lib/query_effects_handlers.jsx`
+- `host/lib/query_repeaters_handlers.jsx`
 - `host/lib/mutation_handlers.jsx`
 - `host/lib/mutation_keyframe_handlers.jsx`
 - `host/lib/mutation_shape_handlers.jsx`

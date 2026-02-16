@@ -282,6 +282,19 @@ function handleGetEffects(searchParams, res) {
     handleBridgeDataCall(script, res, `getEffects(${layerIdLiteral})`);
 }
 
+function handleGetRepeaters(searchParams, res) {
+    const selector = parseLayerSelectorFromSearchParams(searchParams, 'getRepeaters', res);
+    if (!selector.ok) return;
+    const options = {};
+    if (selector.layerName) options.layerName = selector.layerName;
+    const optionsLiteral = Object.keys(options).length > 0
+        ? toExtendScriptStringLiteral(JSON.stringify(options))
+        : 'null';
+    const layerIdLiteral = selector.layerId === null ? 'null' : String(selector.layerId);
+    const script = `getRepeaters(${layerIdLiteral}, ${optionsLiteral})`;
+    handleBridgeDataCall(script, res, `getRepeaters(${layerIdLiteral})`);
+}
+
 function handleSetExpression(req, res) {
     readJsonBody(req, res, ({ layerId, layerName, propertyPath, expression }) => {
         if (!propertyPath || expression === undefined) {
@@ -495,6 +508,10 @@ function routeRequest(req, res) {
     }
     if (pathname === '/effects' && method === 'GET') {
         handleGetEffects(searchParams, res);
+        return;
+    }
+    if (pathname === '/repeaters' && method === 'GET') {
+        handleGetRepeaters(searchParams, res);
         return;
     }
     if (pathname === '/expression' && method === 'POST') {

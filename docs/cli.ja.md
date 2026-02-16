@@ -58,5 +58,5 @@ ae-cli export-scene --comp-name "Main" --output-file work/main.export.json
 注意:
 
 - `export-scene` は現在 best effort で、未対応要素は `warnings` に出力されます（`--scene-only` 以外）。
-- 現在の主対応は `text/null/solid/shape`、`parentId`、`timing`、`transform`、`expressions`、`animations`、`effects` です。
+- 現在の主対応は `text/null/solid/shape`、`parentId`、`timing`、`transform`、`expressions`、`animations`、`effects`、`repeaters` です。
 - 詳細は `docs/reverse-scene-limitations.ja.md` を参照してください。
