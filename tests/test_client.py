@@ -169,6 +169,25 @@ def test_get_animations_supports_layer_name(monkeypatch) -> None:
     assert captured["timeout"] == 5.0
 
 
+def test_get_effects_supports_layer_id(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_effects(layer_id=9)
+
+    assert captured["url"] == "http://127.0.0.1:8080/effects"
+    assert captured["params"] == [("layerId", 9)]
+    assert captured["timeout"] == 5.0
+
+
 def test_create_comp_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

@@ -269,6 +269,19 @@ function handleGetAnimations(searchParams, res) {
     handleBridgeDataCall(script, res, `getAnimations(${layerIdLiteral})`);
 }
 
+function handleGetEffects(searchParams, res) {
+    const selector = parseLayerSelectorFromSearchParams(searchParams, 'getEffects', res);
+    if (!selector.ok) return;
+    const options = {};
+    if (selector.layerName) options.layerName = selector.layerName;
+    const optionsLiteral = Object.keys(options).length > 0
+        ? toExtendScriptStringLiteral(JSON.stringify(options))
+        : 'null';
+    const layerIdLiteral = selector.layerId === null ? 'null' : String(selector.layerId);
+    const script = `getEffects(${layerIdLiteral}, ${optionsLiteral})`;
+    handleBridgeDataCall(script, res, `getEffects(${layerIdLiteral})`);
+}
+
 function handleSetExpression(req, res) {
     readJsonBody(req, res, ({ layerId, layerName, propertyPath, expression }) => {
         if (!propertyPath || expression === undefined) {
@@ -478,6 +491,10 @@ function routeRequest(req, res) {
     }
     if (pathname === '/animations' && method === 'GET') {
         handleGetAnimations(searchParams, res);
+        return;
+    }
+    if (pathname === '/effects' && method === 'GET') {
+        handleGetEffects(searchParams, res);
         return;
     }
     if (pathname === '/expression' && method === 'POST') {

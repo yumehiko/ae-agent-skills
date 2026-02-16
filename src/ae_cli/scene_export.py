@@ -83,6 +83,14 @@ def _is_supported_keyframe_value(value: Any) -> bool:
     return False
 
 
+def _is_supported_effect_value(value: Any) -> bool:
+    if isinstance(value, (int, float, bool, str)):
+        return True
+    if isinstance(value, list):
+        return all(isinstance(item, (int, float, bool, str)) for item in value)
+    return False
+
+
 def _slugify_layer_name(name: str) -> str:
     lowered = name.lower().strip()
     slug = re.sub(r"[^a-z0-9]+", "-", lowered).strip("-")
@@ -269,6 +277,43 @@ def export_scene(
         expression_paths = _collect_expression_paths(props)
         if expression_paths and "expressions" not in scene_layer:
             warnings.append(f"Layer '{layer.get('name')}' has expressions, but export failed to resolve source text.")
+
+        try:
+            effects = client.get_effects(layer_id=layer_id)
+            effect_items: List[Dict[str, Any]] = []
+            for effect in effects:
+                effect_match_name = effect.get("matchName")
+                if not isinstance(effect_match_name, str) or len(effect_match_name) == 0:
+                    continue
+                effect_item: Dict[str, Any] = {"matchName": effect_match_name}
+                effect_name = effect.get("name")
+                if isinstance(effect_name, str) and len(effect_name) > 0:
+                    effect_item["name"] = effect_name
+                params: List[Dict[str, Any]] = []
+                for param in effect.get("params", []):
+                    property_index = param.get("propertyIndex")
+                    value = param.get("value")
+                    if not isinstance(property_index, int) or property_index <= 0:
+                        continue
+                    if not _is_supported_effect_value(value):
+                        warnings.append(
+                            f"Skipped unsupported effect value on layer '{layer.get('name')}'"
+                            f" effect '{effect_name or effect_match_name}' param index {property_index}."
+                        )
+                        continue
+                    params.append(
+                        {
+                            "propertyIndex": property_index,
+                            "value": value,
+                        }
+                    )
+                if params:
+                    effect_item["params"] = params
+                effect_items.append(effect_item)
+            if effect_items:
+                scene_layer["effects"] = effect_items
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"Failed to export effects for layer '{layer.get('name')}': {exc}")
 
         if scene_type == "solid":
             if isinstance(layer.get("sourceWidth"), (int, float)):

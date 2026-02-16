@@ -96,6 +96,24 @@ class FakeClient:
             }
         ]
 
+    def get_effects(self, layer_id: int, **_kwargs: Any) -> list[dict[str, Any]]:
+        if layer_id != 1:
+            return []
+        return [
+            {
+                "matchName": "ADBE Slider Control",
+                "name": "Slider Control",
+                "params": [
+                    {
+                        "propertyIndex": 1,
+                        "matchName": "ADBE Slider Control-0001",
+                        "propertyPath": "ADBE Effect Parade.ADBE Slider Control.ADBE Slider Control-0001",
+                        "value": 55,
+                    }
+                ],
+            }
+        ]
+
 
 def test_export_scene_builds_supported_layers_and_warnings() -> None:
     scene, warnings = export_scene(FakeClient())
@@ -107,6 +125,9 @@ def test_export_scene_builds_supported_layers_and_warnings() -> None:
     assert scene["layers"][0]["timing"]["inPoint"] == 0.0
     assert scene["layers"][0]["expressions"][0]["expression"] == "wiggle(2,20)"
     assert scene["layers"][0]["animations"][0]["propertyPath"] == "ADBE Transform Group.ADBE Position"
+    assert scene["layers"][0]["effects"][0]["matchName"] == "ADBE Slider Control"
+    assert scene["layers"][0]["effects"][0]["params"][0]["propertyIndex"] == 1
+    assert scene["layers"][0]["effects"][0]["params"][0]["value"] == 55
     assert scene["layers"][0]["transform"]["position"] == [960, 540]
     assert scene["layers"][0]["transform"]["opacity"] == 100
     assert scene["layers"][1]["type"] == "solid"
