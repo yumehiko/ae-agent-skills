@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 const DEFAULT_REPO = 'yumehiko/ae-agent-skills';
 const AGENT_WORKSPACE_NAME = 'ae-agent-skills';
 const SKILL_SOURCES = [
-  { sourceName: 'aftereffects-cli.SKILL.md', destinationName: 'aftereffects-cli' },
-  { sourceName: 'aftereffects-declarative.SKILL.md', destinationName: 'aftereffects-declarative' },
+  { sourceName: 'aftereffects-cli', destinationName: 'aftereffects-cli' },
+  { sourceName: 'aftereffects-declarative', destinationName: 'aftereffects-declarative' },
 ];
 const WORKSPACE_RESOURCE_SOURCES = [
   { source: ['schemas', 'scene.schema.json'], destination: ['scene.schema.json'] },
@@ -204,6 +204,20 @@ function downloadToFile(url, destination) {
   });
 }
 
+function copyRecursive(source, destination) {
+  const stat = fs.statSync(source);
+  if (stat.isDirectory()) {
+    fs.mkdirSync(destination, { recursive: true });
+    for (const name of fs.readdirSync(source)) {
+      copyRecursive(path.join(source, name), path.join(destination, name));
+    }
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(source, destination);
+}
+
 async function resolveZxpPath(opts) {
   if (opts.zxp) {
     if (opts.zxp.startsWith('http://') || opts.zxp.startsWith('https://')) {
@@ -255,8 +269,7 @@ function installSkills(agent) {
         throw new Error(`Skill source not found: ${source}`);
       }
       fs.rmSync(destination, { recursive: true, force: true });
-      fs.mkdirSync(destination, { recursive: true });
-      fs.copyFileSync(source, path.join(destination, 'SKILL.md'));
+      copyRecursive(source, destination);
       console.log(`Installed ${target.kind} skill: ${destination}`);
     }
   }
