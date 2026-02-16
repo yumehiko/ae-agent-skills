@@ -7,7 +7,7 @@
 
 - 現行の宣言スキーマは `schemas/scene.schema.json`
 - 現行の適用処理は `host/lib/mutation_scene_handlers.jsx` の `applyScene()`
-- 現行の取得系 API は主に `host/lib/query_handlers.jsx` の `getLayers()` / `getProperties()` / `getExpressionErrors()`
+- 現行の取得系 API は主に `host/lib/query_*_handlers.jsx` の `getLayers()` / `getProperties()` / `getExpressionErrors()` など
 
 ## 制約の分類
 

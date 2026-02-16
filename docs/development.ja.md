@@ -106,7 +106,12 @@ gh release view --repo yumehiko/ae-agent-skills --json tagName,assets
 - `host/index.jsx`
 - `host/lib/common.jsx`
 - `host/lib/property_utils.jsx`
-- `host/lib/query_handlers.jsx`
+- `host/lib/query_common.jsx`
+- `host/lib/query_layers_handlers.jsx`
+- `host/lib/query_properties_handlers.jsx`
+- `host/lib/query_expressions_handlers.jsx`
+- `host/lib/query_animations_handlers.jsx`
+- `host/lib/query_effects_handlers.jsx`
 - `host/lib/mutation_handlers.jsx`
 - `host/lib/mutation_keyframe_handlers.jsx`
 - `host/lib/mutation_shape_handlers.jsx`

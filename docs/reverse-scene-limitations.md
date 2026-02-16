@@ -7,7 +7,7 @@ The goal is to make future work explicit and avoid silent data loss during expor
 
 - Declarative schema: `schemas/scene.schema.json`
 - Scene apply implementation: `host/lib/mutation_scene_handlers.jsx` (`applyScene()`)
-- Query APIs: `host/lib/query_handlers.jsx` (`getLayers()`, `getProperties()`, `getExpressionErrors()`)
+- Query APIs: `host/lib/query_*_handlers.jsx` (`getLayers()`, `getProperties()`, `getExpressionErrors()`, etc.)
 
 ## Limitation Categories
 
