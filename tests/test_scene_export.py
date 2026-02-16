@@ -105,6 +105,13 @@ class FakeClient:
                     "value": "100, 100, 100",
                     "hasExpression": False,
                 },
+                {
+                    "name": "Casts Shadows",
+                    "path": "ADBE Material Options Group.ADBE Casts Shadows",
+                    "value": "true",
+                    "typedValue": True,
+                    "hasExpression": False,
+                },
             ]
         return []
 
@@ -197,6 +204,8 @@ def test_export_scene_builds_supported_layers_and_warnings() -> None:
     assert scene["layers"][1]["width"] == 1920
     assert scene["layers"][1]["color"] == [0.1, 0.2, 0.3]
     assert scene["layers"][1]["transform"]["scale"] == [100, 100, 100]
+    assert scene["layers"][1]["propertyValues"][0]["propertyPath"] == "ADBE Material Options Group.ADBE Casts Shadows"
+    assert scene["layers"][1]["propertyValues"][0]["value"] is True
     assert scene["layers"][2]["type"] == "shape"
     assert scene["layers"][2]["repeaters"][0]["name"] == "BurstRepeater"
     assert scene["layers"][2]["repeaters"][0]["copies"] == 12

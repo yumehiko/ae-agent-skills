@@ -30,7 +30,7 @@ The goal is to make future work explicit and avoid silent data loss during expor
 ## 2) Query-Side Data Gaps
 
 - `getLayers()` is expanded, but not all returned attributes can be mapped 1:1 into current declarative schema
-- `getProperties()` stringifies values, making typed reconstruction difficult
+- `getProperties()` now includes typed values, but some property types still fall back to string representation
 - Expression/keyframe query APIs are now available, but some property value types are still not safely recoverable
 - Complex keyframe payloads (Shape/Marker/Custom values) are currently excluded from export
 - Essential Graphics currently provides controller names, but reverse path mapping is only possible for unique name matches

@@ -61,6 +61,23 @@ def _parse_property_value(raw_value: Any) -> Any:
     return [_parse_scalar(part.strip()) for part in text.split(",")]
 
 
+def _is_supported_property_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (int, float, bool, str)):
+        return True
+    if isinstance(value, list):
+        return all(isinstance(item, (int, float, bool, str)) for item in value)
+    return False
+
+
+def _read_property_typed_value(prop: Dict[str, Any]) -> Any:
+    typed = prop.get("typedValue")
+    if _is_supported_property_value(typed):
+        return typed
+    return _parse_property_value(prop.get("value"))
+
+
 def _find_active_or_target_comp(client: AEClient, comp_id: int | None, comp_name: str | None) -> Dict[str, Any]:
     if comp_id is not None or comp_name:
         client.set_active_comp(comp_id=comp_id, comp_name=comp_name)
@@ -175,6 +192,39 @@ def _build_unique_property_name_map(props: List[Dict[str, Any]]) -> Dict[str, st
     return unique_map
 
 
+def _build_property_values(
+    props: List[Dict[str, Any]],
+    *,
+    exclude_paths: set[str],
+) -> List[Dict[str, Any]]:
+    property_values: List[Dict[str, Any]] = []
+    seen_paths: set[str] = set()
+    for prop in props:
+        path = prop.get("path")
+        if not isinstance(path, str) or len(path) == 0:
+            continue
+        if path in seen_paths or path in exclude_paths:
+            continue
+        if prop.get("hasExpression") is True:
+            continue
+        # Keep effect params/repeater internals in dedicated sections.
+        if path.startswith("ADBE Effect Parade."):
+            continue
+        if "ADBE Vector Filter - Repeater" in path:
+            continue
+        value = _read_property_typed_value(prop)
+        if not _is_supported_property_value(value):
+            continue
+        property_values.append(
+            {
+                "propertyPath": path,
+                "value": value,
+            }
+        )
+        seen_paths.add(path)
+    return property_values
+
+
 def export_scene(
     client: AEClient,
     *,
@@ -228,9 +278,11 @@ def export_scene(
         transform = _extract_transform(props)
         if transform:
             scene_layer["transform"] = transform
+        exclude_paths: set[str] = set(_TRANSFORM_PATHS.values())
 
         if scene_type == "text":
             text = _extract_text(props)
+            exclude_paths.add(_TEXT_DOCUMENT_PATH)
             if text is None:
                 warnings.append(
                     f"Text layer '{layer.get('name')}' source text could not be recovered; omitted text field."
@@ -241,6 +293,10 @@ def export_scene(
         try:
             expressions = client.get_expressions(layer_id=layer_id)
             if expressions:
+                for expression in expressions:
+                    property_path = expression.get("propertyPath")
+                    if isinstance(property_path, str) and property_path:
+                        exclude_paths.add(property_path)
                 scene_layer["expressions"] = [
                     {
                         "propertyPath": expression["propertyPath"],
@@ -260,6 +316,7 @@ def export_scene(
                 keyframes = animation.get("keyframes")
                 if not property_path or not isinstance(keyframes, list) or len(keyframes) == 0:
                     continue
+                exclude_paths.add(property_path)
                 normalized_keyframes: List[Dict[str, Any]] = []
                 for keyframe in keyframes:
                     if "time" not in keyframe or "value" not in keyframe:
@@ -360,6 +417,10 @@ def export_scene(
                 scene_layer["repeaters"] = repeater_items
         except Exception as exc:  # noqa: BLE001
             warnings.append(f"Failed to export repeaters for layer '{layer.get('name')}': {exc}")
+
+        property_values = _build_property_values(props, exclude_paths=exclude_paths)
+        if property_values:
+            scene_layer["propertyValues"] = property_values
 
         if scene_type == "solid":
             if isinstance(layer.get("sourceWidth"), (int, float)):

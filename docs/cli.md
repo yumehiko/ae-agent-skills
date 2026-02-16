@@ -58,6 +58,6 @@ ae-cli export-scene --comp-name "Main" --output-file work/main.export.json
 Notes:
 
 - `export-scene` is currently best effort and emits unsupported cases as `warnings` (unless `--scene-only` is used).
-- Current focus is `text/null/solid/shape` plus `parentId`, `timing`, `transform`, `expressions`, `animations`, `effects`, `repeaters`, and `essentialProperties`.
+- Current focus is `text/null/solid/shape` plus `parentId`, `timing`, `transform`, `propertyValues`, `expressions`, `animations`, `effects`, `repeaters`, and `essentialProperties`.
 - `essentialProperties` currently uses best-effort mapping based on a unique match between EGP controller name and property name.
 - See `docs/reverse-scene-limitations.md` for known gaps.

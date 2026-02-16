@@ -30,7 +30,7 @@
 ## 2) 取得API側の情報不足
 
 - `getLayers()` は拡張済みだが、宣言スキーマに直接マッピングできない属性は依然としてある
-- `getProperties()` の `value` が文字列化されるため、型付き復元が難しい
+- `getProperties()` は型付き値も返すが、プロパティ型によっては文字列表現へのフォールバックが残る
 - expression / keyframe 取得は追加済みだが、プロパティ型によっては復元できない値がある
 - keyframe の値型が複雑（Shape/Marker/Custom 等）な場合は安全のため export 対象外とする
 - Essential Graphics はコントローラ名のみ取得可能で、propertyPath への逆引きは一意一致時のみ可能

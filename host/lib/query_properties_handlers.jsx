@@ -121,8 +121,10 @@ function getProperties(layerId, optionsJSON) {
                     } catch (e) {}
                     properties.push({
                         name: prop.name,
+                        matchName: matchName,
                         path: currentPath,
                         value: aePropertyValueToString(prop),
+                        typedValue: aeSerializeKeyValue(prop.value),
                         hasExpression: hasExpression
                     });
                 }
