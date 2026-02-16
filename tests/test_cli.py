@@ -390,6 +390,25 @@ def test_build_parser_parses_apply_scene_mode() -> None:
     assert args.mode == "clear-all"
 
 
+def test_build_parser_parses_export_scene_options() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "export-scene",
+            "--comp-name",
+            "Main",
+            "--output-file",
+            "work/main.export.json",
+            "--scene-only",
+        ]
+    )
+    assert args.command == "export-scene"
+    assert args.comp_name == "Main"
+    assert args.comp_id is None
+    assert args.output_file == "work/main.export.json"
+    assert args.scene_only is True
+
+
 def test_run_command_returns_2_for_unknown_command(capsys) -> None:
     args = SimpleNamespace(command="unknown", base_url="http://x", timeout=1.0)
     code = run_command(args)

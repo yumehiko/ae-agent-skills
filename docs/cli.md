@@ -47,3 +47,16 @@ Schema:
 - `merge` (default): upsert only
 - `replace-managed`: remove unmanaged `aeSceneId:*` leftovers, then apply
 - `clear-all`: clear comp, then apply
+
+## Reverse export from existing comp (v0.3, best effort)
+
+```bash
+ae-cli export-scene --scene-only
+ae-cli export-scene --comp-name "Main" --output-file work/main.export.json
+```
+
+Notes:
+
+- `export-scene` is currently best effort and emits unsupported cases as `warnings` (unless `--scene-only` is used).
+- Current focus is `text/null/solid/shape` plus `parentId`, `timing`, `transform`, `expressions`, and `animations`.
+- See `docs/reverse-scene-limitations.md` for known gaps.

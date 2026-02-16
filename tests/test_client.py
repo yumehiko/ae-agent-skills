@@ -131,6 +131,44 @@ def test_get_expression_errors_calls_expected_endpoint(monkeypatch) -> None:
     assert captured["timeout"] == 5.0
 
 
+def test_get_expressions_supports_layer_id(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_expressions(layer_id=2)
+
+    assert captured["url"] == "http://127.0.0.1:8080/expressions"
+    assert captured["params"] == [("layerId", 2)]
+    assert captured["timeout"] == 5.0
+
+
+def test_get_animations_supports_layer_name(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_animations(layer_name="Control")
+
+    assert captured["url"] == "http://127.0.0.1:8080/animations"
+    assert captured["params"] == [("layerName", "Control")]
+    assert captured["timeout"] == 5.0
+
+
 def test_create_comp_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

@@ -1,3 +1,84 @@
+function aeBuildPropertyPath(prop) {
+    function getPathIdentifier(target) {
+        return aeGetPropertyIdentifier(target, null);
+    }
+    var segments = [];
+    var current = prop;
+    var guard = 0;
+    while (current && guard < 100) {
+        var parent = null;
+        try {
+            parent = current.parentProperty;
+        } catch (eParent) {
+            parent = null;
+        }
+        if (!parent) {
+            break;
+        }
+        segments.unshift(getPathIdentifier(current));
+        current = parent;
+        guard += 1;
+    }
+    if (segments.length === 0) {
+        return "";
+    }
+    return segments.join(".");
+}
+
+function aeInterpolationTypeToName(interpType) {
+    if (interpType === KeyframeInterpolationType.LINEAR) {
+        return "linear";
+    }
+    if (interpType === KeyframeInterpolationType.BEZIER) {
+        return "bezier";
+    }
+    if (interpType === KeyframeInterpolationType.HOLD) {
+        return "hold";
+    }
+    return null;
+}
+
+function aeSerializeTemporalEaseList(eases) {
+    if (!(eases instanceof Array)) {
+        return null;
+    }
+    var pairs = [];
+    for (var i = 0; i < eases.length; i++) {
+        var ease = eases[i];
+        if (!ease) {
+            continue;
+        }
+        var speed = null;
+        var influence = null;
+        try {
+            speed = ease.speed;
+            influence = ease.influence;
+        } catch (eEaseRead) {
+            speed = null;
+            influence = null;
+        }
+        if (speed === null || influence === null) {
+            continue;
+        }
+        pairs.push([speed, influence]);
+    }
+    return pairs.length > 0 ? pairs : null;
+}
+
+function aeSerializeKeyValue(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+    if (value instanceof Array) {
+        return value;
+    }
+    var t = typeof value;
+    if (t === "number" || t === "boolean" || t === "string") {
+        return value;
+    }
+    return String(value);
+}
+
 function getLayers() {
     try {
         ensureJSON();
@@ -10,17 +91,232 @@ function getLayers() {
         var layers = [];
         for (var i = 1; i <= comp.numLayers; i++) {
             var layer = comp.layer(i);
+            var parentLayerId = null;
+            var parentLayerName = null;
+            try {
+                if (layer.parent) {
+                    parentLayerId = layer.parent.index;
+                    parentLayerName = layer.parent.name;
+                }
+            } catch (eParent) {}
+
+            var solidColor = null;
+            var sourceWidth = null;
+            var sourceHeight = null;
+            var sourceDuration = null;
+            try {
+                if (layer.source) {
+                    sourceWidth = layer.source.width;
+                    sourceHeight = layer.source.height;
+                    sourceDuration = layer.source.duration;
+                    if (layer.source.mainSource && layer.source.mainSource instanceof SolidSource) {
+                        solidColor = layer.source.mainSource.color;
+                    }
+                }
+            } catch (eSource) {}
+
+            var isNullLayer = false;
+            try {
+                isNullLayer = layer.nullLayer === true;
+            } catch (eNull) {}
+
             layers.push({
                 id: layer.index,
                 layerUid: aeTryGetLayerUid(layer),
                 name: layer.name,
-                type: getLayerTypeName(layer)
+                type: getLayerTypeName(layer),
+                parentLayerId: parentLayerId,
+                parentLayerName: parentLayerName,
+                inPoint: layer.inPoint,
+                outPoint: layer.outPoint,
+                startTime: layer.startTime,
+                nullLayer: isNullLayer,
+                sourceWidth: sourceWidth,
+                sourceHeight: sourceHeight,
+                sourceDuration: sourceDuration,
+                solidColor: solidColor
             });
         }
         return encodePayload(layers);
     } catch (e) {
         log("getLayers() threw: " + e.toString());
         return encodePayload({ status: "error", message: e.toString() });
+    }
+}
+
+function getExpressions(layerId, optionsJSON) {
+    try {
+        ensureJSON();
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) {
+            return encodePayload({ status: "Error", message: "Active composition not found." });
+        }
+        var options = {};
+        if (optionsJSON && optionsJSON !== "null") {
+            try {
+                options = JSON.parse(optionsJSON);
+            } catch (e) {
+                options = {};
+            }
+        }
+        var layerName = null;
+        if (options.layerName !== undefined && options.layerName !== null) {
+            layerName = String(options.layerName);
+        }
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "Error", message: resolvedLayer.error });
+        }
+        var layer = resolvedLayer.layer;
+        var expressionItems = [];
+
+        function scan(prop) {
+            if (!prop) {
+                return;
+            }
+            if (aeCanTraverseProperty(prop)) {
+                for (var i = 1; i <= prop.numProperties; i++) {
+                    scan(prop.property(i));
+                }
+                return;
+            }
+            var canSetExpression = false;
+            try {
+                canSetExpression = prop.canSetExpression === true;
+            } catch (eCanSet) {}
+            if (!canSetExpression) {
+                return;
+            }
+            var expressionText = null;
+            try {
+                if (typeof prop.expression === "string" && prop.expression.length > 0) {
+                    expressionText = prop.expression;
+                }
+            } catch (eExpression) {
+                expressionText = null;
+            }
+            if (!expressionText) {
+                return;
+            }
+            expressionItems.push({
+                layerId: layer.index,
+                layerUid: aeTryGetLayerUid(layer),
+                layerName: layer.name,
+                propertyPath: aeBuildPropertyPath(prop),
+                propertyName: prop.name,
+                expression: expressionText
+            });
+        }
+
+        scan(layer);
+        return encodePayload(expressionItems);
+    } catch (e) {
+        log("getExpressions() threw: " + e.toString());
+        return encodePayload({ status: "Error", message: e.toString() });
+    }
+}
+
+function getAnimations(layerId, optionsJSON) {
+    try {
+        ensureJSON();
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) {
+            return encodePayload({ status: "Error", message: "Active composition not found." });
+        }
+        var options = {};
+        if (optionsJSON && optionsJSON !== "null") {
+            try {
+                options = JSON.parse(optionsJSON);
+            } catch (e) {
+                options = {};
+            }
+        }
+        var layerName = null;
+        if (options.layerName !== undefined && options.layerName !== null) {
+            layerName = String(options.layerName);
+        }
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "Error", message: resolvedLayer.error });
+        }
+        var layer = resolvedLayer.layer;
+        var animationItems = [];
+
+        function scan(prop) {
+            if (!prop) {
+                return;
+            }
+            if (aeCanTraverseProperty(prop)) {
+                for (var i = 1; i <= prop.numProperties; i++) {
+                    scan(prop.property(i));
+                }
+                return;
+            }
+            if (!aeIsPropertyNode(prop)) {
+                return;
+            }
+            var numKeys = 0;
+            try {
+                numKeys = prop.numKeys;
+            } catch (eNumKeys) {
+                numKeys = 0;
+            }
+            if (!numKeys || numKeys <= 0) {
+                return;
+            }
+            var keyframes = [];
+            for (var k = 1; k <= numKeys; k++) {
+                var keyTime = null;
+                var keyValue = null;
+                try {
+                    keyTime = prop.keyTime(k);
+                    keyValue = aeSerializeKeyValue(prop.keyValue(k));
+                } catch (eKeyRead) {
+                    continue;
+                }
+                var inInterp = null;
+                var outInterp = null;
+                try {
+                    inInterp = aeInterpolationTypeToName(prop.keyInInterpolationType(k));
+                } catch (eInInterp) {}
+                try {
+                    outInterp = aeInterpolationTypeToName(prop.keyOutInterpolationType(k));
+                } catch (eOutInterp) {}
+                var easeIn = null;
+                var easeOut = null;
+                try {
+                    easeIn = aeSerializeTemporalEaseList(prop.keyInTemporalEase(k));
+                } catch (eInEase) {}
+                try {
+                    easeOut = aeSerializeTemporalEaseList(prop.keyOutTemporalEase(k));
+                } catch (eOutEase) {}
+                keyframes.push({
+                    time: keyTime,
+                    value: keyValue,
+                    inInterp: inInterp,
+                    outInterp: outInterp,
+                    easeIn: easeIn,
+                    easeOut: easeOut
+                });
+            }
+            if (keyframes.length === 0) {
+                return;
+            }
+            animationItems.push({
+                layerId: layer.index,
+                layerUid: aeTryGetLayerUid(layer),
+                layerName: layer.name,
+                propertyPath: aeBuildPropertyPath(prop),
+                propertyName: prop.name,
+                keyframes: keyframes
+            });
+        }
+
+        scan(layer);
+        return encodePayload(animationItems);
+    } catch (e) {
+        log("getAnimations() threw: " + e.toString());
+        return encodePayload({ status: "Error", message: e.toString() });
     }
 }
 
@@ -235,34 +531,6 @@ function getSelectedProperties() {
             return encodePayload([]);
         }
 
-        function getPathIdentifier(prop) {
-            return aeGetPropertyIdentifier(prop, null);
-        }
-
-        function buildPropertyPath(prop) {
-            var segments = [];
-            var current = prop;
-            var guard = 0;
-            while (current && guard < 100) {
-                var parent = null;
-                try {
-                    parent = current.parentProperty;
-                } catch (eParent) {
-                    parent = null;
-                }
-                if (!parent) {
-                    break;
-                }
-                segments.unshift(getPathIdentifier(current));
-                current = parent;
-                guard += 1;
-            }
-            if (segments.length === 0) {
-                return "";
-            }
-            return segments.join(".");
-        }
-
         var selectedPropsPayload = [];
         for (var i = 0; i < selectedLayers.length; i++) {
             var layer = selectedLayers[i];
@@ -284,7 +552,7 @@ function getSelectedProperties() {
                     continue;
                 }
 
-                var path = buildPropertyPath(prop);
+                var path = aeBuildPropertyPath(prop);
                 if (!path || path.length === 0) {
                     continue;
                 }
@@ -318,34 +586,6 @@ function getExpressionErrors() {
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
             return encodePayload({ status: "Error", message: "Active composition not found." });
-        }
-
-        function getPathIdentifier(prop) {
-            return aeGetPropertyIdentifier(prop, null);
-        }
-
-        function buildPropertyPath(prop) {
-            var segments = [];
-            var current = prop;
-            var guard = 0;
-            while (current && guard < 100) {
-                var parent = null;
-                try {
-                    parent = current.parentProperty;
-                } catch (eParent) {
-                    parent = null;
-                }
-                if (!parent) {
-                    break;
-                }
-                segments.unshift(getPathIdentifier(current));
-                current = parent;
-                guard += 1;
-            }
-            if (segments.length === 0) {
-                return "";
-            }
-            return segments.join(".");
         }
 
         function collectLayerExpressionErrors(layer) {
@@ -392,7 +632,7 @@ function getExpressionErrors() {
                     layerId: layer.index,
                     layerUid: aeTryGetLayerUid(layer),
                     layerName: layer.name,
-                    propertyPath: buildPropertyPath(prop),
+                    propertyPath: aeBuildPropertyPath(prop),
                     propertyName: prop.name,
                     message: errorMessage
                 });

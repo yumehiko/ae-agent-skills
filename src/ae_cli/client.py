@@ -188,6 +188,44 @@ class AEClient:
         response = requests.get(self._url("/expression-errors"), timeout=self.timeout)
         return self._handle_response(response)
 
+    def get_expressions(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Return expression source text bindings for a layer."""
+        params: List[tuple[str, Any]] = []
+        selector = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        if "layerId" in selector:
+            params.append(("layerId", selector["layerId"]))
+        else:
+            params.append(("layerName", selector["layerName"]))
+        response = requests.get(
+            self._url("/expressions"),
+            params=params,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def get_animations(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Return animated properties and keyframes for a layer."""
+        params: List[tuple[str, Any]] = []
+        selector = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        if "layerId" in selector:
+            params.append(("layerId", selector["layerId"]))
+        else:
+            params.append(("layerName", selector["layerName"]))
+        response = requests.get(
+            self._url("/animations"),
+            params=params,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def get_properties(
         self,
         layer_id: int | None = None,

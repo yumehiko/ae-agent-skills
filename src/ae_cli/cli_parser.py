@@ -313,4 +313,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    export_scene_parser = subparsers.add_parser(
+        "export-scene",
+        help="Export active composition into declarative scene JSON (best effort)",
+    )
+    export_scene_group = export_scene_parser.add_mutually_exclusive_group(required=False)
+    export_scene_group.add_argument("--comp-id", type=int)
+    export_scene_group.add_argument("--comp-name")
+    export_scene_parser.add_argument(
+        "--output-file",
+        help="Write output JSON to file instead of stdout",
+    )
+    export_scene_parser.add_argument(
+        "--scene-only",
+        action="store_true",
+        help="Output scene JSON only (without warnings/summary wrapper)",
+    )
+
     return parser

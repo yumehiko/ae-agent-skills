@@ -42,5 +42,6 @@ $aftereffects-declarative を使って、1920x1080 / 30fps / 5秒のコンポジ
 
 - CLI利用方法: [docs/cli.ja.md](docs/cli.ja.md)
 - 開発者向け情報: [docs/development.ja.md](docs/development.ja.md)
+- 逆変換の既知制約（v0.3計画）: [docs/reverse-scene-limitations.ja.md](docs/reverse-scene-limitations.ja.md)
 - 宣言型 skill 本体: [.codex/skills/aftereffects-declarative/SKILL.md](.codex/skills/aftereffects-declarative/SKILL.md)
 - レガシーCLI skill 本体: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)

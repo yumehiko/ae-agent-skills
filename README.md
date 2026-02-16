@@ -42,5 +42,6 @@ and add a 0.5-second fade-in animation.
 
 - CLI usage: [docs/cli.md](docs/cli.md)
 - Development: [docs/development.md](docs/development.md)
+- Known reverse-conversion limitations (v0.3 plan): [docs/reverse-scene-limitations.md](docs/reverse-scene-limitations.md)
 - Declarative skill source: [.codex/skills/aftereffects-declarative/SKILL.md](.codex/skills/aftereffects-declarative/SKILL.md)
 - Legacy CLI skill source: [.codex/skills/aftereffects-cli/SKILL.md](.codex/skills/aftereffects-cli/SKILL.md)

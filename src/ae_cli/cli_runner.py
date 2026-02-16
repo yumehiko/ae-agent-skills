@@ -9,6 +9,7 @@ from typing import Any, Callable
 import requests
 
 from .client import AEBridgeError, AEClient
+from .scene_export import export_scene
 
 
 def _print_json(data: Any) -> None:
@@ -286,6 +287,33 @@ def _run_apply_scene(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _write_or_print_json(data: Any, output_file: str | None) -> None:
+    if output_file:
+        Path(output_file).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return
+    _print_json(data)
+
+
+def _run_export_scene(client: AEClient, args: argparse.Namespace) -> None:
+    scene, warnings = export_scene(
+        client,
+        comp_id=args.comp_id,
+        comp_name=args.comp_name,
+    )
+    if args.scene_only:
+        _write_or_print_json(scene, args.output_file)
+        return
+    payload = {
+        "scene": scene,
+        "warnings": warnings,
+        "summary": {
+            "layerCount": len(scene.get("layers", [])),
+            "warningCount": len(warnings),
+        },
+    }
+    _write_or_print_json(payload, args.output_file)
+
+
 CommandHandler = Callable[[AEClient, argparse.Namespace], None]
 
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
@@ -315,6 +343,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "delete-layer": _run_delete_layer,
     "delete-comp": _run_delete_comp,
     "apply-scene": _run_apply_scene,
+    "export-scene": _run_export_scene,
 }
 
 

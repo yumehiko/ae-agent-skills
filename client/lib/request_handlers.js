@@ -96,6 +96,28 @@ function handleGetExpressionErrors(res) {
     handleBridgeDataCall('getExpressionErrors()', res, 'getExpressionErrors()');
 }
 
+function parseLayerSelectorFromSearchParams(searchParams, label, res) {
+    const layerIdParam = searchParams.get('layerId');
+    const layerNameParam = searchParams.get('layerName');
+    const hasLayerId = layerIdParam !== null && layerIdParam !== '';
+    const hasLayerName = layerNameParam !== null && layerNameParam.trim() !== '';
+    if ((hasLayerId && hasLayerName) || (!hasLayerId && !hasLayerName)) {
+        sendBadRequest(res, 'Provide exactly one of layerId or layerName');
+        log(`${label} failed: invalid layer selector`);
+        return { ok: false };
+    }
+    if (hasLayerId) {
+        const parsedLayerId = parseInt(layerIdParam, 10);
+        if (isNaN(parsedLayerId) || parsedLayerId <= 0) {
+            sendBadRequest(res, 'layerId must be a positive integer');
+            log(`${label} failed: invalid layerId`);
+            return { ok: false };
+        }
+        return { ok: true, layerId: parsedLayerId, layerName: null };
+    }
+    return { ok: true, layerId: null, layerName: layerNameParam.trim() };
+}
+
 function handleCreateComp(req, res) {
     readJsonBody(req, res, ({ name, width, height, duration, frameRate, pixelAspect }) => {
         if (!name || typeof name !== 'string') {
@@ -164,25 +186,8 @@ function handleSetActiveComp(req, res) {
 }
 
 function handleGetProperties(searchParams, res) {
-    const layerIdParam = searchParams.get('layerId');
-    const layerNameParam = searchParams.get('layerName');
-    const hasLayerId = layerIdParam !== null && layerIdParam !== '';
-    const hasLayerName = layerNameParam !== null && layerNameParam.trim() !== '';
-    if ((hasLayerId && hasLayerName) || (!hasLayerId && !hasLayerName)) {
-        sendBadRequest(res, 'Provide exactly one of layerId or layerName');
-        log('getProperties failed: invalid layer selector');
-        return;
-    }
-    let layerId = null;
-    if (hasLayerId) {
-        const parsedLayerId = parseInt(layerIdParam, 10);
-        if (isNaN(parsedLayerId) || parsedLayerId <= 0) {
-            sendBadRequest(res, 'layerId must be a positive integer');
-            log('getProperties failed: invalid layerId');
-            return;
-        }
-        layerId = parsedLayerId;
-    }
+    const selector = parseLayerSelectorFromSearchParams(searchParams, 'getProperties', res);
+    if (!selector.ok) return;
 
     const includeGroups = searchParams.getAll('includeGroup').filter(Boolean);
     const excludeGroups = searchParams.getAll('excludeGroup').filter(Boolean);
@@ -221,7 +226,7 @@ function handleGetProperties(searchParams, res) {
     }
 
     const options = {};
-    if (hasLayerName) options.layerName = layerNameParam.trim();
+    if (selector.layerName) options.layerName = selector.layerName;
     if (includeGroups.length > 0) options.includeGroups = includeGroups;
     if (excludeGroups.length > 0) options.excludeGroups = excludeGroups;
     if (maxDepth !== undefined) options.maxDepth = maxDepth;
@@ -232,10 +237,36 @@ function handleGetProperties(searchParams, res) {
         ? toExtendScriptStringLiteral(JSON.stringify(options))
         : 'null';
     const optionsLabel = optionsLiteral === 'null' ? 'null' : 'custom';
-    const layerIdLiteral = layerId === null ? 'null' : String(layerId);
+    const layerIdLiteral = selector.layerId === null ? 'null' : String(selector.layerId);
     const script = `getProperties(${layerIdLiteral}, ${optionsLiteral})`;
 
     handleBridgeDataCall(script, res, `getProperties(${layerIdLiteral}, options=${optionsLabel})`);
+}
+
+function handleGetExpressions(searchParams, res) {
+    const selector = parseLayerSelectorFromSearchParams(searchParams, 'getExpressions', res);
+    if (!selector.ok) return;
+    const options = {};
+    if (selector.layerName) options.layerName = selector.layerName;
+    const optionsLiteral = Object.keys(options).length > 0
+        ? toExtendScriptStringLiteral(JSON.stringify(options))
+        : 'null';
+    const layerIdLiteral = selector.layerId === null ? 'null' : String(selector.layerId);
+    const script = `getExpressions(${layerIdLiteral}, ${optionsLiteral})`;
+    handleBridgeDataCall(script, res, `getExpressions(${layerIdLiteral})`);
+}
+
+function handleGetAnimations(searchParams, res) {
+    const selector = parseLayerSelectorFromSearchParams(searchParams, 'getAnimations', res);
+    if (!selector.ok) return;
+    const options = {};
+    if (selector.layerName) options.layerName = selector.layerName;
+    const optionsLiteral = Object.keys(options).length > 0
+        ? toExtendScriptStringLiteral(JSON.stringify(options))
+        : 'null';
+    const layerIdLiteral = selector.layerId === null ? 'null' : String(selector.layerId);
+    const script = `getAnimations(${layerIdLiteral}, ${optionsLiteral})`;
+    handleBridgeDataCall(script, res, `getAnimations(${layerIdLiteral})`);
 }
 
 function handleSetExpression(req, res) {
@@ -439,6 +470,14 @@ function routeRequest(req, res) {
     }
     if (pathname === '/expression-errors' && method === 'GET') {
         handleGetExpressionErrors(res);
+        return;
+    }
+    if (pathname === '/expressions' && method === 'GET') {
+        handleGetExpressions(searchParams, res);
+        return;
+    }
+    if (pathname === '/animations' && method === 'GET') {
+        handleGetAnimations(searchParams, res);
         return;
     }
     if (pathname === '/expression' && method === 'POST') {
