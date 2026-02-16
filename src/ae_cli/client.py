@@ -188,6 +188,11 @@ class AEClient:
         response = requests.get(self._url("/expression-errors"), timeout=self.timeout)
         return self._handle_response(response)
 
+    def get_essential_properties(self) -> Dict[str, Any]:
+        """Return Essential Graphics controller names in the active composition."""
+        response = requests.get(self._url("/essential-properties"), timeout=self.timeout)
+        return self._handle_response(response)
+
     def get_expressions(
         self,
         layer_id: int | None = None,

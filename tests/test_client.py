@@ -131,6 +131,23 @@ def test_get_expression_errors_calls_expected_endpoint(monkeypatch) -> None:
     assert captured["timeout"] == 5.0
 
 
+def test_get_essential_properties_calls_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"count": 0, "controllers": []}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_essential_properties()
+
+    assert captured["url"] == "http://127.0.0.1:8080/essential-properties"
+    assert captured["timeout"] == 5.0
+
+
 def test_get_expressions_supports_layer_id(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

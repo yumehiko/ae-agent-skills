@@ -72,14 +72,39 @@ class FakeClient:
     def get_properties(self, layer_id: int, **_kwargs: Any) -> list[dict[str, Any]]:
         if layer_id == 1:
             return [
-                {"path": "ADBE Transform Group.ADBE Position", "value": "960, 540", "hasExpression": False},
-                {"path": "ADBE Transform Group.ADBE Opacity", "value": "100", "hasExpression": True},
-                {"path": "ADBE Text Properties.ADBE Text Document", "value": "Hello", "hasExpression": False},
+                {
+                    "name": "Position",
+                    "path": "ADBE Transform Group.ADBE Position",
+                    "value": "960, 540",
+                    "hasExpression": False,
+                },
+                {
+                    "name": "Opacity",
+                    "path": "ADBE Transform Group.ADBE Opacity",
+                    "value": "100",
+                    "hasExpression": True,
+                },
+                {
+                    "name": "Source Text",
+                    "path": "ADBE Text Properties.ADBE Text Document",
+                    "value": "Hello",
+                    "hasExpression": False,
+                },
             ]
         if layer_id == 2:
             return [
-                {"path": "ADBE Transform Group.ADBE Position", "value": "960, 540", "hasExpression": False},
-                {"path": "ADBE Transform Group.ADBE Scale", "value": "100, 100, 100", "hasExpression": False},
+                {
+                    "name": "Position",
+                    "path": "ADBE Transform Group.ADBE Position",
+                    "value": "960, 540",
+                    "hasExpression": False,
+                },
+                {
+                    "name": "Scale",
+                    "path": "ADBE Transform Group.ADBE Scale",
+                    "value": "100, 100, 100",
+                    "hasExpression": False,
+                },
             ]
         return []
 
@@ -141,6 +166,14 @@ class FakeClient:
             }
         ]
 
+    def get_essential_properties(self) -> dict[str, Any]:
+        return {
+            "count": 1,
+            "controllers": [
+                {"index": 1, "name": "Opacity"},
+            ],
+        }
+
 
 def test_export_scene_builds_supported_layers_and_warnings() -> None:
     scene, warnings = export_scene(FakeClient())
@@ -155,6 +188,8 @@ def test_export_scene_builds_supported_layers_and_warnings() -> None:
     assert scene["layers"][0]["effects"][0]["matchName"] == "ADBE Slider Control"
     assert scene["layers"][0]["effects"][0]["params"][0]["propertyIndex"] == 1
     assert scene["layers"][0]["effects"][0]["params"][0]["value"] == 55
+    assert scene["layers"][0]["essentialProperties"][0]["propertyPath"] == "ADBE Transform Group.ADBE Opacity"
+    assert scene["layers"][0]["essentialProperties"][0]["essentialName"] == "Opacity"
     assert scene["layers"][0]["transform"]["position"] == [960, 540]
     assert scene["layers"][0]["transform"]["opacity"] == 100
     assert scene["layers"][1]["type"] == "solid"

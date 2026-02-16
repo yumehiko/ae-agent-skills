@@ -33,7 +33,7 @@ The goal is to make future work explicit and avoid silent data loss during expor
 - `getProperties()` stringifies values, making typed reconstruction difficult
 - Expression/keyframe query APIs are now available, but some property value types are still not safely recoverable
 - Complex keyframe payloads (Shape/Marker/Custom values) are currently excluded from export
-- No API to list current Essential Graphics state
+- Essential Graphics currently provides controller names, but reverse path mapping is only possible for unique name matches
 
 ## 3) Conversion Policy Ambiguity
 

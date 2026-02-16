@@ -26,7 +26,15 @@ function handleAddEssentialProperty(req, res) {
     });
 }
 
+function handleGetEssentialProperties(res) {
+    handleBridgeDataCall('getEssentialProperties()', res, 'getEssentialProperties()');
+}
+
 function routeEssentialRequest(pathname, method, req, res) {
+    if (pathname === '/essential-properties' && method === 'GET') {
+        handleGetEssentialProperties(res);
+        return true;
+    }
     if (pathname === '/essential-property' && method === 'POST') {
         handleAddEssentialProperty(req, res);
         return true;

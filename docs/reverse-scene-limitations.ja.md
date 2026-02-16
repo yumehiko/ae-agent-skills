@@ -33,7 +33,7 @@
 - `getProperties()` の `value` が文字列化されるため、型付き復元が難しい
 - expression / keyframe 取得は追加済みだが、プロパティ型によっては復元できない値がある
 - keyframe の値型が複雑（Shape/Marker/Custom 等）な場合は安全のため export 対象外とする
-- Essential Graphics の現在状態を一覧取得するAPIがない
+- Essential Graphics はコントローラ名のみ取得可能で、propertyPath への逆引きは一意一致時のみ可能
 
 ## 3) 変換ポリシー上の曖昧さ
 

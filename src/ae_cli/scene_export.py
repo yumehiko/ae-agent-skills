@@ -157,6 +157,24 @@ def _collect_expression_paths(props: List[Dict[str, Any]]) -> List[str]:
     return paths
 
 
+def _build_unique_property_name_map(props: List[Dict[str, Any]]) -> Dict[str, str]:
+    name_to_paths: Dict[str, List[str]] = {}
+    for prop in props:
+        name = prop.get("name")
+        path = prop.get("path")
+        if not isinstance(name, str) or not isinstance(path, str):
+            continue
+        if not name or not path:
+            continue
+        name_to_paths.setdefault(name, []).append(path)
+    unique_map: Dict[str, str] = {}
+    for name, paths in name_to_paths.items():
+        unique_paths = sorted(set(paths))
+        if len(unique_paths) == 1:
+            unique_map[name] = unique_paths[0]
+    return unique_map
+
+
 def export_scene(
     client: AEClient,
     *,
@@ -171,6 +189,7 @@ def export_scene(
 
     scene_layers: List[Dict[str, Any]] = []
     used_ids: set[str] = set()
+    scene_id_to_unique_property_path: Dict[str, Dict[str, str]] = {}
 
     layer_index_to_scene_id: Dict[int, str] = {}
     layer_index_to_parent_index: Dict[int, int | None] = {}
@@ -185,8 +204,9 @@ def export_scene(
             continue
 
         layer_id = int(layer.get("id"))
-        props = _collect_layer_properties(client, layer_id)
         scene_id = _build_layer_id(layer, used_ids)
+        props = _collect_layer_properties(client, layer_id)
+        scene_id_to_unique_property_path[scene_id] = _build_unique_property_name_map(props)
         layer_index_to_scene_id[layer_id] = scene_id
         parent_index = layer.get("parentLayerId")
         layer_index_to_parent_index[layer_id] = int(parent_index) if isinstance(parent_index, int) else None
@@ -373,6 +393,45 @@ def export_scene(
             warnings.append(
                 f"Layer '{scene_layer.get('name')}' parent was skipped because parent layer type is unsupported."
             )
+
+    try:
+        essential_payload = client.get_essential_properties()
+        controllers = essential_payload.get("controllers", []) if isinstance(essential_payload, dict) else []
+        for controller in controllers:
+            controller_name = controller.get("name")
+            if not isinstance(controller_name, str) or len(controller_name) == 0:
+                continue
+            matches: List[Tuple[Dict[str, Any], str]] = []
+            for scene_layer in scene_layers:
+                scene_id = scene_layer.get("id")
+                if not isinstance(scene_id, str):
+                    continue
+                unique_map = scene_id_to_unique_property_path.get(scene_id, {})
+                matched_path = unique_map.get(controller_name)
+                if matched_path:
+                    matches.append((scene_layer, matched_path))
+            if len(matches) == 1:
+                target_layer, matched_path = matches[0]
+                essential_list = target_layer.get("essentialProperties")
+                if not isinstance(essential_list, list):
+                    essential_list = []
+                    target_layer["essentialProperties"] = essential_list
+                essential_list.append(
+                    {
+                        "propertyPath": matched_path,
+                        "essentialName": controller_name,
+                    }
+                )
+            elif len(matches) == 0:
+                warnings.append(
+                    f"Essential controller '{controller_name}' could not be mapped to a unique property path."
+                )
+            else:
+                warnings.append(
+                    f"Essential controller '{controller_name}' matched multiple properties; skipped to avoid ambiguity."
+                )
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"Failed to export essential properties: {exc}")
 
     scene: Dict[str, Any] = {
         "composition": {
