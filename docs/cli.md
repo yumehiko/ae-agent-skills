@@ -36,6 +36,10 @@ ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
 ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
 ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
+
+# Multi-composition apply (create Cut comps and place as precomps in Master)
+ae-cli apply-scene --scene-file examples/scene.cuts.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.cuts.example.json
 ```
 
 Schema:
@@ -47,3 +51,9 @@ Schema:
 - `merge` (default): upsert only
 - `replace-managed`: remove unmanaged `aeSceneId:*` leftovers, then apply
 - `clear-all`: clear comp, then apply
+
+Scene JSON supports:
+
+- Single composition: `composition` + `layers` (legacy)
+- Multi composition set: `compositions[]` where each item is `{ composition, layers }`
+- Precomp layer reference: `layers[].type = "comp"` with `refCompName` or `refCompId`

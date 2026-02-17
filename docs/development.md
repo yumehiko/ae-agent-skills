@@ -46,6 +46,9 @@ PYTHONPATH=src pytest
 - `host/lib/mutation_timeline_handlers.jsx`
 - `host/lib/mutation_layer_structure_handlers.jsx`
 - `host/lib/mutation_scene_handlers.jsx`
+- `host/lib/mutation_scene_core.jsx`
+- `host/lib/mutation_scene_validation.jsx`
+- `host/lib/mutation_scene_apply.jsx`
 
 ### CEP panel client
 

@@ -1,0 +1,104 @@
+{
+  "compositions": [
+    {
+      "composition": {
+        "name": "Cut 01",
+        "width": 1920,
+        "height": 1080,
+        "duration": 7,
+        "frameRate": 30,
+        "createIfMissing": true,
+        "setActive": false
+      },
+      "layers": []
+    },
+    {
+      "composition": {
+        "name": "Cut 02",
+        "width": 1920,
+        "height": 1080,
+        "duration": 8,
+        "frameRate": 30,
+        "createIfMissing": true,
+        "setActive": false
+      },
+      "layers": []
+    },
+    {
+      "composition": {
+        "name": "Cut 03",
+        "width": 1920,
+        "height": 1080,
+        "duration": 10,
+        "frameRate": 30,
+        "createIfMissing": true,
+        "setActive": false
+      },
+      "layers": []
+    },
+    {
+      "composition": {
+        "name": "Cut 04",
+        "width": 1920,
+        "height": 1080,
+        "duration": 5,
+        "frameRate": 30,
+        "createIfMissing": true,
+        "setActive": false
+      },
+      "layers": []
+    },
+    {
+      "composition": {
+        "compName": "Master",
+        "setActive": true
+      },
+      "layers": [
+        {
+          "id": "cut-01",
+          "type": "comp",
+          "name": "Cut 01",
+          "refCompName": "Cut 01",
+          "timing": {
+            "startTime": 0,
+            "inPoint": 0,
+            "outPoint": 7
+          }
+        },
+        {
+          "id": "cut-02",
+          "type": "comp",
+          "name": "Cut 02",
+          "refCompName": "Cut 02",
+          "timing": {
+            "startTime": 7,
+            "inPoint": 7,
+            "outPoint": 15
+          }
+        },
+        {
+          "id": "cut-03",
+          "type": "comp",
+          "name": "Cut 03",
+          "refCompName": "Cut 03",
+          "timing": {
+            "startTime": 15,
+            "inPoint": 15,
+            "outPoint": 25
+          }
+        },
+        {
+          "id": "cut-04",
+          "type": "comp",
+          "name": "Cut 04",
+          "refCompName": "Cut 04",
+          "timing": {
+            "startTime": 25,
+            "inPoint": 25,
+            "outPoint": 30
+          }
+        }
+      ]
+    }
+  ]
+}

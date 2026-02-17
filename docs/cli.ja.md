@@ -36,6 +36,10 @@ ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
 ae-cli apply-scene --scene-file examples/scene.example.json
 ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
 ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
+
+# 複数コンポ適用（Cutコンポを作り、Masterにプリコン配置）
+ae-cli apply-scene --scene-file examples/scene.cuts.example.json --validate-only
+ae-cli apply-scene --scene-file examples/scene.cuts.example.json
 ```
 
 スキーマ:
@@ -47,3 +51,9 @@ ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
 - `merge`（デフォルト）: upsertのみ
 - `replace-managed`: 不要な `aeSceneId:*` 管理レイヤーを削除して適用
 - `clear-all`: compを空にして適用
+
+Scene JSON は次をサポート:
+
+- 単一コンポ: `composition` + `layers`（従来形式）
+- 複数コンポ: `compositions[]`（各要素は `{ composition, layers }`）
+- プリコン参照レイヤー: `layers[].type = "comp"` と `refCompName` または `refCompId`

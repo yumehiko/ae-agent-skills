@@ -3,8 +3,17 @@
   "$id": "https://example.com/ae-agent-skills/scene.schema.json",
   "title": "AE Declarative Scene",
   "type": "object",
-  "required": [
-    "layers"
+  "oneOf": [
+    {
+      "required": [
+        "layers"
+      ]
+    },
+    {
+      "required": [
+        "compositions"
+      ]
+    }
   ],
   "properties": {
     "composition": {
@@ -12,14 +21,37 @@
     },
     "layers": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "$ref": "#/$defs/layer"
+      }
+    },
+    "compositions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/sceneEntry"
       }
     }
   },
   "additionalProperties": false,
   "$defs": {
+    "sceneEntry": {
+      "type": "object",
+      "properties": {
+        "composition": {
+          "$ref": "#/$defs/composition"
+        },
+        "layers": {
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "$ref": "#/$defs/layer"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "numberArray2": {
       "type": "array",
       "minItems": 2,
@@ -339,11 +371,20 @@
             "text",
             "null",
             "solid",
-            "shape"
+            "shape",
+            "comp"
           ]
         },
         "name": {
           "type": "string"
+        },
+        "refCompId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "refCompName": {
+          "type": "string",
+          "minLength": 1
         },
         "parentId": {
           "type": [
@@ -448,6 +489,47 @@
           }
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "comp"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "refCompId"
+                ]
+              },
+              {
+                "required": [
+                  "refCompName"
+                ]
+              }
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "refCompId"
+                  ]
+                },
+                {
+                  "required": [
+                    "refCompName"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
       "additionalProperties": false
     }
   }
