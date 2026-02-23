@@ -8,6 +8,7 @@
     "ae-agent-setup": "bin/ae-agent-setup.mjs"
   },
   "scripts": {
+    "build:zxp": "./scripts/signing/build-zxp-interactive.sh",
     "sync:version": "node scripts/release/sync-version.mjs",
     "version": "npm run sync:version"
   },

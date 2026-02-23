@@ -41,6 +41,26 @@ npm version 0.2.7 --no-git-tag-version
 - `ZXPSignCmd` が `PATH` 上にある、または `ZXPSIGNCMD_BIN` で実体パスを指定できる
 - 署名証明書 (`.p12`) とパスワードを用意済み
 
+1コマンド（パスワードはプロンプト入力）:
+
+```bash
+npm run build:zxp
+```
+
+または:
+
+```bash
+./scripts/signing/build-zxp-interactive.sh
+```
+
+証明書パスを変える場合:
+
+```bash
+SIGN_CERT_P12=/absolute/path/to/dev-cert.p12 npm run build:zxp
+```
+
+以下は従来どおり、環境変数で直接指定する方法:
+
 ```bash
 SIGN_CERT_P12=certs/dev-cert.p12 \
 SIGN_CERT_PASSWORD='your-password' \
