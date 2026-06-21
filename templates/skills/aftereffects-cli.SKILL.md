@@ -1,9 +1,9 @@
 ---
-name: aftereffects-cli-legacy
+name: aftereffects-cli
 description: Command-by-command After Effects editing via ae-cli. Best for surgical edits on existing human-made scenes (especially partial expression/property changes) and for debugging.
 ---
 
-# aftereffects-cli-legacy
+# aftereffects-cli
 
 低レベル CLI 操作（命令型）のスキル。  
 新規構築の主軸は宣言型 `aftereffects-declarative` だが、**既存シーンへの外科的編集ではこのスキルを第一選択**にする。
@@ -81,7 +81,7 @@ description: Command-by-command After Effects editing via ae-cli. Best for surgi
 ae-cli health
 ae-cli create-comp --name "Skill_CLI_Minimal_Test" --width 1280 --height 720 --duration 3 --frame-rate 30
 ae-cli set-active-comp --comp-name "Skill_CLI_Minimal_Test"
-ae-cli add-layer --type text --name "Hello" --text "CLI skill test"
+ae-cli add-layer --layer-type text --name "Hello" --text "CLI skill test"
 ae-cli layers
 ```
 

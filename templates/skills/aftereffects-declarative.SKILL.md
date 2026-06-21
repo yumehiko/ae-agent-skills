@@ -20,7 +20,7 @@ After Effects を宣言型 JSON で構築する標準スキル。
   - 新規 comp / 新規レイヤー群を組み上げる
   - 同種変更を複数箇所へ展開する
   - scene JSON を成果物として残し、再実行可能にしたい
-- 命令型（`aftereffects-cli-legacy`）を使う:
+- 命令型（`aftereffects-cli`）を使う:
   - 人間が作った既存シーン（scene JSON 未管理）へ部分修正を入れる
   - 複雑な既存レイヤーに expression をピンポイント適用する
   - comp 全体の再宣言を避け、局所的に安全修正したい
@@ -152,4 +152,4 @@ ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json
 - 旧レイヤーが残る:
   - `apply-scene --mode replace-managed` または `--mode clear-all` を使う
 - 既存シーンへ局所修正したい / 宣言型で表現しづらい:
-  - `aftereffects-cli-legacy` へ切り替え
+  - `aftereffects-cli` へ切り替え

@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.2.7",
+  "version": "0.3.0",
   "description": "One-command installer for the ae-agent-skill After Effects extension and CLI.",
   "type": "module",
   "bin": {
@@ -10,6 +10,7 @@
   "scripts": {
     "build:zxp": "./scripts/signing/build-zxp-interactive.sh",
     "sync:version": "node scripts/release/sync-version.mjs",
+    "test:node": "node --test tests/*.test.mjs",
     "version": "npm run sync:version"
   },
   "files": [

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ae-agent-skills"
-version = "0.1.0"
+version = "0.3.0"
 description = "Simple CLI and skills for controlling After Effects bridge without MCP."
 readme = "README.md"
 requires-python = ">=3.10"

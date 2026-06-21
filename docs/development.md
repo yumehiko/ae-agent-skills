@@ -22,7 +22,15 @@ Then fully quit and relaunch After Effects.
 
 ```bash
 python3 -m pip install -e ".[dev]"
-PYTHONPATH=src pytest
+PYTHONPATH=src python3 -m pytest
+npm run test:node
+```
+
+`package.json`, `pyproject.toml`, and `CSXS/manifest.xml` versions should stay aligned for releases.
+Before publishing, run:
+
+```bash
+npm --cache /private/tmp/ae-agent-npm-cache pack --dry-run
 ```
 
 ## Project structure

@@ -22,17 +22,19 @@ defaults write com.adobe.CSXS.11 PlayerDebugMode 1
 
 ```bash
 python3 -m pip install -e ".[dev]"
-PYTHONPATH=src pytest
+PYTHONPATH=src python3 -m pytest
+npm run test:node
 ```
 
 ## ZXPビルドと公開手順
 
 `0.2.6` 以降は `package.json` の `version` を正として、`npm version` 実行時に `CSXS/manifest.xml` へ自動同期します。
+Python パッケージ版は `pyproject.toml` も同じ値に揃えます。
 
 ### 1) バージョン更新
 
 ```bash
-npm version 0.2.7 --no-git-tag-version
+npm version 0.3.0 --no-git-tag-version
 ```
 
 ### 2) 署名付き ZXP ビルド
@@ -82,11 +84,11 @@ SIGN_CERT_PASSWORD='your-password' \
 ### 3) コミット・タグ・push
 
 ```bash
-git add package.json CSXS/manifest.xml
-git commit -m "release: v0.2.7"
-git tag v0.2.7
+git add package.json pyproject.toml CSXS/manifest.xml
+git commit -m "release: v0.3.0"
+git tag v0.3.0
 git push origin HEAD
-git push origin v0.2.7
+git push origin v0.3.0
 ```
 
 ### 4) npm 公開
@@ -100,14 +102,15 @@ npm publish
 `npx ae-agent-skills install` は latest release の `.zxp` を参照するため、Release に ZXP を添付します。
 
 ```bash
-gh release create v0.2.7 dist/ae-agent-skill-0.2.7.zxp \
-  --title v0.2.7 \
+gh release create v0.3.0 dist/ae-agent-skill-0.3.0.zxp \
+  --title v0.3.0 \
   --notes "Release notes"
 ```
 
 ### 6) 公開後確認
 
 ```bash
+npm --cache /private/tmp/ae-agent-npm-cache pack --dry-run
 npm view ae-agent-skills version dist-tags.latest --json
 gh release view --repo yumehiko/ae-agent-skills --json tagName,assets
 ```
