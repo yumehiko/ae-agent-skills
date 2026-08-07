@@ -141,3 +141,23 @@ test('setupAgentWorkspace installs the footage editing example', () => {
     fs.rmSync(tempHome, { recursive: true, force: true });
   }
 });
+
+test('setupAgentWorkspace installs the text style scene example', () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-workspace-home-'));
+  try {
+    setupAgentWorkspace({ home: tempHome });
+    const installed = path.join(
+      tempHome,
+      'ae-agent-skills',
+      'references',
+      'scene.example.json',
+    );
+    const example = JSON.parse(fs.readFileSync(installed, 'utf8'));
+    const title = example.layers.find((layer) => layer.type === 'text');
+    assert.equal(title.textStyle.font, 'ArialMT');
+    assert.equal(title.textStyle.fontSize, 96);
+    assert.equal(title.textStyle.justification, 'center');
+  } finally {
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
+});

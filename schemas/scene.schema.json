@@ -179,6 +179,86 @@
       },
       "additionalProperties": false
     },
+    "rgbColor": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 255
+      }
+    },
+    "textStyle": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "font": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1296
+        },
+        "fillEnabled": {
+          "type": "boolean"
+        },
+        "fillColor": {
+          "$ref": "#/$defs/rgbColor"
+        },
+        "strokeEnabled": {
+          "type": "boolean"
+        },
+        "strokeColor": {
+          "$ref": "#/$defs/rgbColor"
+        },
+        "strokeWidth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "strokeOverFill": {
+          "type": "boolean"
+        },
+        "tracking": {
+          "type": "number"
+        },
+        "leading": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1296
+        },
+        "autoLeading": {
+          "type": "boolean"
+        },
+        "justification": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "full-left",
+            "full-center",
+            "full-right",
+            "full"
+          ]
+        }
+      },
+      "not": {
+        "required": [
+          "leading",
+          "autoLeading"
+        ],
+        "properties": {
+          "autoLeading": {
+            "const": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "transform": {
       "type": "object",
       "properties": {
@@ -429,6 +509,9 @@
         "text": {
           "type": "string"
         },
+        "textStyle": {
+          "$ref": "#/$defs/textStyle"
+        },
         "sourceId": {
           "type": "string",
           "minLength": 1
@@ -558,6 +641,20 @@
             "properties": {
               "type": {
                 "const": "footage"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "textStyle"
+            ]
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "const": "text"
               }
             }
           }

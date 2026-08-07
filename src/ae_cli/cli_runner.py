@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -137,6 +138,78 @@ def _run_set_layer_audio(client: AEClient, args: argparse.Namespace) -> None:
             level_db=args.level_db,
             fade_in=args.fade_in,
             fade_out=args.fade_out,
+            **_layer_selector_kwargs(args),
+        )
+    )
+
+
+def _run_list_fonts(client: AEClient, args: argparse.Namespace) -> None:
+    if args.limit <= 0:
+        raise ValueError("--limit must be a positive integer.")
+    _print_json(client.list_fonts(query=args.query, limit=args.limit))
+
+
+def _run_get_text_style(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.get_text_style(**_layer_selector_kwargs(args)))
+
+
+def _validate_text_color(value: list[float] | None, label: str) -> None:
+    if value is not None and any(
+        not math.isfinite(component) or component < 0 or component > 255
+        for component in value
+    ):
+        raise ValueError(f"{label} values must be between 0 and 255.")
+
+
+def _run_set_text_style(client: AEClient, args: argparse.Namespace) -> None:
+    values = (
+        args.font,
+        args.font_size,
+        args.fill_enabled,
+        args.fill_color,
+        args.stroke_enabled,
+        args.stroke_color,
+        args.stroke_width,
+        args.stroke_over_fill,
+        args.tracking,
+        args.leading,
+        args.auto_leading,
+        args.justification,
+    )
+    if all(value is None for value in values):
+        raise ValueError("Provide at least one text style option.")
+    if args.font_size is not None and (
+        not math.isfinite(args.font_size) or not 0.1 <= args.font_size <= 1296
+    ):
+        raise ValueError("--font-size must be between 0.1 and 1296.")
+    _validate_text_color(args.fill_color, "--fill-color")
+    _validate_text_color(args.stroke_color, "--stroke-color")
+    if args.stroke_width is not None and (
+        not math.isfinite(args.stroke_width) or not 0 <= args.stroke_width <= 1000
+    ):
+        raise ValueError("--stroke-width must be between 0 and 1000.")
+    if args.tracking is not None and not math.isfinite(args.tracking):
+        raise ValueError("--tracking must be a finite number.")
+    if args.leading is not None and (
+        not math.isfinite(args.leading) or not 0.1 <= args.leading <= 1296
+    ):
+        raise ValueError("--leading must be between 0.1 and 1296.")
+    if args.leading is not None and args.auto_leading is True:
+        raise ValueError("--leading cannot be combined with --auto-leading.")
+    _print_json(
+        client.set_text_style(
+            font=args.font,
+            fontSize=args.font_size,
+            fillEnabled=args.fill_enabled,
+            fillColor=args.fill_color,
+            strokeEnabled=args.stroke_enabled,
+            strokeColor=args.stroke_color,
+            strokeWidth=args.stroke_width,
+            strokeOverFill=args.stroke_over_fill,
+            tracking=args.tracking,
+            leading=args.leading,
+            autoLeading=args.auto_leading,
+            justification=args.justification,
             **_layer_selector_kwargs(args),
         )
     )
@@ -372,6 +445,9 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "set-footage-cut": _run_set_footage_cut,
     "get-layer-audio": _run_get_layer_audio,
     "set-layer-audio": _run_set_layer_audio,
+    "list-fonts": _run_list_fonts,
+    "get-text-style": _run_get_text_style,
+    "set-text-style": _run_set_text_style,
     "create-comp": _run_create_comp,
     "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,

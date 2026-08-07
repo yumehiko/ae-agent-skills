@@ -258,6 +258,38 @@ class AEClient:
         )
         return self._handle_response(response)
 
+    def list_fonts(self, query: str | None = None, limit: int = 200) -> Dict[str, Any]:
+        """List installed After Effects fonts with their PostScript names."""
+        params: Dict[str, Any] = {"limit": limit}
+        if query is not None:
+            params["query"] = query
+        response = requests.get(self._url("/fonts"), params=params, timeout=self.timeout)
+        return self._handle_response(response)
+
+    def get_text_style(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Return the whole-layer text style for a text layer."""
+        params = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        response = requests.get(self._url("/text-style"), params=params, timeout=self.timeout)
+        return self._handle_response(response)
+
+    def set_text_style(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+        **style: Any,
+    ) -> Dict[str, Any]:
+        """Partially update the whole-layer text style for a text layer."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update({key: value for key, value in style.items() if value is not None})
+        if len(payload) == 1:
+            raise ValueError("Provide at least one text style setting.")
+        response = requests.post(self._url("/text-style"), json=payload, timeout=self.timeout)
+        return self._handle_response(response)
+
     def create_comp(
         self,
         name: str,

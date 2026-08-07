@@ -115,6 +115,52 @@ def build_parser() -> argparse.ArgumentParser:
     set_layer_audio_parser.add_argument("--fade-in", type=float, help="Fade-in duration in seconds")
     set_layer_audio_parser.add_argument("--fade-out", type=float, help="Fade-out duration in seconds")
 
+    list_fonts_parser = subparsers.add_parser(
+        "list-fonts",
+        help="List installed fonts and their PostScript names",
+    )
+    list_fonts_parser.add_argument("--query", help="Filter by font, family, or style name")
+    list_fonts_parser.add_argument("--limit", type=int, default=200, help="Maximum results (default: 200)")
+
+    get_text_style_parser = subparsers.add_parser(
+        "get-text-style",
+        help="Get the whole-layer text style for a text layer",
+    )
+    _add_layer_selector(get_text_style_parser)
+
+    set_text_style_parser = subparsers.add_parser(
+        "set-text-style",
+        help="Set whole-layer font, fill, stroke, spacing, and paragraph style",
+    )
+    _add_layer_selector(set_text_style_parser)
+    set_text_style_parser.add_argument("--font", help="PostScript font name; discover with list-fonts")
+    set_text_style_parser.add_argument("--font-size", type=float)
+    fill_group = set_text_style_parser.add_mutually_exclusive_group()
+    fill_group.add_argument("--enable-fill", dest="fill_enabled", action="store_true")
+    fill_group.add_argument("--disable-fill", dest="fill_enabled", action="store_false")
+    set_text_style_parser.set_defaults(fill_enabled=None)
+    set_text_style_parser.add_argument("--fill-color", nargs=3, type=float, metavar=("R", "G", "B"))
+    stroke_group = set_text_style_parser.add_mutually_exclusive_group()
+    stroke_group.add_argument("--enable-stroke", dest="stroke_enabled", action="store_true")
+    stroke_group.add_argument("--disable-stroke", dest="stroke_enabled", action="store_false")
+    set_text_style_parser.set_defaults(stroke_enabled=None)
+    set_text_style_parser.add_argument("--stroke-color", nargs=3, type=float, metavar=("R", "G", "B"))
+    set_text_style_parser.add_argument("--stroke-width", type=float)
+    stroke_order_group = set_text_style_parser.add_mutually_exclusive_group()
+    stroke_order_group.add_argument("--stroke-over-fill", dest="stroke_over_fill", action="store_true")
+    stroke_order_group.add_argument("--stroke-under-fill", dest="stroke_over_fill", action="store_false")
+    set_text_style_parser.set_defaults(stroke_over_fill=None)
+    set_text_style_parser.add_argument("--tracking", type=float)
+    set_text_style_parser.add_argument("--leading", type=float)
+    leading_group = set_text_style_parser.add_mutually_exclusive_group()
+    leading_group.add_argument("--auto-leading", dest="auto_leading", action="store_true")
+    leading_group.add_argument("--manual-leading", dest="auto_leading", action="store_false")
+    set_text_style_parser.set_defaults(auto_leading=None)
+    set_text_style_parser.add_argument(
+        "--justification",
+        choices=["left", "center", "right", "full-left", "full-center", "full-right", "full"],
+    )
+
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     _add_layer_selector(properties_parser)
     properties_parser.add_argument("--include-group", action="append", default=[])

@@ -278,6 +278,65 @@ def test_build_parser_parses_set_layer_audio() -> None:
     assert args.fade_out == 0.75
 
 
+def test_build_parser_parses_list_fonts() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["list-fonts", "--query", "Noto Sans", "--limit", "20"])
+    assert args.command == "list-fonts"
+    assert args.query == "Noto Sans"
+    assert args.limit == 20
+
+
+def test_build_parser_parses_get_text_style() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["get-text-style", "--layer-name", "Title"])
+    assert args.command == "get-text-style"
+    assert args.layer_name == "Title"
+
+
+def test_build_parser_parses_set_text_style() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "set-text-style",
+            "--layer-id",
+            "2",
+            "--font",
+            "ArialMT",
+            "--font-size",
+            "96",
+            "--fill-color",
+            "255",
+            "240",
+            "210",
+            "--enable-stroke",
+            "--stroke-color",
+            "18",
+            "34",
+            "56",
+            "--stroke-width",
+            "4",
+            "--stroke-under-fill",
+            "--tracking",
+            "20",
+            "--leading",
+            "110",
+            "--justification",
+            "center",
+        ]
+    )
+    assert args.command == "set-text-style"
+    assert args.font == "ArialMT"
+    assert args.font_size == 96
+    assert args.fill_color == [255, 240, 210]
+    assert args.stroke_enabled is True
+    assert args.stroke_color == [18, 34, 56]
+    assert args.stroke_width == 4
+    assert args.stroke_over_fill is False
+    assert args.tracking == 20
+    assert args.leading == 110
+    assert args.justification == "center"
+
+
 def test_build_parser_parses_expression_errors() -> None:
     parser = build_parser()
     args = parser.parse_args(["expression-errors"])
@@ -511,3 +570,23 @@ def test_run_set_layer_audio_rejects_negative_fade(capsys) -> None:
     captured = capsys.readouterr()
     assert code == 1
     assert "--fade-in must be greater than or equal to 0" in captured.err
+
+
+def test_run_set_text_style_requires_a_setting(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(["set-text-style", "--layer-id", "1"])
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "at least one text style option" in captured.err
+
+
+def test_run_set_text_style_rejects_auto_and_manual_leading_value(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        ["set-text-style", "--layer-id", "1", "--leading", "100", "--auto-leading"]
+    )
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "cannot be combined" in captured.err

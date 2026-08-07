@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: Command-by-command After Effects editing via ae-cli, including footage cuts and audio level, mute, or fade changes. Best for surgical edits on existing human-made scenes and for debugging.
+description: Command-by-command After Effects editing via ae-cli, including footage cuts, audio changes, and whole-layer text styling. Best for surgical edits on existing human-made scenes and for debugging.
 ---
 
 # aftereffects-cli
@@ -70,6 +70,10 @@ description: Command-by-command After Effects editing via ae-cli, including foot
 - 音声:
   - `ae-cli get-layer-audio (--layer-id <id> | --layer-name <name>)`
   - `ae-cli set-layer-audio (--layer-id <id> | --layer-name <name>) [--mute | --unmute] [--level-db <dB>] [--fade-in <sec>] [--fade-out <sec>]`
+- テキスト:
+  - `ae-cli list-fonts [--query <text>] [--limit <count>]`
+  - `ae-cli get-text-style (--layer-id <id> | --layer-name <name>)`
+  - `ae-cli set-text-style (--layer-id <id> | --layer-name <name>) [style options]`
 - タイムライン:
   - `ae-cli set-in-out-point ...`
   - `ae-cli move-layer-time ...`
@@ -91,6 +95,7 @@ ae-cli health
 ae-cli create-comp --name "Skill_CLI_Minimal_Test" --width 1280 --height 720 --duration 3 --frame-rate 30
 ae-cli set-active-comp --comp-name "Skill_CLI_Minimal_Test"
 ae-cli add-layer --layer-type text --name "Hello" --text "CLI skill test"
+ae-cli set-text-style --layer-name "Hello" --font-size 72 --fill-color 255 255 255 --justification center
 ae-cli layers
 ```
 
@@ -101,6 +106,9 @@ ae-cli layers
 - `set-layer-audio` の `--level-db` は左右チャンネルへ同じ値を設定する。
 - `--fade-in` / `--fade-out` はレイヤーのin/outを基準にAudio Levelsキーフレームを作る。
 - `--mute` / `--unmute` だけを指定した場合は既存のAudio Levelsキーフレームを保持する。
+- フォント指定前に `list-fonts` を実行し、返されたPostScript名を `--font` に使う。
+- `set-text-style` は指定項目だけをテキストレイヤー全体へ適用する。色は0〜1または0〜255のRGBで指定する。
+- `--leading` と `--auto-leading` は併用しない。文字単位の混在スタイルやテキストアニメーターは対象外。
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。

@@ -1,6 +1,6 @@
 ---
 name: aftereffects-declarative
-description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/audio/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage or audio editing.
+description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/audio/text styles/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage, audio, or text editing.
 ---
 
 # aftereffects-declarative
@@ -94,6 +94,11 @@ ae-cli expression-errors
 - `audio.muted` の既定はfalse、`audio.levelDb` の既定は0 dB、未指定のフェードは0秒として、再適用時に音声状態を作り直す
 - `audio.fadeIn + audio.fadeOut` はカット後のレイヤー尺以内にする
 - `audio` と汎用 `animations` / `propertyValues` から同じAudio Levelsを同時管理しない
+- テキストレイヤー全体のスタイルは `textStyle` で宣言する
+- `textStyle.font` は `ae-cli list-fonts` で取得したPostScript名を使う
+- `fillColor` / `strokeColor` は0〜1または0〜255のRGB配列を使う
+- `textStyle.leading` は手動行送りへ切り替わるため、`autoLeading: true` と併用しない
+- `textStyle` は宣言した項目だけを更新する。文字単位の混在スタイルやテキストアニメーターには使わない
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
 
 ## フッテージ音声の例
@@ -114,6 +119,28 @@ ae-cli expression-errors
     "levelDb": -6,
     "fadeIn": 0.5,
     "fadeOut": 0.75
+  }
+}
+```
+
+## テキストスタイルの例
+
+```json
+{
+  "id": "title",
+  "type": "text",
+  "name": "Title",
+  "text": "Hello Agent",
+  "textStyle": {
+    "font": "ArialMT",
+    "fontSize": 96,
+    "fillColor": [255, 240, 210],
+    "strokeEnabled": true,
+    "strokeColor": [18, 34, 56],
+    "strokeWidth": 4,
+    "tracking": 20,
+    "leading": 110,
+    "justification": "center"
   }
 }
 ```
@@ -140,6 +167,11 @@ ae-cli expression-errors
       "type": "text",
       "name": "Hello",
       "text": "Skill only test",
+      "textStyle": {
+        "fontSize": 72,
+        "fillColor": [255, 255, 255],
+        "justification": "center"
+      },
       "transform": {
         "position": [640, 360],
         "opacity": 100

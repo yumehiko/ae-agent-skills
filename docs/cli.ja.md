@@ -58,6 +58,22 @@ ae-cli set-layer-audio --layer-name "Clip 01" --mute
 レイヤーの `inPoint` / `outPoint` を基準にAudio Levelsキーフレームを作成します。
 ミュートだけを変更した場合、既存のAudio Levelsキーフレームは保持されます。
 
+## テキストスタイル
+
+```bash
+ae-cli list-fonts --query "Noto Sans" --limit 20
+ae-cli get-text-style --layer-name "Title"
+ae-cli set-text-style --layer-name "Title" \
+  --font "ArialMT" --font-size 96 --fill-color 255 240 210 \
+  --enable-stroke --stroke-color 18 34 56 --stroke-width 4 \
+  --stroke-under-fill --tracking 20 --leading 110 --justification center
+```
+
+`--font` は `list-fonts` が返すPostScript名を指定します。色は0〜1または0〜255のRGBです。
+`--leading` は手動行送りへ切り替わるため、`--auto-leading` とは同時指定できません。
+指定した項目だけを更新し、未指定のスタイルは保持します。対象はテキストレイヤー全体です。
+文字単位の混在スタイルとテキストアニメーターは対象外です。
+
 ## 宣言的シーン適用
 
 ```bash
@@ -83,6 +99,9 @@ sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` �
 音声は各フッテージレイヤーの `audio.muted` / `levelDb` / `fadeIn` / `fadeOut` で指定します。
 宣言的適用では `audio` が音声状態を所有し、`muted: false`・`levelDb: 0`・フェード0秒を既定として
 再適用時にAudio Levelsキーフレームを作り直します。
+テキストレイヤーでは `textStyle` に `font` / `fontSize` / `fillEnabled` / `fillColor` /
+`strokeEnabled` / `strokeColor` / `strokeWidth` / `strokeOverFill` / `tracking` / `leading` /
+`autoLeading` / `justification` を指定できます。`textStyle` は宣言した項目だけを更新します。
 
 `apply-scene` の mode:
 

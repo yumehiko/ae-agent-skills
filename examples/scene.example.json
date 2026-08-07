@@ -27,6 +27,18 @@
       "type": "text",
       "name": "Title",
       "text": "Hello Agent",
+      "textStyle": {
+        "font": "ArialMT",
+        "fontSize": 96,
+        "fillColor": [255, 240, 210],
+        "strokeEnabled": true,
+        "strokeColor": [18, 34, 56],
+        "strokeWidth": 4,
+        "strokeOverFill": false,
+        "tracking": 20,
+        "leading": 110,
+        "justification": "center"
+      },
       "transform": {
         "position": [960, 540],
         "scale": [100, 100],

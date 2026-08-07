@@ -310,6 +310,80 @@ def test_set_layer_audio_requires_a_setting() -> None:
         raise AssertionError("ValueError was not raised")
 
 
+def test_list_fonts_calls_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        return DummyResponse({"status": "success", "data": {"fonts": []}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.list_fonts(query="Noto", limit=20)
+
+    assert captured["url"] == "http://127.0.0.1:8080/fonts"
+    assert captured["params"] == {"query": "Noto", "limit": 20}
+
+
+def test_get_text_style_calls_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        return DummyResponse({"status": "success", "data": {"textStyle": {}}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_text_style(layer_name="Title")
+
+    assert captured["url"] == "http://127.0.0.1:8080/text-style"
+    assert captured["params"] == {"layerName": "Title"}
+
+
+def test_set_text_style_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        return DummyResponse({"status": "success", "data": {"textStyle": {}}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_text_style(
+        layer_id=2,
+        font="ArialMT",
+        fontSize=96,
+        fillColor=[255, 240, 210],
+        strokeEnabled=True,
+        strokeWidth=4,
+        justification="center",
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/text-style"
+    assert captured["json"] == {
+        "layerId": 2,
+        "font": "ArialMT",
+        "fontSize": 96,
+        "fillColor": [255, 240, 210],
+        "strokeEnabled": True,
+        "strokeWidth": 4,
+        "justification": "center",
+    }
+
+
+def test_set_text_style_requires_a_setting() -> None:
+    client = AEClient()
+    try:
+        client.set_text_style(layer_id=2)
+    except ValueError as exc:
+        assert "text style setting" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+
 def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

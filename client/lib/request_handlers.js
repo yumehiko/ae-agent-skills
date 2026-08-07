@@ -422,6 +422,10 @@ function routeRequest(req, res) {
         && routeAudioRequest(pathname, method, req, res, searchParams)) {
         return;
     }
+    if (typeof routeTextRequest === 'function'
+        && routeTextRequest(pathname, method, req, res, searchParams)) {
+        return;
+    }
     if (typeof routeShapeRequest === 'function' && routeShapeRequest(pathname, method, req, res)) {
         return;
     }

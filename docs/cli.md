@@ -58,6 +58,22 @@ ae-cli set-layer-audio --layer-name "Clip 01" --mute
 they create Audio Levels keyframes relative to the layer `inPoint` and `outPoint`. A mute-only update
 preserves existing Audio Levels keyframes.
 
+## Text style
+
+```bash
+ae-cli list-fonts --query "Noto Sans" --limit 20
+ae-cli get-text-style --layer-name "Title"
+ae-cli set-text-style --layer-name "Title" \
+  --font "ArialMT" --font-size 96 --fill-color 255 240 210 \
+  --enable-stroke --stroke-color 18 34 56 --stroke-width 4 \
+  --stroke-under-fill --tracking 20 --leading 110 --justification center
+```
+
+Pass a PostScript name returned by `list-fonts` to `--font`. RGB colors accept either 0–1 or
+0–255 values. `--leading` switches to manual leading and cannot be combined with `--auto-leading`.
+Only specified fields are updated. Styling applies to the entire text layer; mixed character styles
+and text animators are outside this release's scope.
+
 ## Declarative scene apply
 
 ```bash
@@ -83,6 +99,8 @@ Scenes declare each source once in `assets[]`. Multiple `type: "footage"` layers
 Set audio with `audio.muted`, `levelDb`, `fadeIn`, and `fadeOut` on each footage layer. Declarative
 apply owns the audio state for layers with `audio`, defaults to unmuted/0 dB/no fades, and rebuilds
 Audio Levels keyframes on reapply.
+Text layers accept `textStyle` fields for `font`, `fontSize`, fill, stroke, `tracking`, `leading`,
+`autoLeading`, and `justification`. Scene apply updates only fields declared in `textStyle`.
 
 `apply-scene` modes:
 

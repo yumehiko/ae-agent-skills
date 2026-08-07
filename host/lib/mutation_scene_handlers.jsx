@@ -513,6 +513,17 @@ function aeValidateSceneSpec(scene) {
                 if (layer.text !== undefined && typeof layer.text !== "string") {
                     errors.push(prefix + ".text must be a string when specified.");
                 }
+                var textStyle = layer.textStyle;
+                if (textStyle !== undefined) {
+                    if (String(layer.type).toLowerCase() !== "text") {
+                        errors.push(prefix + ".textStyle is only allowed for text layers.");
+                    }
+                    try {
+                        aeValidateTextStyle(textStyle);
+                    } catch (eTextStyle) {
+                        errors.push(prefix + ".textStyle: " + eTextStyle.toString());
+                    }
+                }
                 if (layer.sourceId !== undefined && (typeof layer.sourceId !== "string" || layer.sourceId.length === 0)) {
                     errors.push(prefix + ".sourceId must be a non-empty string when specified.");
                 }
@@ -1140,6 +1151,10 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
         aeSetTextLayerValue(layer, layerSpec.text);
         operationCount += 1;
     }
+    if (layerSpec.textStyle !== undefined) {
+        aeApplyTextStyle(layer, layerSpec.textStyle);
+        operationCount += 1;
+    }
 
     var skipPropertyPaths = {};
     var animationsForSkip = layerSpec.animations || [];
@@ -1315,6 +1330,9 @@ function applyScene(sceneJSON, optionsJSON) {
                 operationsPlanned += 1;
             }
             if (layer.audio !== undefined) {
+                operationsPlanned += 1;
+            }
+            if (layer.textStyle !== undefined) {
                 operationsPlanned += 1;
             }
             operationsPlanned += (layer.propertyValues || []).length;
