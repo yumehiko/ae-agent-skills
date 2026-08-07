@@ -215,6 +215,62 @@ def _run_set_text_style(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _layout_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "layer_ids": getattr(args, "layer_ids", None),
+        "layer_names": getattr(args, "layer_names", None),
+    }
+
+
+def _validate_layout_common(args: argparse.Namespace) -> None:
+    if not math.isfinite(args.time) or args.time < 0:
+        raise ValueError("--time must be a finite number greater than or equal to 0.")
+    if args.margin_percent is not None and (
+        not math.isfinite(args.margin_percent)
+        or args.margin_percent < 0
+        or args.margin_percent >= 50
+    ):
+        raise ValueError("--margin-percent must be between 0 and 50 (exclusive).")
+    if args.reference == "selection" and args.margin_percent is not None:
+        raise ValueError("--margin-percent cannot be used with --reference selection.")
+
+
+def _run_align_layers(client: AEClient, args: argparse.Namespace) -> None:
+    _validate_layout_common(args)
+    if args.horizontal is None and args.vertical is None:
+        raise ValueError("Provide --horizontal, --vertical, or both.")
+    if args.offset is not None and any(not math.isfinite(value) for value in args.offset):
+        raise ValueError("--offset values must be finite numbers.")
+    _print_json(
+        client.align_layers(
+            horizontal=args.horizontal,
+            vertical=args.vertical,
+            reference=args.reference,
+            offset=args.offset,
+            margin_percent=args.margin_percent,
+            time=args.time,
+            **_layout_selector_kwargs(args),
+        )
+    )
+
+
+def _run_distribute_layers(client: AEClient, args: argparse.Namespace) -> None:
+    _validate_layout_common(args)
+    selector_values = args.layer_ids if args.layer_ids is not None else args.layer_names
+    if selector_values is None or len(selector_values) < 2:
+        raise ValueError("Provide at least two --layer-id or --layer-name values.")
+    _print_json(
+        client.distribute_layers(
+            axis=args.axis,
+            mode=args.mode,
+            reference=args.reference,
+            margin_percent=args.margin_percent,
+            time=args.time,
+            **_layout_selector_kwargs(args),
+        )
+    )
+
+
 def _run_create_comp(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.create_comp(
@@ -448,6 +504,8 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "list-fonts": _run_list_fonts,
     "get-text-style": _run_get_text_style,
     "set-text-style": _run_set_text_style,
+    "align-layers": _run_align_layers,
+    "distribute-layers": _run_distribute_layers,
     "create-comp": _run_create_comp,
     "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,

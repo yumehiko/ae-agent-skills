@@ -1,6 +1,6 @@
 ---
 name: aftereffects-declarative
-description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/audio/text styles/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage, audio, or text editing.
+description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/audio/text styles/layout/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage, audio, text, or visual-bounds layout editing.
 ---
 
 # aftereffects-declarative
@@ -77,6 +77,7 @@ ae-cli expression-errors
 
 - `layers[].id` は必須推奨（upsert の安定キー）
 - `layers[].parentId` は scene id を参照
+- `parentId` を持つレイヤーの `transform` は親座標系で宣言し、初回適用と再適用で同じ値を使う
 - 推測でキーを作らず、必ず `~/ae-agent-skills/scene.schema.json` を正として合わせる
 - アニメーション対象プロパティは `animations` で管理
 - 3Dベクトルには2D入力可（`[x,y] -> [x,y,0]` 自動補完）
@@ -99,6 +100,10 @@ ae-cli expression-errors
 - `fillColor` / `strokeColor` は0〜1または0〜255のRGB配列を使う
 - `textStyle.leading` は手動行送りへ切り替わるため、`autoLeading: true` と併用しない
 - `textStyle` は宣言した項目だけを更新する。文字単位の混在スタイルやテキストアニメーターには使わない
+- 整列・分布はトップレベルの `layout[]` に上から順に宣言し、`layerIds` はscene layer idを参照する
+- `align` は `horizontal` / `vertical`、`distribute` は `axis` と `mode: gaps | centers` を指定する
+- 基準は `comp` / `action-safe` / `title-safe` / `selection`。safe既定値は10% / 20%で、必要なら `marginPercent` で上書きする
+- layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
 
 ## フッテージ音声の例
@@ -145,6 +150,28 @@ ae-cli expression-errors
 }
 ```
 
+## 配置の例
+
+```json
+"layout": [
+  {
+    "type": "align",
+    "layerIds": ["title"],
+    "reference": "title-safe",
+    "horizontal": "center",
+    "vertical": "top",
+    "offset": [0, 24]
+  },
+  {
+    "type": "distribute",
+    "layerIds": ["card-a", "card-b", "card-c"],
+    "reference": "action-safe",
+    "axis": "horizontal",
+    "mode": "gaps"
+  }
+]
+```
+
 ## 最小テンプレート（このまま使える）
 
 以下を `~/ae-agent-skills/work/min.scene.json` として保存して、そのまま `validate/apply` できる。
@@ -176,6 +203,15 @@ ae-cli expression-errors
         "position": [640, 360],
         "opacity": 100
       }
+    }
+  ],
+  "layout": [
+    {
+      "type": "align",
+      "layerIds": ["t1"],
+      "reference": "title-safe",
+      "horizontal": "center",
+      "vertical": "center"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.6.0",
-  "description": "After Effects agent skills and CLI for composition building, footage, audio, and text styling.",
+  "version": "0.7.0",
+  "description": "After Effects agent skills and CLI for composition building, footage, audio, text, and layout.",
   "type": "module",
   "bin": {
     "ae-agent-skills": "bin/ae-agent-setup.mjs",

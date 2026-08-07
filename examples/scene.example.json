@@ -53,6 +53,68 @@
           ]
         }
       ]
+    },
+    {
+      "id": "card-a",
+      "type": "shape",
+      "name": "Card A",
+      "shapeType": "rect",
+      "shapeSize": [220, 180],
+      "shapeFillColor": [236, 112, 99],
+      "shapeRoundness": 24,
+      "transform": {
+        "position": [260, 720]
+      }
+    },
+    {
+      "id": "card-b",
+      "type": "shape",
+      "name": "Card B",
+      "shapeType": "rect",
+      "shapeSize": [280, 220],
+      "shapeFillColor": [112, 190, 236],
+      "shapeRoundness": 24,
+      "transform": {
+        "position": [960, 650]
+      }
+    },
+    {
+      "id": "card-c",
+      "type": "shape",
+      "name": "Card C",
+      "shapeType": "rect",
+      "shapeSize": [180, 160],
+      "shapeFillColor": [244, 203, 92],
+      "shapeRoundness": 24,
+      "transform": {
+        "position": [1660, 760]
+      }
+    }
+  ],
+  "layout": [
+    {
+      "type": "align",
+      "layerIds": ["title"],
+      "reference": "title-safe",
+      "horizontal": "center",
+      "vertical": "top",
+      "offset": [0, 24],
+      "time": 0
+    },
+    {
+      "type": "align",
+      "layerIds": ["card-a", "card-b", "card-c"],
+      "reference": "comp",
+      "vertical": "center",
+      "time": 0
+    },
+    {
+      "type": "distribute",
+      "layerIds": ["card-a", "card-b", "card-c"],
+      "reference": "action-safe",
+      "axis": "horizontal",
+      "mode": "gaps",
+      "time": 0
     }
   ]
 }

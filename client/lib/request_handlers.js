@@ -426,6 +426,10 @@ function routeRequest(req, res) {
         && routeTextRequest(pathname, method, req, res, searchParams)) {
         return;
     }
+    if (typeof routeLayoutRequest === 'function'
+        && routeLayoutRequest(pathname, method, req, res)) {
+        return;
+    }
     if (typeof routeShapeRequest === 'function' && routeShapeRequest(pathname, method, req, res)) {
         return;
     }

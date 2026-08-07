@@ -74,6 +74,26 @@ Pass a PostScript name returned by `list-fonts` to `--font`. RGB colors accept e
 Only specified fields are updated. Styling applies to the entire text layer; mixed character styles
 and text animators are outside this release's scope.
 
+## Alignment and distribution
+
+```bash
+ae-cli align-layers --layer-name "Title" \
+  --horizontal center --vertical top --reference title-safe --offset 0 24
+
+ae-cli distribute-layers \
+  --layer-name "Card A" --layer-name "Card B" --layer-name "Card C" \
+  --axis horizontal --mode gaps --reference action-safe
+```
+
+Choose `comp`, `action-safe`, `title-safe`, or `selection` as the reference. Safe-area defaults are
+10% for action-safe and 20% for title-safe; override either with `--margin-percent`. `gaps` equalizes
+the space between visual bounds, while `centers` equalizes center spacing. A `selection` reference
+preserves the target group's current outer bounds; other references use the full reference rectangle.
+
+Bounds account for anchor point, scale, rotation, and 2D parenting. Layout supports visible 2D AV
+layers and rejects 3D layers, 3D parent chains, and Position expressions. For animated Position,
+the command writes a value at `--time`.
+
 ## Declarative scene apply
 
 ```bash
@@ -101,6 +121,9 @@ apply owns the audio state for layers with `audio`, defaults to unmuted/0 dB/no 
 Audio Levels keyframes on reapply.
 Text layers accept `textStyle` fields for `font`, `fontSize`, fill, stroke, `tracking`, `leading`,
 `autoLeading`, and `justification`. Scene apply updates only fields declared in `textStyle`.
+Top-level `layout[]` entries apply ordered `align` or `distribute` operations and reference scene
+layer ids through `layerIds`. Each later operation sees the bounds produced by earlier operations.
+For layers with `parentId`, declared `transform` values remain parent-local so first apply and reapply match.
 
 `apply-scene` modes:
 

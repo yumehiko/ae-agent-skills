@@ -6,6 +6,7 @@ $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/query_handlers.jsx"));
 $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/footage_handlers.jsx"));
 $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/audio_handlers.jsx"));
 $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/text_handlers.jsx"));
+$.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/layout_handlers.jsx"));
 $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/mutation_handlers.jsx"));
 $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/mutation_keyframe_handlers.jsx"));
 $.evalFile(File(__AE_AGENT_HOST_ROOT + "/lib/mutation_shape_handlers.jsx"));

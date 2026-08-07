@@ -854,6 +854,8 @@ function aeValidateSceneSpec(scene) {
         }
     }
 
+    aeValidateSceneLayoutSpecs(scene.layout, seenIds || {}, comp || {}, errors);
+
     return { ok: errors.length === 0, errors: errors };
 }
 
@@ -1304,8 +1306,9 @@ function applyScene(sceneJSON, optionsJSON) {
         }
 
         var layers = scene.layers || [];
+        var layoutSpecs = scene.layout || [];
         var assetSpecs = scene.assets || [];
-        var operationsPlanned = assetSpecs.length;
+        var operationsPlanned = assetSpecs.length + layoutSpecs.length;
         for (var i = 0; i < layers.length; i++) {
             var layer = layers[i];
             operationsPlanned += 1;
@@ -1401,6 +1404,7 @@ function applyScene(sceneJSON, optionsJSON) {
                 assetCount: assetSpecs.length,
                 assets: assetPlan.summaries,
                 layerCount: layers.length,
+                layoutCount: layoutSpecs.length,
                 operationsPlanned: operationsPlanned,
                 deletedCount: deleteTargets.length
             });
@@ -1410,6 +1414,8 @@ function applyScene(sceneJSON, optionsJSON) {
         var createdCount = 0;
         var reusedCount = 0;
         var parentAppliedCount = 0;
+        var appliedLayouts = [];
+        var layoutMovedCount = 0;
         var deletedLayers = [];
         var resolvedAssets = null;
         app.beginUndoGroup("Apply Scene");
@@ -1467,16 +1473,50 @@ function applyScene(sceneJSON, optionsJSON) {
                     }
                 }
                 if (parentLayerId !== null && parentLayerId === childApplied.layerId) {
-                    // Already in desired state for scene identity mapping.
+                    throw new Error("A scene layer cannot be parented to itself.");
+                }
+                var childLayerForParent = comp.layer(childApplied.layerId);
+                var currentParentLayerId = childLayerForParent.parent
+                    ? childLayerForParent.parent.index
+                    : null;
+                if (currentParentLayerId === parentLayerId) {
                     continue;
                 }
-                aeInvokeMutation(
-                    parentLayer,
-                    [childApplied.layerId, parentLayerId],
-                    "parentLayer"
-                );
+                if (parentLayerId === null) {
+                    childLayerForParent.setParentWithJump();
+                } else {
+                    childLayerForParent.setParentWithJump(comp.layer(parentLayerId));
+                }
                 childApplied.operations += 1;
                 parentAppliedCount += 1;
+            }
+            for (var w = 0; w < layoutSpecs.length; w++) {
+                var layoutSpec = layoutSpecs[w];
+                var layoutLayers = [];
+                for (var x = 0; x < layoutSpec.layerIds.length; x++) {
+                    var layoutLayerId = sceneIdToLayerId[String(layoutSpec.layerIds[x])];
+                    if (!layoutLayerId) {
+                        throw new Error(
+                            "layout[" + w + "] references an unresolved scene layer: "
+                            + layoutSpec.layerIds[x]
+                        );
+                    }
+                    layoutLayers.push(comp.layer(layoutLayerId));
+                }
+                var layoutOptions = {};
+                for (var layoutKey in layoutSpec) {
+                    if (layoutSpec.hasOwnProperty(layoutKey)
+                        && layoutKey !== "type"
+                        && layoutKey !== "layerIds") {
+                        layoutOptions[layoutKey] = layoutSpec[layoutKey];
+                    }
+                }
+                var appliedLayout = layoutSpec.type === "align"
+                    ? aeAlignLayerRefs(comp, layoutLayers, layoutOptions)
+                    : aeDistributeLayerRefs(comp, layoutLayers, layoutOptions);
+                appliedLayout.sceneLayerIds = layoutSpec.layerIds;
+                appliedLayouts.push(appliedLayout);
+                layoutMovedCount += appliedLayout.movedCount;
             }
         } finally {
             app.endUndoGroup();
@@ -1496,6 +1536,9 @@ function applyScene(sceneJSON, optionsJSON) {
             createdCount: createdCount,
             reusedCount: reusedCount,
             parentAppliedCount: parentAppliedCount,
+            layoutCount: appliedLayouts.length,
+            layoutMovedCount: layoutMovedCount,
+            layouts: appliedLayouts,
             deletedCount: deletedLayers.length,
             deletedLayers: deletedLayers,
             createdLayers: appliedLayers,

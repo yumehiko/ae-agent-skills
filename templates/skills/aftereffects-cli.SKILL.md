@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: Command-by-command After Effects editing via ae-cli, including footage cuts, audio changes, and whole-layer text styling. Best for surgical edits on existing human-made scenes and for debugging.
+description: Command-by-command After Effects editing via ae-cli, including footage cuts, audio changes, whole-layer text styling, and visual-bounds alignment or distribution. Best for surgical edits on existing human-made scenes and for debugging.
 ---
 
 # aftereffects-cli
@@ -74,6 +74,9 @@ description: Command-by-command After Effects editing via ae-cli, including foot
   - `ae-cli list-fonts [--query <text>] [--limit <count>]`
   - `ae-cli get-text-style (--layer-id <id> | --layer-name <name>)`
   - `ae-cli set-text-style (--layer-id <id> | --layer-name <name>) [style options]`
+- 配置:
+  - `ae-cli align-layers (--layer-id <id>... | --layer-name <name>...) [--horizontal left|center|right] [--vertical top|center|bottom] [--reference comp|action-safe|title-safe|selection]`
+  - `ae-cli distribute-layers (--layer-id <id>... | --layer-name <name>...) --axis horizontal|vertical [--mode gaps|centers] [--reference comp|action-safe|title-safe|selection]`
 - タイムライン:
   - `ae-cli set-in-out-point ...`
   - `ae-cli move-layer-time ...`
@@ -96,6 +99,7 @@ ae-cli create-comp --name "Skill_CLI_Minimal_Test" --width 1280 --height 720 --d
 ae-cli set-active-comp --comp-name "Skill_CLI_Minimal_Test"
 ae-cli add-layer --layer-type text --name "Hello" --text "CLI skill test"
 ae-cli set-text-style --layer-name "Hello" --font-size 72 --fill-color 255 255 255 --justification center
+ae-cli align-layers --layer-name "Hello" --horizontal center --vertical center --reference title-safe
 ae-cli layers
 ```
 
@@ -109,6 +113,9 @@ ae-cli layers
 - フォント指定前に `list-fonts` を実行し、返されたPostScript名を `--font` に使う。
 - `set-text-style` は指定項目だけをテキストレイヤー全体へ適用する。色は0〜1または0〜255のRGBで指定する。
 - `--leading` と `--auto-leading` は併用しない。文字単位の混在スタイルやテキストアニメーターは対象外。
+- 配置基準のsafe既定値はaction-safe 10%、title-safe 20%。必要なら `--margin-percent` で上書きする。
+- `gaps` は実寸の隙間、`centers` は中心間隔を均等化する。`selection` は対象全体の現在の外周を保持する。
+- layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない。
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。

@@ -43,7 +43,8 @@ then place those cuts sequentially in a composition.
 
 As of `v0.4.0`, file import, source reuse, and multi-cut footage placement are supported. `v0.5.0`
 adds per-cut volume, mute, fade-in, and fade-out controls. `v0.6.0` adds whole-layer font, size,
-fill, stroke, tracking, leading, and paragraph alignment controls.
+fill, stroke, tracking, leading, and paragraph alignment controls. `v0.7.0` adds visual-bounds
+alignment, equal distribution, and composition or safe-area placement references.
 
 To choose an agent explicitly:
 
@@ -92,8 +93,8 @@ with their latest versions. Files under `~/ae-agent-skills/work/` and `~/ae-agen
 
 ## Which skill to use
 
-- `$aftereffects-declarative`: default for new compositions and repeatable footage, audio, or text edits
-- `$aftereffects-cli`: best for local footage, audio, text style, or property changes and debugging
+- `$aftereffects-declarative`: default for new compositions and repeatable footage, audio, text, or layout edits
+- `$aftereffects-cli`: best for local footage, audio, text style, layout, or property changes and debugging
 
 ## Docs
 

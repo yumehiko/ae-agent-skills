@@ -384,6 +384,80 @@ def test_set_text_style_requires_a_setting() -> None:
         raise AssertionError("ValueError was not raised")
 
 
+def test_align_layers_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layout": {}}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.align_layers(
+        layer_names=["Title", "Subtitle"],
+        horizontal="center",
+        vertical="top",
+        reference="title-safe",
+        offset=[0, 24],
+        margin_percent=18,
+        time=1.5,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/layout-align"
+    assert captured["json"] == {
+        "layerNames": ["Title", "Subtitle"],
+        "reference": "title-safe",
+        "time": 1.5,
+        "horizontal": "center",
+        "vertical": "top",
+        "offset": [0, 24],
+        "marginPercent": 18,
+    }
+    assert captured["timeout"] == 5.0
+
+
+def test_distribute_layers_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layout": {}}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.distribute_layers(
+        layer_ids=[5, 3, 1],
+        axis="horizontal",
+        mode="gaps",
+        reference="action-safe",
+        time=0,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/layout-distribute"
+    assert captured["json"] == {
+        "layerIds": [5, 3, 1],
+        "axis": "horizontal",
+        "mode": "gaps",
+        "reference": "action-safe",
+        "time": 0,
+    }
+    assert captured["timeout"] == 5.0
+
+
+def test_layout_selector_requires_exactly_one_selector_kind() -> None:
+    client = AEClient()
+    try:
+        client.align_layers(horizontal="center")
+    except ValueError as exc:
+        assert "exactly one" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+
 def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

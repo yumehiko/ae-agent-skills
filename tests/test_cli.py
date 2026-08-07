@@ -337,6 +337,68 @@ def test_build_parser_parses_set_text_style() -> None:
     assert args.justification == "center"
 
 
+def test_build_parser_parses_align_layers_by_name() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "align-layers",
+            "--layer-name",
+            "Title",
+            "--layer-name",
+            "Subtitle",
+            "--horizontal",
+            "center",
+            "--vertical",
+            "top",
+            "--reference",
+            "title-safe",
+            "--margin-percent",
+            "18",
+            "--offset",
+            "0",
+            "24",
+            "--time",
+            "1.5",
+        ]
+    )
+    assert args.command == "align-layers"
+    assert args.layer_names == ["Title", "Subtitle"]
+    assert args.layer_ids is None
+    assert args.horizontal == "center"
+    assert args.vertical == "top"
+    assert args.reference == "title-safe"
+    assert args.margin_percent == 18
+    assert args.offset == [0, 24]
+    assert args.time == 1.5
+
+
+def test_build_parser_parses_distribute_layers_by_id() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "distribute-layers",
+            "--layer-id",
+            "5",
+            "--layer-id",
+            "3",
+            "--layer-id",
+            "1",
+            "--axis",
+            "horizontal",
+            "--mode",
+            "gaps",
+            "--reference",
+            "action-safe",
+        ]
+    )
+    assert args.command == "distribute-layers"
+    assert args.layer_ids == [5, 3, 1]
+    assert args.layer_names is None
+    assert args.axis == "horizontal"
+    assert args.mode == "gaps"
+    assert args.reference == "action-safe"
+
+
 def test_build_parser_parses_expression_errors() -> None:
     parser = build_parser()
     args = parser.parse_args(["expression-errors"])
@@ -590,3 +652,44 @@ def test_run_set_text_style_rejects_auto_and_manual_leading_value(capsys) -> Non
     captured = capsys.readouterr()
     assert code == 1
     assert "cannot be combined" in captured.err
+
+
+def test_run_align_layers_requires_an_axis(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(["align-layers", "--layer-id", "1"])
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "Provide --horizontal" in captured.err
+
+
+def test_run_distribute_layers_requires_two_layers(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        ["distribute-layers", "--layer-id", "1", "--axis", "horizontal"]
+    )
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "at least two" in captured.err
+
+
+def test_run_layout_rejects_margin_for_selection(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "align-layers",
+            "--layer-id",
+            "1",
+            "--horizontal",
+            "center",
+            "--reference",
+            "selection",
+            "--margin-percent",
+            "10",
+        ]
+    )
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "cannot be used" in captured.err

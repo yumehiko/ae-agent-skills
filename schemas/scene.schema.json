@@ -22,6 +22,12 @@
       "items": {
         "$ref": "#/$defs/layer"
       }
+    },
+    "layout": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/layoutOperation"
+      }
     }
   },
   "additionalProperties": false,
@@ -49,6 +55,181 @@
         },
         {
           "$ref": "#/$defs/numberArray3"
+        }
+      ]
+    },
+    "layoutReference": {
+      "type": "string",
+      "enum": [
+        "comp",
+        "action-safe",
+        "title-safe",
+        "selection"
+      ]
+    },
+    "alignLayout": {
+      "type": "object",
+      "required": [
+        "type",
+        "layerIds"
+      ],
+      "properties": {
+        "type": {
+          "const": "align"
+        },
+        "layerIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reference": {
+          "$ref": "#/$defs/layoutReference"
+        },
+        "horizontal": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        },
+        "vertical": {
+          "type": "string",
+          "enum": [
+            "top",
+            "center",
+            "bottom"
+          ]
+        },
+        "offset": {
+          "$ref": "#/$defs/numberArray2"
+        },
+        "time": {
+          "type": "number",
+          "minimum": 0
+        },
+        "marginPercent": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 50
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "horizontal"
+          ]
+        },
+        {
+          "required": [
+            "vertical"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reference": {
+                "const": "selection"
+              }
+            },
+            "required": [
+              "reference"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "marginPercent"
+              ]
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "distributeLayout": {
+      "type": "object",
+      "required": [
+        "type",
+        "layerIds",
+        "axis"
+      ],
+      "properties": {
+        "type": {
+          "const": "distribute"
+        },
+        "layerIds": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reference": {
+          "$ref": "#/$defs/layoutReference"
+        },
+        "axis": {
+          "type": "string",
+          "enum": [
+            "horizontal",
+            "vertical"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "gaps",
+            "centers"
+          ]
+        },
+        "time": {
+          "type": "number",
+          "minimum": 0
+        },
+        "marginPercent": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 50
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reference": {
+                "const": "selection"
+              }
+            },
+            "required": [
+              "reference"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "marginPercent"
+              ]
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "layoutOperation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/alignLayout"
+        },
+        {
+          "$ref": "#/$defs/distributeLayout"
         }
       ]
     },

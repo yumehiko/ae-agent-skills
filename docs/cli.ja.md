@@ -74,6 +74,26 @@ ae-cli set-text-style --layer-name "Title" \
 指定した項目だけを更新し、未指定のスタイルは保持します。対象はテキストレイヤー全体です。
 文字単位の混在スタイルとテキストアニメーターは対象外です。
 
+## 整列・均等配置
+
+```bash
+ae-cli align-layers --layer-name "Title" \
+  --horizontal center --vertical top --reference title-safe --offset 0 24
+
+ae-cli distribute-layers \
+  --layer-name "Card A" --layer-name "Card B" --layer-name "Card C" \
+  --axis horizontal --mode gaps --reference action-safe
+```
+
+`reference` は `comp` / `action-safe` / `title-safe` / `selection` から選びます。
+安全領域の既定マージンはaction-safeが10%、title-safeが20%で、`--margin-percent` で変更できます。
+`gaps` はレイヤー実寸の隙間、`centers` は中心間隔を均等化します。`selection` は現在の対象全体の
+外周を保持し、それ以外は基準領域の端まで使って配置します。
+
+レイヤー実寸にはアンカーポイント、拡大縮小、回転、2D親子関係が反映されます。対象は可視の
+2D AVレイヤーです。3Dレイヤー、3D親子関係、Position expressionは明示的に拒否します。
+Positionにキーフレームがある場合は`--time`の位置へ値を設定します。
+
 ## 宣言的シーン適用
 
 ```bash
@@ -102,6 +122,9 @@ sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` �
 テキストレイヤーでは `textStyle` に `font` / `fontSize` / `fillEnabled` / `fillColor` /
 `strokeEnabled` / `strokeColor` / `strokeWidth` / `strokeOverFill` / `tracking` / `leading` /
 `autoLeading` / `justification` を指定できます。`textStyle` は宣言した項目だけを更新します。
+トップレベルの `layout[]` には `type: "align"` または `type: "distribute"` を順番に宣言し、
+`layerIds` でscene layer idを参照します。後のlayout操作は前の操作結果を基準にします。
+`parentId` を宣言したレイヤーの `transform` は親座標系の値として扱い、初回適用と再適用で同じ結果になります。
 
 `apply-scene` の mode:
 

@@ -290,6 +290,61 @@ class AEClient:
         response = requests.post(self._url("/text-style"), json=payload, timeout=self.timeout)
         return self._handle_response(response)
 
+    @staticmethod
+    def _layer_list_selector_payload(
+        layer_ids: List[int] | None = None,
+        layer_names: List[str] | None = None,
+    ) -> Dict[str, Any]:
+        has_ids = layer_ids is not None
+        has_names = layer_names is not None
+        if has_ids == has_names:
+            raise ValueError("Provide exactly one of layer_ids or layer_names.")
+        return {"layerIds": layer_ids} if has_ids else {"layerNames": layer_names}
+
+    def align_layers(
+        self,
+        layer_ids: List[int] | None = None,
+        layer_names: List[str] | None = None,
+        horizontal: str | None = None,
+        vertical: str | None = None,
+        reference: str = "comp",
+        offset: List[float] | None = None,
+        margin_percent: float | None = None,
+        time: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Align visual layer bounds to a composition reference rectangle."""
+        payload = self._layer_list_selector_payload(layer_ids=layer_ids, layer_names=layer_names)
+        payload["reference"] = reference
+        payload["time"] = time
+        if horizontal is not None:
+            payload["horizontal"] = horizontal
+        if vertical is not None:
+            payload["vertical"] = vertical
+        if offset is not None:
+            payload["offset"] = offset
+        if margin_percent is not None:
+            payload["marginPercent"] = margin_percent
+        response = requests.post(self._url("/layout-align"), json=payload, timeout=self.timeout)
+        return self._handle_response(response)
+
+    def distribute_layers(
+        self,
+        axis: str,
+        layer_ids: List[int] | None = None,
+        layer_names: List[str] | None = None,
+        mode: str = "gaps",
+        reference: str = "comp",
+        margin_percent: float | None = None,
+        time: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Distribute visual layer bounds with equal gaps or center spacing."""
+        payload = self._layer_list_selector_payload(layer_ids=layer_ids, layer_names=layer_names)
+        payload.update({"axis": axis, "mode": mode, "reference": reference, "time": time})
+        if margin_percent is not None:
+            payload["marginPercent"] = margin_percent
+        response = requests.post(self._url("/layout-distribute"), json=payload, timeout=self.timeout)
+        return self._handle_response(response)
+
     def create_comp(
         self,
         name: str,

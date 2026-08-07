@@ -13,6 +13,22 @@ def _add_layer_selector(parser: argparse.ArgumentParser) -> None:
     selector_group.add_argument("--layer-name")
 
 
+def _add_layer_list_selector(parser: argparse.ArgumentParser) -> None:
+    selector_group = parser.add_mutually_exclusive_group(required=True)
+    selector_group.add_argument("--layer-id", dest="layer_ids", type=int, action="append")
+    selector_group.add_argument("--layer-name", dest="layer_names", action="append")
+
+
+def _add_layout_reference_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--reference",
+        choices=["comp", "action-safe", "title-safe", "selection"],
+        default="comp",
+    )
+    parser.add_argument("--margin-percent", type=float)
+    parser.add_argument("--time", type=float, default=0.0)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ae-cli",
@@ -160,6 +176,33 @@ def build_parser() -> argparse.ArgumentParser:
         "--justification",
         choices=["left", "center", "right", "full-left", "full-center", "full-right", "full"],
     )
+
+    align_layers_parser = subparsers.add_parser(
+        "align-layers",
+        help="Align visual layer bounds to the comp, safe area, or selected bounds",
+    )
+    _add_layer_list_selector(align_layers_parser)
+    align_layers_parser.add_argument("--horizontal", choices=["left", "center", "right"])
+    align_layers_parser.add_argument("--vertical", choices=["top", "center", "bottom"])
+    align_layers_parser.add_argument("--offset", nargs=2, type=float, metavar=("X", "Y"))
+    _add_layout_reference_options(align_layers_parser)
+
+    distribute_layers_parser = subparsers.add_parser(
+        "distribute-layers",
+        help="Distribute visual layer bounds with equal gaps or center spacing",
+    )
+    _add_layer_list_selector(distribute_layers_parser)
+    distribute_layers_parser.add_argument(
+        "--axis",
+        choices=["horizontal", "vertical"],
+        required=True,
+    )
+    distribute_layers_parser.add_argument(
+        "--mode",
+        choices=["gaps", "centers"],
+        default="gaps",
+    )
+    _add_layout_reference_options(distribute_layers_parser)
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     _add_layer_selector(properties_parser)

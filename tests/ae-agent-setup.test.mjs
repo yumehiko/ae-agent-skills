@@ -142,7 +142,7 @@ test('setupAgentWorkspace installs the footage editing example', () => {
   }
 });
 
-test('setupAgentWorkspace installs the text style scene example', () => {
+test('setupAgentWorkspace installs the text style and layout scene example', () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-workspace-home-'));
   try {
     setupAgentWorkspace({ home: tempHome });
@@ -157,6 +157,10 @@ test('setupAgentWorkspace installs the text style scene example', () => {
     assert.equal(title.textStyle.font, 'ArialMT');
     assert.equal(title.textStyle.fontSize, 96);
     assert.equal(title.textStyle.justification, 'center');
+    assert.equal(example.layout[0].type, 'align');
+    assert.deepEqual(example.layout[0].layerIds, ['title']);
+    assert.equal(example.layout[2].type, 'distribute');
+    assert.equal(example.layout[2].mode, 'gaps');
   } finally {
     fs.rmSync(tempHome, { recursive: true, force: true });
   }
