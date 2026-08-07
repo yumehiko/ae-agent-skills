@@ -1,7 +1,7 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.4.0",
-  "description": "After Effects agent skills and CLI for composition building, footage import, and cut editing.",
+  "version": "0.5.0",
+  "description": "After Effects agent skills and CLI for composition building, footage cuts, and audio editing.",
   "type": "module",
   "bin": {
     "ae-agent-skills": "bin/ae-agent-setup.mjs",

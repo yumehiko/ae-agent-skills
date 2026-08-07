@@ -156,6 +156,29 @@
       },
       "additionalProperties": false
     },
+    "audio": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "muted": {
+          "type": "boolean"
+        },
+        "levelDb": {
+          "type": "number",
+          "minimum": -192,
+          "maximum": 24
+        },
+        "fadeIn": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fadeOut": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
     "transform": {
       "type": "object",
       "properties": {
@@ -464,6 +487,9 @@
         "timing": {
           "$ref": "#/$defs/timing"
         },
+        "audio": {
+          "$ref": "#/$defs/audio"
+        },
         "transform": {
           "$ref": "#/$defs/transform"
         },
@@ -520,6 +546,20 @@
             "required": [
               "sourceId"
             ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "audio"
+            ]
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "const": "footage"
+              }
+            }
           }
         }
       ],

@@ -34,7 +34,7 @@ Python パッケージ版は `pyproject.toml` も同じ値に揃えます。
 ### 1) バージョン更新
 
 ```bash
-npm version 0.4.0 --no-git-tag-version
+npm version 0.5.0 --no-git-tag-version
 ```
 
 ### 2) 署名付き ZXP ビルド
@@ -85,10 +85,10 @@ SIGN_CERT_PASSWORD='your-password' \
 
 ```bash
 git add package.json pyproject.toml CSXS/manifest.xml
-git commit -m "release: v0.4.0"
-git tag v0.4.0
+git commit -m "release: v0.5.0"
+git tag v0.5.0
 git push origin HEAD
-git push origin v0.4.0
+git push origin v0.5.0
 ```
 
 ### 4) npm 公開
@@ -102,8 +102,8 @@ npm publish
 `npx ae-agent-skills install` は latest release の `.zxp` を参照するため、Release に ZXP を添付します。
 
 ```bash
-gh release create v0.4.0 dist/ae-agent-skill-0.4.0.zxp \
-  --title v0.4.0 \
+gh release create v0.5.0 dist/ae-agent-skill-0.5.0.zxp \
+  --title v0.5.0 \
   --notes "Release notes"
 ```
 
@@ -130,6 +130,8 @@ gh release view --repo yumehiko/ae-agent-skills --json tagName,assets
 - `host/lib/common.jsx`
 - `host/lib/property_utils.jsx`
 - `host/lib/query_handlers.jsx`
+- `host/lib/footage_handlers.jsx`
+- `host/lib/audio_handlers.jsx`
 - `host/lib/mutation_handlers.jsx`
 - `host/lib/mutation_keyframe_handlers.jsx`
 - `host/lib/mutation_shape_handlers.jsx`
@@ -144,6 +146,8 @@ gh release view --repo yumehiko/ae-agent-skills --json tagName,assets
 - `client/lib/logging.js`
 - `client/lib/bridge_utils.js`
 - `client/lib/request_handlers_shape.js`
+- `client/lib/request_handlers_footage.js`
+- `client/lib/request_handlers_audio.js`
 - `client/lib/request_handlers_scene.js`
 - `client/lib/request_handlers_essential.js`
 - `client/lib/request_handlers_timeline.js`

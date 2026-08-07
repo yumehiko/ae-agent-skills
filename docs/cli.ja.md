@@ -45,6 +45,19 @@ ae-cli set-footage-cut --layer-name "Clip 01" \
 未読み込みの場合だけimportしてからレイヤーを追加します。
 既存のフッテージレイヤーは `set-footage-cut` で同じ指定方法のまま再カットできます。
 
+## 音量・ミュート・フェード
+
+```bash
+ae-cli get-layer-audio --layer-name "Clip 01"
+ae-cli set-layer-audio --layer-name "Clip 01" \
+  --unmute --level-db -6 --fade-in 0.5 --fade-out 0.75
+ae-cli set-layer-audio --layer-name "Clip 01" --mute
+```
+
+`level-db` は左右チャンネルへ同じ値を設定します。`fade-in` と `fade-out` は秒数で、
+レイヤーの `inPoint` / `outPoint` を基準にAudio Levelsキーフレームを作成します。
+ミュートだけを変更した場合、既存のAudio Levelsキーフレームは保持されます。
+
 ## 宣言的シーン適用
 
 ```bash
@@ -67,6 +80,9 @@ ae-cli apply-scene --scene-file examples/footage-edit.example.json
 
 sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` レイヤーから
 `sourceId` で参照できます。カット範囲は `timing.sourceIn` / `sourceOut` / `timelineIn` で指定します。
+音声は各フッテージレイヤーの `audio.muted` / `levelDb` / `fadeIn` / `fadeOut` で指定します。
+宣言的適用では `audio` が音声状態を所有し、`muted: false`・`levelDb: 0`・フェード0秒を既定として
+再適用時にAudio Levelsキーフレームを作り直します。
 
 `apply-scene` の mode:
 

@@ -45,6 +45,19 @@ range from `source-in` through `source-out` onto the composition beginning at `t
 `--path` directly imports the footage only when necessary before adding the layer.
 Use `set-footage-cut` to recut an existing footage layer with the same timing model.
 
+## Volume, mute, and fades
+
+```bash
+ae-cli get-layer-audio --layer-name "Clip 01"
+ae-cli set-layer-audio --layer-name "Clip 01" \
+  --unmute --level-db -6 --fade-in 0.5 --fade-out 0.75
+ae-cli set-layer-audio --layer-name "Clip 01" --mute
+```
+
+`level-db` sets the same value on both channels. `fade-in` and `fade-out` are durations in seconds;
+they create Audio Levels keyframes relative to the layer `inPoint` and `outPoint`. A mute-only update
+preserves existing Audio Levels keyframes.
+
 ## Declarative scene apply
 
 ```bash
@@ -67,6 +80,9 @@ ae-cli apply-scene --scene-file examples/footage-edit.example.json
 
 Scenes declare each source once in `assets[]`. Multiple `type: "footage"` layers can reference it by
 `sourceId` and select cuts with `timing.sourceIn`, `sourceOut`, and `timelineIn`.
+Set audio with `audio.muted`, `levelDb`, `fadeIn`, and `fadeOut` on each footage layer. Declarative
+apply owns the audio state for layers with `audio`, defaults to unmuted/0 dB/no fades, and rebuilds
+Audio Levels keyframes on reapply.
 
 `apply-scene` modes:
 

@@ -25,6 +25,9 @@ function getLayers() {
                 summary.sourceIn = layer.inPoint - layer.startTime;
                 summary.sourceOut = layer.outPoint - layer.startTime;
             }
+            if (layer instanceof AVLayer && typeof aeAudioLayerSummary === "function") {
+                summary.audio = aeAudioLayerSummary(layer);
+            }
             layers.push(summary);
         }
         return encodePayload(layers);

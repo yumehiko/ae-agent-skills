@@ -96,6 +96,25 @@ def build_parser() -> argparse.ArgumentParser:
     set_footage_cut_parser.add_argument("--source-out", type=float, required=True)
     set_footage_cut_parser.add_argument("--timeline-in", type=float, required=True)
 
+    get_layer_audio_parser = subparsers.add_parser(
+        "get-layer-audio",
+        help="Get mute, level, and Audio Levels keyframes for a layer",
+    )
+    _add_layer_selector(get_layer_audio_parser)
+
+    set_layer_audio_parser = subparsers.add_parser(
+        "set-layer-audio",
+        help="Set mute, volume, and fade durations for an audio-capable layer",
+    )
+    _add_layer_selector(set_layer_audio_parser)
+    mute_group = set_layer_audio_parser.add_mutually_exclusive_group()
+    mute_group.add_argument("--mute", dest="muted", action="store_true")
+    mute_group.add_argument("--unmute", dest="muted", action="store_false")
+    set_layer_audio_parser.set_defaults(muted=None)
+    set_layer_audio_parser.add_argument("--level-db", type=float, help="Audio level in dB")
+    set_layer_audio_parser.add_argument("--fade-in", type=float, help="Fade-in duration in seconds")
+    set_layer_audio_parser.add_argument("--fade-out", type=float, help="Fade-out duration in seconds")
+
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     _add_layer_selector(properties_parser)
     properties_parser.add_argument("--include-group", action="append", default=[])

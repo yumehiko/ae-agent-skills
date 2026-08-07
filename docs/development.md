@@ -48,6 +48,8 @@ npm --cache /private/tmp/ae-agent-npm-cache pack --dry-run
 - `host/lib/common.jsx`
 - `host/lib/property_utils.jsx`
 - `host/lib/query_handlers.jsx`
+- `host/lib/footage_handlers.jsx`
+- `host/lib/audio_handlers.jsx`
 - `host/lib/mutation_handlers.jsx`
 - `host/lib/mutation_keyframe_handlers.jsx`
 - `host/lib/mutation_shape_handlers.jsx`
@@ -62,6 +64,8 @@ npm --cache /private/tmp/ae-agent-npm-cache pack --dry-run
 - `client/lib/logging.js`
 - `client/lib/bridge_utils.js`
 - `client/lib/request_handlers_shape.js`
+- `client/lib/request_handlers_footage.js`
+- `client/lib/request_handlers_audio.js`
 - `client/lib/request_handlers_scene.js`
 - `client/lib/request_handlers_essential.js`
 - `client/lib/request_handlers_timeline.js`

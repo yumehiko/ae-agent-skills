@@ -1,6 +1,6 @@
 ---
 name: aftereffects-declarative
-description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage editing.
+description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/audio/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage or audio editing.
 ---
 
 # aftereffects-declarative
@@ -89,7 +89,34 @@ ae-cli expression-errors
 - カット編集は `timing.sourceIn` / `sourceOut` / `timelineIn` を使う
 - `sourceIn` と `sourceOut` は必ず対で指定し、同じ `sourceId` を複数レイヤーから参照してよい
 - フッテージのカット指定と `inPoint` / `outPoint` / `startTime` は混在させない
+- 音声調整はフッテージレイヤーの `audio` で宣言する
+- `audio.muted` はミュート状態、`audio.levelDb` は左右共通のdB値、`audio.fadeIn` / `fadeOut` は秒数
+- `audio.muted` の既定はfalse、`audio.levelDb` の既定は0 dB、未指定のフェードは0秒として、再適用時に音声状態を作り直す
+- `audio.fadeIn + audio.fadeOut` はカット後のレイヤー尺以内にする
+- `audio` と汎用 `animations` / `propertyValues` から同じAudio Levelsを同時管理しない
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
+
+## フッテージ音声の例
+
+```json
+{
+  "id": "clip-01",
+  "type": "footage",
+  "name": "Interview 01",
+  "sourceId": "interview",
+  "timing": {
+    "sourceIn": 12.5,
+    "sourceOut": 18,
+    "timelineIn": 0
+  },
+  "audio": {
+    "muted": false,
+    "levelDb": -6,
+    "fadeIn": 0.5,
+    "fadeOut": 0.75
+  }
+}
+```
 
 ## 最小テンプレート（このまま使える）
 

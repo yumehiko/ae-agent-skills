@@ -418,6 +418,10 @@ function routeRequest(req, res) {
     if (typeof routeFootageRequest === 'function' && routeFootageRequest(pathname, method, req, res)) {
         return;
     }
+    if (typeof routeAudioRequest === 'function'
+        && routeAudioRequest(pathname, method, req, res, searchParams)) {
+        return;
+    }
     if (typeof routeShapeRequest === 'function' && routeShapeRequest(pathname, method, req, res)) {
         return;
     }

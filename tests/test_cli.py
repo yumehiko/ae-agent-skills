@@ -246,6 +246,38 @@ def test_build_parser_parses_set_footage_cut_by_name() -> None:
     assert args.timeline_in == 2.0
 
 
+def test_build_parser_parses_get_layer_audio() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["get-layer-audio", "--layer-id", "3"])
+    assert args.command == "get-layer-audio"
+    assert args.layer_id == 3
+    assert args.layer_name is None
+
+
+def test_build_parser_parses_set_layer_audio() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "set-layer-audio",
+            "--layer-name",
+            "Interview 01",
+            "--unmute",
+            "--level-db",
+            "-6",
+            "--fade-in",
+            "0.5",
+            "--fade-out",
+            "0.75",
+        ]
+    )
+    assert args.command == "set-layer-audio"
+    assert args.layer_name == "Interview 01"
+    assert args.muted is False
+    assert args.level_db == -6.0
+    assert args.fade_in == 0.5
+    assert args.fade_out == 0.75
+
+
 def test_build_parser_parses_expression_errors() -> None:
     parser = build_parser()
     args = parser.parse_args(["expression-errors"])
@@ -459,3 +491,23 @@ def test_run_command_returns_2_for_unknown_command(capsys) -> None:
     captured = capsys.readouterr()
     assert code == 2
     assert "Unknown command" in captured.err
+
+
+def test_run_set_layer_audio_requires_a_setting(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(["set-layer-audio", "--layer-id", "1"])
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "Provide --mute" in captured.err
+
+
+def test_run_set_layer_audio_rejects_negative_fade(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        ["set-layer-audio", "--layer-id", "1", "--fade-in", "-0.5"]
+    )
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "--fade-in must be greater than or equal to 0" in captured.err

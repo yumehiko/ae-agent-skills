@@ -115,6 +115,33 @@ def _run_set_footage_cut(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_get_layer_audio(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.get_layer_audio(**_layer_selector_kwargs(args)))
+
+
+def _run_set_layer_audio(client: AEClient, args: argparse.Namespace) -> None:
+    if all(
+        value is None
+        for value in (args.muted, args.level_db, args.fade_in, args.fade_out)
+    ):
+        raise ValueError("Provide --mute, --unmute, --level-db, --fade-in, or --fade-out.")
+    if args.level_db is not None and not -192 <= args.level_db <= 24:
+        raise ValueError("--level-db must be between -192 and 24.")
+    if args.fade_in is not None and args.fade_in < 0:
+        raise ValueError("--fade-in must be greater than or equal to 0.")
+    if args.fade_out is not None and args.fade_out < 0:
+        raise ValueError("--fade-out must be greater than or equal to 0.")
+    _print_json(
+        client.set_layer_audio(
+            muted=args.muted,
+            level_db=args.level_db,
+            fade_in=args.fade_in,
+            fade_out=args.fade_out,
+            **_layer_selector_kwargs(args),
+        )
+    )
+
+
 def _run_create_comp(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.create_comp(
@@ -343,6 +370,8 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "import-footage": _run_import_footage,
     "add-footage-layer": _run_add_footage_layer,
     "set-footage-cut": _run_set_footage_cut,
+    "get-layer-audio": _run_get_layer_audio,
+    "set-layer-audio": _run_set_layer_audio,
     "create-comp": _run_create_comp,
     "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,

@@ -41,7 +41,8 @@ Use $aftereffects-declarative to take 12.5–18 seconds and 25–31 seconds from
 then place those cuts sequentially in a composition.
 ```
 
-As of `v0.4.0`, file import, source reuse, and multi-cut footage placement are supported.
+As of `v0.4.0`, file import, source reuse, and multi-cut footage placement are supported. `v0.5.0`
+adds per-cut volume, mute, fade-in, and fade-out controls.
 
 To choose an agent explicitly:
 
@@ -90,8 +91,8 @@ with their latest versions. Files under `~/ae-agent-skills/work/` and `~/ae-agen
 
 ## Which skill to use
 
-- `$aftereffects-declarative`: default for new compositions, overall scene structure, and repeatable footage edits
-- `$aftereffects-cli`: best for adding footage to existing scenes, surgical edits, property-level tweaks, and debugging
+- `$aftereffects-declarative`: default for new compositions and repeatable footage or audio edits
+- `$aftereffects-cli`: best for adding footage, local audio changes, surgical property edits, and debugging
 
 ## Docs
 

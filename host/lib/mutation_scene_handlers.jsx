@@ -574,6 +574,67 @@ function aeValidateSceneSpec(scene) {
                     }
                 }
 
+                var audio = layer.audio;
+                if (audio !== undefined) {
+                    if (!audio || typeof audio !== "object" || audio instanceof Array) {
+                        errors.push(prefix + ".audio must be an object when specified.");
+                    } else {
+                        var allowedAudioKeys = { muted: true, levelDb: true, fadeIn: true, fadeOut: true };
+                        for (var audioKey in audio) {
+                            if (audio.hasOwnProperty(audioKey) && !allowedAudioKeys[audioKey]) {
+                                errors.push(prefix + ".audio contains an unknown field: " + audioKey);
+                            }
+                        }
+                        if (String(layer.type).toLowerCase() !== "footage") {
+                            errors.push(prefix + ".audio is only allowed for footage layers.");
+                        }
+                        var hasAudioSetting = audio.muted !== undefined
+                            || audio.levelDb !== undefined
+                            || audio.fadeIn !== undefined
+                            || audio.fadeOut !== undefined;
+                        if (!hasAudioSetting) {
+                            errors.push(prefix + ".audio must specify muted, levelDb, fadeIn, or fadeOut.");
+                        }
+                        if (audio.muted !== undefined && typeof audio.muted !== "boolean") {
+                            errors.push(prefix + ".audio.muted must be a boolean when specified.");
+                        }
+                        if (audio.levelDb !== undefined) {
+                            if (aeRequireFiniteNumber(audio.levelDb, prefix + ".audio.levelDb", errors)
+                                && (audio.levelDb < -192 || audio.levelDb > 24)) {
+                                errors.push(prefix + ".audio.levelDb must be between -192 and 24.");
+                            }
+                        }
+                        if (audio.fadeIn !== undefined) {
+                            if (aeRequireFiniteNumber(audio.fadeIn, prefix + ".audio.fadeIn", errors)
+                                && audio.fadeIn < 0) {
+                                errors.push(prefix + ".audio.fadeIn must be greater than or equal to 0.");
+                            }
+                        }
+                        if (audio.fadeOut !== undefined) {
+                            if (aeRequireFiniteNumber(audio.fadeOut, prefix + ".audio.fadeOut", errors)
+                                && audio.fadeOut < 0) {
+                                errors.push(prefix + ".audio.fadeOut must be greater than or equal to 0.");
+                            }
+                        }
+                        var knownLayerDuration = null;
+                        if (timing && aeIsFiniteNumber(timing.sourceIn) && aeIsFiniteNumber(timing.sourceOut)) {
+                            knownLayerDuration = timing.sourceOut - timing.sourceIn;
+                        } else if (timing && aeIsFiniteNumber(timing.inPoint) && aeIsFiniteNumber(timing.outPoint)) {
+                            knownLayerDuration = timing.outPoint - timing.inPoint;
+                        }
+                        if (knownLayerDuration !== null
+                            && knownLayerDuration >= 0
+                            && (audio.fadeIn === undefined || aeIsFiniteNumber(audio.fadeIn))
+                            && (audio.fadeOut === undefined || aeIsFiniteNumber(audio.fadeOut))) {
+                            var declaredFadeIn = audio.fadeIn !== undefined ? audio.fadeIn : 0;
+                            var declaredFadeOut = audio.fadeOut !== undefined ? audio.fadeOut : 0;
+                            if (declaredFadeIn + declaredFadeOut > knownLayerDuration + 0.0001) {
+                                errors.push(prefix + ".audio fadeIn + fadeOut exceeds the declared layer duration.");
+                            }
+                        }
+                    }
+                }
+
                 var transform = layer.transform;
                 if (transform !== undefined && (!transform || typeof transform !== "object" || transform instanceof Array)) {
                     errors.push(prefix + ".transform must be an object when specified.");
@@ -1090,6 +1151,10 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     }
     operationCount += aeApplyLayerTransform(layerId, layerSpec.transform, skipPropertyPaths);
     operationCount += aeApplyLayerTiming(comp, layerId, layerSpec.timing);
+    if (layerSpec.audio !== undefined) {
+        var appliedAudio = aeApplyAudioSettings(layer, layerSpec.audio, true);
+        operationCount += appliedAudio.operationCount;
+    }
 
     var propertyValues = layerSpec.propertyValues || [];
     for (var i = 0; i < propertyValues.length; i++) {
@@ -1247,6 +1312,9 @@ function applyScene(sceneJSON, optionsJSON) {
                 || layer.timing.sourceOut !== undefined
                 || layer.timing.timelineIn !== undefined
             )) {
+                operationsPlanned += 1;
+            }
+            if (layer.audio !== undefined) {
                 operationsPlanned += 1;
             }
             operationsPlanned += (layer.propertyValues || []).length;

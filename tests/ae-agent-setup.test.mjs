@@ -135,6 +135,8 @@ test('setupAgentWorkspace installs the footage editing example', () => {
     const example = JSON.parse(fs.readFileSync(installed, 'utf8'));
     assert.equal(example.assets[0].type, 'footage');
     assert.equal(example.layers[0].sourceId, example.assets[0].id);
+    assert.equal(example.layers[0].audio.levelDb, -3);
+    assert.equal(example.layers[0].audio.fadeIn, 0.5);
   } finally {
     fs.rmSync(tempHome, { recursive: true, force: true });
   }

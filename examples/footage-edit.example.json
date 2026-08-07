@@ -27,6 +27,12 @@
         "sourceIn": 12.5,
         "sourceOut": 18,
         "timelineIn": 0
+      },
+      "audio": {
+        "muted": false,
+        "levelDb": -3,
+        "fadeIn": 0.5,
+        "fadeOut": 0.5
       }
     },
     {
@@ -38,6 +44,12 @@
         "sourceIn": 25,
         "sourceOut": 31,
         "timelineIn": 5.5
+      },
+      "audio": {
+        "muted": false,
+        "levelDb": -6,
+        "fadeIn": 0.25,
+        "fadeOut": 1
       }
     }
   ]

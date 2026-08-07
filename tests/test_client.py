@@ -252,6 +252,64 @@ def test_set_footage_cut_posts_expected_payload(monkeypatch) -> None:
     }
 
 
+def test_get_layer_audio_calls_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["params"] = params
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"audio": {"muted": False}}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_layer_audio(layer_id=2)
+
+    assert captured["url"] == "http://127.0.0.1:8080/layer-audio"
+    assert captured["params"] == {"layerId": 2}
+    assert captured["timeout"] == 5.0
+
+
+def test_set_layer_audio_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_layer_audio(
+        layer_name="Interview 01",
+        muted=False,
+        level_db=-6.0,
+        fade_in=0.5,
+        fade_out=0.75,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/layer-audio"
+    assert captured["json"] == {
+        "layerName": "Interview 01",
+        "muted": False,
+        "levelDb": -6.0,
+        "fadeIn": 0.5,
+        "fadeOut": 0.75,
+    }
+    assert captured["timeout"] == 5.0
+
+
+def test_set_layer_audio_requires_a_setting() -> None:
+    client = AEClient()
+    try:
+        client.set_layer_audio(layer_id=2)
+    except ValueError as exc:
+        assert "audio setting" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+
 def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: Command-by-command After Effects editing via ae-cli. Best for surgical edits on existing human-made scenes (especially partial expression/property changes) and for debugging.
+description: Command-by-command After Effects editing via ae-cli, including footage cuts and audio level, mute, or fade changes. Best for surgical edits on existing human-made scenes and for debugging.
 ---
 
 # aftereffects-cli
@@ -67,6 +67,9 @@ description: Command-by-command After Effects editing via ae-cli. Best for surgi
   - `ae-cli import-footage --path <absolute-path> [--name <name>]`
   - `ae-cli add-footage-layer (--footage-id <id> | --footage-name <name> | --path <absolute-path>) ...`
   - `ae-cli set-footage-cut (--layer-id <id> | --layer-name <name>) --source-in <sec> --source-out <sec> --timeline-in <sec>`
+- 音声:
+  - `ae-cli get-layer-audio (--layer-id <id> | --layer-name <name>)`
+  - `ae-cli set-layer-audio (--layer-id <id> | --layer-name <name>) [--mute | --unmute] [--level-db <dB>] [--fade-in <sec>] [--fade-out <sec>]`
 - タイムライン:
   - `ae-cli set-in-out-point ...`
   - `ae-cli move-layer-time ...`
@@ -95,6 +98,9 @@ ae-cli layers
 
 - フッテージのカットは `--source-in` と `--source-out` を対で指定し、配置先を `--timeline-in` で指定する。
 - `import-footage` と `add-footage-layer --path` は同じファイルパスのProjectItemを再利用する。
+- `set-layer-audio` の `--level-db` は左右チャンネルへ同じ値を設定する。
+- `--fade-in` / `--fade-out` はレイヤーのin/outを基準にAudio Levelsキーフレームを作る。
+- `--mute` / `--unmute` だけを指定した場合は既存のAudio Levelsキーフレームを保持する。
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。

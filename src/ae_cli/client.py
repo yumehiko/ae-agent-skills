@@ -216,6 +216,48 @@ class AEClient:
         )
         return self._handle_response(response)
 
+    def get_layer_audio(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Return mute state, current levels, and Audio Levels keyframes for a layer."""
+        params = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        response = requests.get(
+            self._url("/layer-audio"),
+            params=params,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_layer_audio(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+        muted: bool | None = None,
+        level_db: float | None = None,
+        fade_in: float | None = None,
+        fade_out: float | None = None,
+    ) -> Dict[str, Any]:
+        """Set mute, stereo-linked dB level, and optional fades for a layer."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        if muted is not None:
+            payload["muted"] = muted
+        if level_db is not None:
+            payload["levelDb"] = level_db
+        if fade_in is not None:
+            payload["fadeIn"] = fade_in
+        if fade_out is not None:
+            payload["fadeOut"] = fade_out
+        if len(payload) == 1:
+            raise ValueError("Provide at least one audio setting.")
+        response = requests.post(
+            self._url("/layer-audio"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def create_comp(
         self,
         name: str,
