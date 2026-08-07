@@ -34,6 +34,15 @@ Claude Code では slash command として呼び出します。
 
 4. エージェントの処理完了後、After Effects 上でコンポジションが作成されたことを確認する。
 
+フッテージ編集の依頼例:
+
+```text
+$aftereffects-declarative を使って interview.mp4 の12.5〜18秒と25〜31秒を抜き出し、
+順番に並べたコンポジションを作成して。
+```
+
+`v0.4.0` から、ファイル素材のimport、同一素材の再利用、複数カットの配置に対応しています。
+
 エージェントを明示してインストールする場合:
 
 ```bash
@@ -54,10 +63,35 @@ npx ae-agent-skills install --agent all
 Claude Code の個人 skill は `~/.claude/skills/<skill-name>/SKILL.md` にインストールされます。
 Claude Code 用の slash command は `~/.claude/commands/<command>.md` にインストールされます。
 
+## アップデート
+
+1. After Effectsのプロジェクトを保存し、After Effectsを終了する。
+2. インストール時と同じエージェントを指定して、最新版のインストーラーを実行する。
+
+```bash
+npx --yes ae-agent-skills@latest install --agent codex
+```
+
+複数のエージェントをまとめて更新する場合:
+
+```bash
+npx --yes ae-agent-skills@latest install --agent all
+```
+
+3. After Effectsを再起動し、`ウィンドウ > 機能拡張 (ベータ) > ae-agent-skill` を開く。
+4. 疎通を確認する。
+
+```bash
+ae-cli health
+```
+
+アップデートでは、CEP拡張機能、`ae-cli`、agent skill、`scene.schema.json`、`references/` が最新版へ更新されます。
+`~/ae-agent-skills/work/` と `~/ae-agent-skills/done/` に保存した作業ファイルは削除されません。
+
 ## どの skill を使うか
 
-- `$aftereffects-declarative`: 新規コンポジション作成や全体構成を作るとき（通常はこちら）
-- `$aftereffects-cli`: 既存シーンの一部修正、プロパティ単位の調整、デバッグ
+- `$aftereffects-declarative`: 新規コンポジション作成、全体構成、再実行可能なフッテージ編集（通常はこちら）
+- `$aftereffects-cli`: 既存シーンへの素材追加、一部修正、プロパティ単位の調整、デバッグ
 
 ## ドキュメント
 

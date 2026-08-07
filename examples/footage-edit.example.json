@@ -1,0 +1,44 @@
+{
+  "composition": {
+    "name": "Footage_Edit",
+    "width": 1920,
+    "height": 1080,
+    "duration": 11.5,
+    "frameRate": 30,
+    "pixelAspect": 1,
+    "createIfMissing": true,
+    "setActive": true
+  },
+  "assets": [
+    {
+      "id": "interview",
+      "type": "footage",
+      "path": "/ABSOLUTE/PATH/TO/interview.mp4",
+      "name": "Interview Source"
+    }
+  ],
+  "layers": [
+    {
+      "id": "clip-01",
+      "type": "footage",
+      "name": "Interview 01",
+      "sourceId": "interview",
+      "timing": {
+        "sourceIn": 12.5,
+        "sourceOut": 18,
+        "timelineIn": 0
+      }
+    },
+    {
+      "id": "clip-02",
+      "type": "footage",
+      "name": "Interview 02",
+      "sourceId": "interview",
+      "timing": {
+        "sourceIn": 25,
+        "sourceOut": 31,
+        "timelineIn": 5.5
+      }
+    }
+  ]
+}

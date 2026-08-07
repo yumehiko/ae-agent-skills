@@ -140,6 +140,82 @@ class AEClient:
         response = requests.get(self._url("/comps"), timeout=self.timeout)
         return self._handle_response(response)
 
+    def list_footage(self) -> List[Dict[str, Any]]:
+        """Return file-based footage items in the current project."""
+        response = requests.get(self._url("/footage"), timeout=self.timeout)
+        return self._handle_response(response)
+
+    def import_footage(self, path: str, name: str | None = None) -> Dict[str, Any]:
+        """Import footage by path, reusing an existing project item when possible."""
+        payload: Dict[str, Any] = {"path": path}
+        if name is not None:
+            payload["name"] = name
+        response = requests.post(
+            self._url("/footage"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def add_footage_layer(
+        self,
+        footage_id: int | None = None,
+        footage_name: str | None = None,
+        path: str | None = None,
+        name: str | None = None,
+        source_in: float | None = None,
+        source_out: float | None = None,
+        timeline_in: float | None = None,
+    ) -> Dict[str, Any]:
+        """Add footage to the active comp and map a source range onto the timeline."""
+        selector_count = sum(
+            value is not None and (not isinstance(value, str) or len(value) > 0)
+            for value in (footage_id, footage_name, path)
+        )
+        if selector_count != 1:
+            raise ValueError("Provide exactly one of footage_id, footage_name, or path.")
+        payload: Dict[str, Any] = {}
+        if footage_id is not None:
+            payload["footageId"] = footage_id
+        if footage_name is not None:
+            payload["footageName"] = footage_name
+        if path is not None:
+            payload["path"] = path
+        if name is not None:
+            payload["name"] = name
+        if source_in is not None:
+            payload["sourceIn"] = source_in
+        if source_out is not None:
+            payload["sourceOut"] = source_out
+        if timeline_in is not None:
+            payload["timelineIn"] = timeline_in
+        response = requests.post(
+            self._url("/footage-layer"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def set_footage_cut(
+        self,
+        source_in: float,
+        source_out: float,
+        timeline_in: float,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Set an existing footage layer's source range and timeline placement."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["sourceIn"] = source_in
+        payload["sourceOut"] = source_out
+        payload["timelineIn"] = timeline_in
+        response = requests.post(
+            self._url("/footage-cut"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def create_comp(
         self,
         name: str,

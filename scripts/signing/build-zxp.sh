@@ -51,6 +51,12 @@ cp -R "${ROOT_DIR}/CSXS" "${STAGE_DIR}/"
 cp -R "${ROOT_DIR}/client" "${STAGE_DIR}/"
 cp -R "${ROOT_DIR}/host" "${STAGE_DIR}/"
 
+# Finder metadata is rejected by Adobe Marketplace and can cause installation
+# issues in signed CEP packages.
+find "${STAGE_DIR}" -type f -name '.DS_Store' -delete
+find "${STAGE_DIR}" -type d -name '__MACOSX' -prune -exec rm -rf {} +
+
+rm -f "${OUT_ZXP}"
 "${ZXPSIGNCMD_BIN}" -sign "${STAGE_DIR}" "${OUT_ZXP}" "${CERT_P12}" "${CERT_PASSWORD}" -tsa "${TIMESTAMP_URL}"
 
 echo "Built signed ZXP: ${OUT_ZXP}"

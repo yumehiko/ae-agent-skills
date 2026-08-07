@@ -10,6 +10,12 @@
     "composition": {
       "$ref": "#/$defs/composition"
     },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    },
     "layers": {
       "type": "array",
       "minItems": 1,
@@ -45,6 +51,31 @@
           "$ref": "#/$defs/numberArray3"
         }
       ]
+    },
+    "asset": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "path"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "footage"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     },
     "composition": {
       "type": "object",
@@ -101,7 +132,27 @@
         },
         "startTime": {
           "type": "number"
+        },
+        "sourceIn": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sourceOut": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "timelineIn": {
+          "type": "number",
+          "minimum": 0
         }
+      },
+      "dependentRequired": {
+        "sourceIn": [
+          "sourceOut"
+        ],
+        "sourceOut": [
+          "sourceIn"
+        ]
       },
       "additionalProperties": false
     },
@@ -339,7 +390,8 @@
             "text",
             "null",
             "solid",
-            "shape"
+            "shape",
+            "footage"
           ]
         },
         "name": {
@@ -353,6 +405,10 @@
         },
         "text": {
           "type": "string"
+        },
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
         },
         "width": {
           "type": "number"
@@ -448,6 +504,25 @@
           }
         }
       },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "footage"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "sourceId"
+            ]
+          }
+        }
+      ],
       "additionalProperties": false
     }
   }

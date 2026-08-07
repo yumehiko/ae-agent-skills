@@ -415,6 +415,9 @@ function routeRequest(req, res) {
         handleGetComps(res);
         return;
     }
+    if (typeof routeFootageRequest === 'function' && routeFootageRequest(pathname, method, req, res)) {
+        return;
+    }
     if (typeof routeShapeRequest === 'function' && routeShapeRequest(pathname, method, req, res)) {
         return;
     }

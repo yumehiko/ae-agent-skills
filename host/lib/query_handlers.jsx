@@ -10,12 +10,22 @@ function getLayers() {
         var layers = [];
         for (var i = 1; i <= comp.numLayers; i++) {
             var layer = comp.layer(i);
-            layers.push({
+            var summary = {
                 id: layer.index,
                 layerUid: aeTryGetLayerUid(layer),
                 name: layer.name,
-                type: getLayerTypeName(layer)
-            });
+                type: getLayerTypeName(layer),
+                startTime: layer.startTime,
+                inPoint: layer.inPoint,
+                outPoint: layer.outPoint
+            };
+            if (layer instanceof AVLayer && layer.source && aeIsFileFootageItem(layer.source)) {
+                summary.source = aeFootageItemSummary(layer.source, false);
+                summary.source.type = "footage";
+                summary.sourceIn = layer.inPoint - layer.startTime;
+                summary.sourceOut = layer.outPoint - layer.startTime;
+            }
+            layers.push(summary);
         }
         return encodePayload(layers);
     } catch (e) {

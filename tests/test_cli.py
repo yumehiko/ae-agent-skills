@@ -183,6 +183,69 @@ def test_build_parser_parses_create_comp() -> None:
     assert args.pixel_aspect == 1.0
 
 
+def test_build_parser_parses_import_footage() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "import-footage",
+            "--path",
+            "/clips/interview.mp4",
+            "--name",
+            "Interview",
+        ]
+    )
+    assert args.command == "import-footage"
+    assert args.path == "/clips/interview.mp4"
+    assert args.name == "Interview"
+
+
+def test_build_parser_parses_add_footage_layer_cut() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "add-footage-layer",
+            "--footage-id",
+            "12",
+            "--name",
+            "Clip 01",
+            "--source-in",
+            "12.5",
+            "--source-out",
+            "18",
+            "--timeline-in",
+            "3",
+        ]
+    )
+    assert args.command == "add-footage-layer"
+    assert args.footage_id == 12
+    assert args.footage_name is None
+    assert args.source_in == 12.5
+    assert args.source_out == 18.0
+    assert args.timeline_in == 3.0
+
+
+def test_build_parser_parses_set_footage_cut_by_name() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "set-footage-cut",
+            "--layer-name",
+            "Interview 01",
+            "--source-in",
+            "5",
+            "--source-out",
+            "9.5",
+            "--timeline-in",
+            "2",
+        ]
+    )
+    assert args.command == "set-footage-cut"
+    assert args.layer_name == "Interview 01"
+    assert args.source_in == 5.0
+    assert args.source_out == 9.5
+    assert args.timeline_in == 2.0
+
+
 def test_build_parser_parses_expression_errors() -> None:
     parser = build_parser()
     args = parser.parse_args(["expression-errors"])

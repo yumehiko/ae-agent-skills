@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("health", help="Check bridge health")
     subparsers.add_parser("layers", help="Get active composition layers")
     subparsers.add_parser("list-comps", help="List compositions in the current project")
+    subparsers.add_parser("list-footage", help="List file-based footage items in the current project")
     subparsers.add_parser("selected-properties", help="Get currently selected properties")
     subparsers.add_parser("expression-errors", help="Get expression errors in the active composition")
 
@@ -58,6 +59,42 @@ def build_parser() -> argparse.ArgumentParser:
     set_active_group = set_active_comp_parser.add_mutually_exclusive_group(required=True)
     set_active_group.add_argument("--comp-id", type=int)
     set_active_group.add_argument("--comp-name")
+
+    import_footage_parser = subparsers.add_parser(
+        "import-footage",
+        help="Import a footage file, reusing an existing item with the same path",
+    )
+    import_footage_parser.add_argument("--path", required=True, help="Absolute path to a footage file")
+    import_footage_parser.add_argument("--name", help="Optional project item name")
+
+    add_footage_layer_parser = subparsers.add_parser(
+        "add-footage-layer",
+        help="Add a footage item to the active composition and optionally cut its source range",
+    )
+    footage_source_group = add_footage_layer_parser.add_mutually_exclusive_group(required=True)
+    footage_source_group.add_argument("--footage-id", type=int, help="Project item id")
+    footage_source_group.add_argument("--footage-name", help="Unique project item name")
+    footage_source_group.add_argument(
+        "--path",
+        help="Absolute file path; imports the footage first when it is not already in the project",
+    )
+    add_footage_layer_parser.add_argument("--name", help="Optional layer name")
+    add_footage_layer_parser.add_argument("--source-in", type=float, help="Source start time in seconds")
+    add_footage_layer_parser.add_argument("--source-out", type=float, help="Source end time in seconds")
+    add_footage_layer_parser.add_argument(
+        "--timeline-in",
+        type=float,
+        help="Composition time where the selected source range starts (default: 0)",
+    )
+
+    set_footage_cut_parser = subparsers.add_parser(
+        "set-footage-cut",
+        help="Set the source range and timeline placement of an existing footage layer",
+    )
+    _add_layer_selector(set_footage_cut_parser)
+    set_footage_cut_parser.add_argument("--source-in", type=float, required=True)
+    set_footage_cut_parser.add_argument("--source-out", type=float, required=True)
+    set_footage_cut_parser.add_argument("--timeline-in", type=float, required=True)
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     _add_layer_selector(properties_parser)

@@ -68,6 +68,53 @@ def _run_list_comps(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.list_comps())
 
 
+def _run_list_footage(client: AEClient, _args: argparse.Namespace) -> None:
+    _print_json(client.list_footage())
+
+
+def _run_import_footage(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.import_footage(path=args.path, name=args.name))
+
+
+def _run_add_footage_layer(client: AEClient, args: argparse.Namespace) -> None:
+    if (args.source_in is None) != (args.source_out is None):
+        raise ValueError("--source-in and --source-out must be provided together.")
+    if args.source_in is not None and args.source_out <= args.source_in:
+        raise ValueError("--source-out must be greater than --source-in.")
+    if args.source_in is not None and args.source_in < 0:
+        raise ValueError("--source-in must be greater than or equal to 0.")
+    if args.timeline_in is not None and args.timeline_in < 0:
+        raise ValueError("--timeline-in must be greater than or equal to 0.")
+    _print_json(
+        client.add_footage_layer(
+            footage_id=args.footage_id,
+            footage_name=args.footage_name,
+            path=args.path,
+            name=args.name,
+            source_in=args.source_in,
+            source_out=args.source_out,
+            timeline_in=args.timeline_in,
+        )
+    )
+
+
+def _run_set_footage_cut(client: AEClient, args: argparse.Namespace) -> None:
+    if args.source_in < 0:
+        raise ValueError("--source-in must be greater than or equal to 0.")
+    if args.source_out <= args.source_in:
+        raise ValueError("--source-out must be greater than --source-in.")
+    if args.timeline_in < 0:
+        raise ValueError("--timeline-in must be greater than or equal to 0.")
+    _print_json(
+        client.set_footage_cut(
+            source_in=args.source_in,
+            source_out=args.source_out,
+            timeline_in=args.timeline_in,
+            **_layer_selector_kwargs(args),
+        )
+    )
+
+
 def _run_create_comp(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.create_comp(
@@ -292,6 +339,10 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "health": _run_health,
     "layers": _run_layers,
     "list-comps": _run_list_comps,
+    "list-footage": _run_list_footage,
+    "import-footage": _run_import_footage,
+    "add-footage-layer": _run_add_footage_layer,
+    "set-footage-cut": _run_set_footage_cut,
     "create-comp": _run_create_comp,
     "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,

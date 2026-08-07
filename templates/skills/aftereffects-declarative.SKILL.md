@@ -1,6 +1,6 @@
 ---
 name: aftereffects-declarative
-description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building.
+description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage editing.
 ---
 
 # aftereffects-declarative
@@ -30,7 +30,7 @@ After Effects を宣言型 JSON で構築する標準スキル。
 ## 基本フロー
 
 1. 疎通確認: `ae-cli health`
-2. `~/ae-agent-skills/scene.schema.json` と `~/ae-agent-skills/references/scene.example.json` を確認
+2. `~/ae-agent-skills/scene.schema.json` と `~/ae-agent-skills/references/scene.example.json` を確認（フッテージ編集は `footage-edit.example.json` も確認）
 3. scene JSON を作成/更新（作業中は `~/ae-agent-skills/work/` 配下）
 4. `--validate-only` で検証
 5. 実適用
@@ -41,6 +41,7 @@ After Effects を宣言型 JSON で構築する標準スキル。
 
 - schema: `~/ae-agent-skills/scene.schema.json`
 - サンプル: `~/ae-agent-skills/references/scene.example.json`
+- フッテージ編集サンプル: `~/ae-agent-skills/references/footage-edit.example.json`
 - CLIリファレンス（日本語）: `~/ae-agent-skills/references/cli.ja.md`
 - CLIリファレンス（英語）: `~/ae-agent-skills/references/cli.md`
 
@@ -56,6 +57,7 @@ After Effects を宣言型 JSON で構築する標準スキル。
 
 ```bash
 ae-cli health
+ae-cli list-footage
 ae-cli apply-scene --scene-file <scene.json> --validate-only
 ae-cli apply-scene --scene-file <scene.json>
 ae-cli apply-scene --scene-file <scene.json> --mode replace-managed
@@ -82,6 +84,11 @@ ae-cli expression-errors
 - Effect 値は `layers[].effects[].params[]`
 - expression は `layers[].expressions[]`
 - Essential Graphics は `layers[].essentialProperties[]`
+- フッテージは `assets[]` に1度宣言し、`type: footage` のレイヤーから `sourceId` で参照する
+- フッテージの `assets[].path` は実在する絶対パスを使う
+- カット編集は `timing.sourceIn` / `sourceOut` / `timelineIn` を使う
+- `sourceIn` と `sourceOut` は必ず対で指定し、同じ `sourceId` を複数レイヤーから参照してよい
+- フッテージのカット指定と `inPoint` / `outPoint` / `startTime` は混在させない
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
 
 ## 最小テンプレート（このまま使える）

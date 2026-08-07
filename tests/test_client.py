@@ -163,6 +163,95 @@ def test_create_comp_posts_expected_payload(monkeypatch) -> None:
     }
 
 
+def test_list_footage_calls_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.list_footage()
+
+    assert captured["url"] == "http://127.0.0.1:8080/footage"
+    assert captured["timeout"] == 5.0
+
+
+def test_import_footage_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"id": 4}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.import_footage(path="/clips/interview.mp4", name="Interview")
+
+    assert captured["url"] == "http://127.0.0.1:8080/footage"
+    assert captured["json"] == {"path": "/clips/interview.mp4", "name": "Interview"}
+
+
+def test_add_footage_layer_posts_cut_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.add_footage_layer(
+        footage_id=12,
+        name="Clip 01",
+        source_in=12.5,
+        source_out=18.0,
+        timeline_in=3.0,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/footage-layer"
+    assert captured["json"] == {
+        "footageId": 12,
+        "name": "Clip 01",
+        "sourceIn": 12.5,
+        "sourceOut": 18.0,
+        "timelineIn": 3.0,
+    }
+
+
+def test_set_footage_cut_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 2}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.set_footage_cut(
+        layer_name="Interview 01",
+        source_in=5.0,
+        source_out=9.5,
+        timeline_in=2.0,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/footage-cut"
+    assert captured["json"] == {
+        "layerName": "Interview 01",
+        "sourceIn": 5.0,
+        "sourceOut": 9.5,
+        "timelineIn": 2.0,
+    }
+
+
 def test_set_keyframe_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

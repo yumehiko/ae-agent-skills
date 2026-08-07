@@ -22,12 +22,12 @@ function getLayerTypeName(layer) {
     } else if (layer instanceof AVLayer) {
         if (layer.source instanceof CompItem) {
             return "PreComp";
+        } else if (layer.source && layer.source.mainSource instanceof SolidSource) {
+            return "Solid";
         } else if (layer.hasVideo && !layer.hasAudio) {
             return "Video";
         } else if (!layer.hasVideo && layer.hasAudio) {
             return "Audio";
-        } else if (layer.source && layer.source.mainSource instanceof SolidSource) {
-            return "Solid";
         } else {
             return "AVLayer";
         }

@@ -34,6 +34,15 @@ and add a 0.5-second fade-in animation.
 
 4. After the agent finishes, confirm the composition is created in After Effects.
 
+Footage editing request example:
+
+```text
+Use $aftereffects-declarative to take 12.5–18 seconds and 25–31 seconds from interview.mp4,
+then place those cuts sequentially in a composition.
+```
+
+As of `v0.4.0`, file import, source reuse, and multi-cut footage placement are supported.
+
 To choose an agent explicitly:
 
 ```bash
@@ -54,10 +63,35 @@ npx ae-agent-skills install --agent all
 Claude Code user skills are installed under `~/.claude/skills/<skill-name>/SKILL.md`.
 Claude Code slash commands are installed under `~/.claude/commands/<command>.md`.
 
+## Updating
+
+1. Save the current After Effects project and quit After Effects.
+2. Run the latest installer with the same agent target used for the initial installation:
+
+```bash
+npx --yes ae-agent-skills@latest install --agent codex
+```
+
+To update every supported agent installation:
+
+```bash
+npx --yes ae-agent-skills@latest install --agent all
+```
+
+3. Restart After Effects and open `Window > Extensions (Beta) > ae-agent-skill`.
+4. Verify the bridge connection:
+
+```bash
+ae-cli health
+```
+
+The update replaces the CEP extension, `ae-cli`, agent skills, `scene.schema.json`, and `references/`
+with their latest versions. Files under `~/ae-agent-skills/work/` and `~/ae-agent-skills/done/` are preserved.
+
 ## Which skill to use
 
-- `$aftereffects-declarative`: default for new composition building and overall scene structure
-- `$aftereffects-cli`: best for surgical edits, property-level tweaks, and debugging
+- `$aftereffects-declarative`: default for new compositions, overall scene structure, and repeatable footage edits
+- `$aftereffects-cli`: best for adding footage to existing scenes, surgical edits, property-level tweaks, and debugging
 
 ## Docs
 

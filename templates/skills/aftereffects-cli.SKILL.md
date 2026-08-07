@@ -27,6 +27,7 @@ description: Command-by-command After Effects editing via ae-cli. Best for surgi
 1. まず疎通確認: `ae-cli health`
 2. 状態確認:
    - `ae-cli list-comps`
+   - `ae-cli list-footage`
    - `ae-cli layers`
    - `ae-cli selected-properties`
    - `ae-cli expression-errors`
@@ -61,6 +62,11 @@ description: Command-by-command After Effects editing via ae-cli. Best for surgi
   - `ae-cli add-effect ...`
   - `ae-cli add-essential-property ...`
   - `ae-cli add-shape-repeater ...`
+- フッテージ:
+  - `ae-cli list-footage`
+  - `ae-cli import-footage --path <absolute-path> [--name <name>]`
+  - `ae-cli add-footage-layer (--footage-id <id> | --footage-name <name> | --path <absolute-path>) ...`
+  - `ae-cli set-footage-cut (--layer-id <id> | --layer-name <name>) --source-in <sec> --source-out <sec> --timeline-in <sec>`
 - タイムライン:
   - `ae-cli set-in-out-point ...`
   - `ae-cli move-layer-time ...`
@@ -87,6 +93,8 @@ ae-cli layers
 
 ## 注意
 
+- フッテージのカットは `--source-in` と `--source-out` を対で指定し、配置先を `--timeline-in` で指定する。
+- `import-footage` と `add-footage-layer --path` は同じファイルパスのProjectItemを再利用する。
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。

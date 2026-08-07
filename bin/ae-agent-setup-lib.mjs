@@ -21,6 +21,7 @@ export const CLAUDE_COMMAND_SOURCES = [
 export const WORKSPACE_RESOURCE_SOURCES = [
   { source: ['schemas', 'scene.schema.json'], destination: ['scene.schema.json'] },
   { source: ['examples', 'scene.example.json'], destination: ['references', 'scene.example.json'] },
+  { source: ['examples', 'footage-edit.example.json'], destination: ['references', 'footage-edit.example.json'] },
   { source: ['docs', 'cli.ja.md'], destination: ['references', 'cli.ja.md'] },
   { source: ['docs', 'cli.md'], destination: ['references', 'cli.md'] },
 ];

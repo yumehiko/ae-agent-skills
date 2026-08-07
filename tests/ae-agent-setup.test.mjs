@@ -11,6 +11,7 @@ import {
   getSkillInstallTargets,
   installSkills,
   parseArgs,
+  setupAgentWorkspace,
 } from '../bin/ae-agent-setup-lib.mjs';
 
 test('parseArgs accepts claude and all agent values', () => {
@@ -116,6 +117,25 @@ test('installSkills installs Claude user skills and slash commands', () => {
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('setupAgentWorkspace installs the footage editing example', () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-workspace-home-'));
+  try {
+    setupAgentWorkspace({ home: tempHome });
+    const installed = path.join(
+      tempHome,
+      'ae-agent-skills',
+      'references',
+      'footage-edit.example.json',
+    );
+    assert.equal(fs.existsSync(installed), true);
+    const example = JSON.parse(fs.readFileSync(installed, 'utf8'));
+    assert.equal(example.assets[0].type, 'footage');
+    assert.equal(example.layers[0].sourceId, example.assets[0].id);
+  } finally {
     fs.rmSync(tempHome, { recursive: true, force: true });
   }
 });
