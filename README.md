@@ -57,14 +57,20 @@ npx ae-agent-skills install --agent all
 
 ## What the installer does
 
-1. Prompts for target agent (`codex` / `gemini` / `claude` / `both` / `all`) when `--agent` is omitted.
+1. Prompts for target agent (`codex` / `gemini` / `claude` / `all`) when `--agent` is omitted.
 2. Installs the signed ZXP extension via `UPIA` or `ExManCmd`.
-3. Installs `ae-cli` and agent skills.
+3. Installs `ae-cli` and the standard `skills/<skill-name>/SKILL.md` packages.
 4. Initializes `~/ae-agent-skills/` with `work/`, `done/`, `scene.schema.json`, and `references/`.
 
-`both` means Codex + Gemini for backward compatibility. `all` means Codex + Gemini + Claude Code.
+`all` means Codex + Gemini + Claude Code.
+Codex user skills are installed under `~/.agents/skills/<skill-name>/`.
+Gemini user skills are installed under `~/.gemini/skills/<skill-name>/`.
 Claude Code user skills are installed under `~/.claude/skills/<skill-name>/SKILL.md`.
 Claude Code slash commands are installed under `~/.claude/commands/<command>.md`.
+
+The npm package is also a Codex plugin with `.codex-plugin/plugin.json` and the same canonical
+`skills/` directory. The one-command setup remains the primary installation path; no separate
+plugin installation is required after running `npx ae-agent-skills install`.
 
 ## Updating
 
@@ -90,6 +96,8 @@ ae-cli health
 
 The update replaces the CEP extension, `ae-cli`, agent skills, `scene.schema.json`, and `references/`
 with their latest versions. Files under `~/ae-agent-skills/work/` and `~/ae-agent-skills/done/` are preserved.
+Managed Codex skills from the legacy `~/.codex/skills/` location are removed after they are copied to
+`~/.agents/skills/`; unrelated user skills are not changed.
 
 ## Which skill to use
 
@@ -100,5 +108,6 @@ with their latest versions. Files under `~/ae-agent-skills/work/` and `~/ae-agen
 
 - CLI usage: [docs/cli.md](docs/cli.md)
 - Development: [docs/development.md](docs/development.md)
-- Declarative skill source: [templates/skills/aftereffects-declarative.SKILL.md](templates/skills/aftereffects-declarative.SKILL.md)
-- CLI skill source: [templates/skills/aftereffects-cli.SKILL.md](templates/skills/aftereffects-cli.SKILL.md)
+- Declarative skill source: [skills/aftereffects-declarative/SKILL.md](skills/aftereffects-declarative/SKILL.md)
+- CLI skill source: [skills/aftereffects-cli/SKILL.md](skills/aftereffects-cli/SKILL.md)
+- Codex plugin manifest: [.codex-plugin/plugin.json](.codex-plugin/plugin.json)

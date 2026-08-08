@@ -1,0 +1,4 @@
+interface:
+  display_name: "After Effects Declarative"
+  short_description: "Build repeatable After Effects scenes from JSON"
+  default_prompt: "Use $aftereffects-declarative to build a repeatable After Effects composition from declarative JSON."

@@ -9,8 +9,8 @@ export const DEFAULT_REPO = 'yumehiko/ae-agent-skills';
 export const AGENT_WORKSPACE_NAME = 'ae-agent-skills';
 
 export const SKILL_SOURCES = [
-  { sourceName: 'aftereffects-cli.SKILL.md', destinationName: 'aftereffects-cli' },
-  { sourceName: 'aftereffects-declarative.SKILL.md', destinationName: 'aftereffects-declarative' },
+  { name: 'aftereffects-cli' },
+  { name: 'aftereffects-declarative' },
 ];
 
 export const CLAUDE_COMMAND_SOURCES = [
@@ -29,9 +29,8 @@ export const WORKSPACE_RESOURCE_SOURCES = [
 export const AGENT_REGISTRY = [
   {
     id: 'codex',
-    destRoot({ home, env }) {
-      const codexHome = env.CODEX_HOME || path.join(home, '.codex');
-      return path.join(codexHome, 'skills');
+    destRoot({ home }) {
+      return path.join(home, '.agents', 'skills');
     },
     isDetected({ home, env, fsModule }) {
       return Boolean(env.CODEX_HOME) || fsModule.existsSync(path.join(home, '.codex'));
@@ -61,7 +60,6 @@ export const AGENT_REGISTRY = [
 ];
 
 const AGENT_ALIASES = {
-  both: ['codex', 'gemini'],
   all: AGENT_REGISTRY.map((agent) => agent.id),
 };
 
@@ -76,9 +74,8 @@ Usage:
   ae-agent-setup install [options]
 
 Options:
-  --agent <codex|gemini|claude|both|all>
+  --agent <codex|gemini|claude|all>
                               Agent target. If omitted, interactive selection is shown.
-                              "both" means codex+gemini for backward compatibility.
                               "all" means codex+gemini+claude.
   --repo <owner/repo>          GitHub repository for release and CLI install (default: ${DEFAULT_REPO}).
   --zxp <path-or-url>          Local ZXP path or direct download URL.
@@ -192,20 +189,18 @@ export async function resolveAgent(agentArg) {
   console.log(`  1) codex${recommended === 'codex' ? ' (recommended)' : ''}`);
   console.log(`  2) gemini${recommended === 'gemini' ? ' (recommended)' : ''}`);
   console.log(`  3) claude${recommended === 'claude' ? ' (recommended)' : ''}`);
-  console.log('  4) both (codex + gemini)');
-  console.log('  5) all (codex + gemini + claude)');
+  console.log('  4) all (codex + gemini + claude)');
 
   if (!process.stdin.isTTY) {
     console.log(`No interactive terminal detected. Defaulting to: ${recommended}`);
     return recommended;
   }
 
-  const answer = await ask('Enter 1, 2, 3, 4, or 5 [1]: ');
+  const answer = await ask('Enter 1, 2, 3, or 4 [1]: ');
   if (!answer || answer === '1') return 'codex';
   if (answer === '2') return 'gemini';
   if (answer === '3') return 'claude';
-  if (answer === '4') return 'both';
-  if (answer === '5') return 'all';
+  if (answer === '4') return 'all';
   throw new Error(`Invalid selection: ${answer}`);
 }
 
@@ -314,21 +309,32 @@ export function installSkills(
   agent,
   { root = getRepoRoot(), home = os.homedir(), env = process.env } = {},
 ) {
-  const sourceRoot = path.join(root, 'templates', 'skills');
+  const sourceRoot = path.join(root, 'skills');
   const targets = getSkillInstallTargets(agent, { home, env });
 
   for (const target of targets) {
     fs.mkdirSync(target.destRoot, { recursive: true });
     for (const skill of SKILL_SOURCES) {
-      const source = path.join(sourceRoot, skill.sourceName);
-      const destination = path.join(target.destRoot, skill.destinationName);
-      if (!fs.existsSync(source)) {
+      const source = path.join(sourceRoot, skill.name);
+      const destination = path.join(target.destRoot, skill.name);
+      if (!fs.existsSync(path.join(source, 'SKILL.md'))) {
         throw new Error(`Skill source not found: ${source}`);
       }
       fs.rmSync(destination, { recursive: true, force: true });
-      fs.mkdirSync(destination, { recursive: true });
-      fs.copyFileSync(source, path.join(destination, 'SKILL.md'));
+      fs.cpSync(source, destination, { recursive: true });
       console.log(`Installed ${target.kind} skill: ${destination}`);
+
+      if (target.kind === 'codex') {
+        const legacyCodexHome = env.CODEX_HOME || path.join(home, '.codex');
+        const legacyDestination = path.join(legacyCodexHome, 'skills', skill.name);
+        if (
+          path.resolve(legacyDestination) !== path.resolve(destination)
+          && fs.existsSync(legacyDestination)
+        ) {
+          fs.rmSync(legacyDestination, { recursive: true, force: true });
+          console.log(`Removed legacy codex skill: ${legacyDestination}`);
+        }
+      }
     }
   }
 
