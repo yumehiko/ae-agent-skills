@@ -27,11 +27,15 @@ npm run test:node
 ```
 
 `package.json`, `pyproject.toml`, and `CSXS/manifest.xml` versions should stay aligned for releases.
-Before publishing, run:
+Before publishing a GitHub Release, run:
 
 ```bash
 npm --cache /private/tmp/ae-agent-npm-cache pack --dry-run
 ```
+
+Publishing a GitHub Release triggers `.github/workflows/publish-npm.yml`, which publishes the
+same version to npm through Trusted Publishing (OIDC). No npm password, passkey, or long-lived
+token is required by the workflow.
 
 ## Project structure
 

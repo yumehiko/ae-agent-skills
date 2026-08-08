@@ -91,15 +91,10 @@ git push origin HEAD
 git push origin v0.7.1
 ```
 
-### 4) npm 公開
-
-```bash
-npm publish
-```
-
-### 5) GitHub Release 作成（ZXP添付）
+### 4) GitHub Release 作成（ZXP添付）
 
 `npx ae-agent-skills install` は latest release の `.zxp` を参照するため、Release に ZXP を添付します。
+Release を公開すると `.github/workflows/publish-npm.yml` が起動し、npm Trusted Publishing (OIDC) で同じバージョンを自動公開します。
 
 ```bash
 gh release create v0.7.1 dist/ae-agent-skill-0.7.1.zxp \
@@ -107,13 +102,16 @@ gh release create v0.7.1 dist/ae-agent-skill-0.7.1.zxp \
   --notes "Release notes"
 ```
 
-### 6) 公開後確認
+### 5) 公開後確認
 
 ```bash
 npm --cache /private/tmp/ae-agent-npm-cache pack --dry-run
 npm view ae-agent-skills version dist-tags.latest --json
 gh release view --repo yumehiko/ae-agent-skills --json tagName,assets
 ```
+
+npm公開にパスワード、パスキー、長期トークンは不要です。失敗時はGitHub Actionsの
+`Publish package to npm`ワークフローを確認してください。
 
 ## プロジェクト構成
 
