@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "After Effects agent skills and CLI for composition building, footage, audio, text, and layout.",
   "type": "module",
   "bin": {
@@ -14,7 +14,9 @@
     "version": "npm run sync:version"
   },
   "files": [
+    ".codex-plugin",
     "bin",
+    "skills",
     "templates",
     "schemas",
     "examples",

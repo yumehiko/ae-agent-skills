@@ -1,0 +1,33 @@
+{
+  "name": "ae-agent-skills",
+  "version": "0.7.1",
+  "description": "Operate Adobe After Effects with reusable declarative and command-by-command agent workflows.",
+  "author": {
+    "name": "yumehiko",
+    "url": "https://github.com/yumehiko"
+  },
+  "homepage": "https://github.com/yumehiko/ae-agent-skills#readme",
+  "repository": "https://github.com/yumehiko/ae-agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "after-effects",
+    "agent-skills",
+    "video-editing",
+    "automation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "After Effects Agent Skills",
+    "shortDescription": "Build and edit After Effects scenes with agent workflows.",
+    "longDescription": "Create repeatable After Effects compositions from declarative JSON or make precise edits to existing scenes through ae-cli.",
+    "developerName": "yumehiko",
+    "category": "Productivity",
+    "capabilities": [
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use $aftereffects-declarative to create an After Effects composition.",
+      "Use $aftereffects-cli to inspect and edit the active composition."
+    ]
+  }
+}

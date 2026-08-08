@@ -10,6 +10,7 @@ const rootDir = path.resolve(__dirname, '..', '..');
 
 const packageJsonPath = path.join(rootDir, 'package.json');
 const manifestPath = path.join(rootDir, 'CSXS', 'manifest.xml');
+const pluginManifestPath = path.join(rootDir, '.codex-plugin', 'plugin.json');
 
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = pkg.version;
@@ -30,4 +31,9 @@ manifest = manifest.replace(
 );
 
 fs.writeFileSync(manifestPath, manifest, 'utf8');
-console.log(`Synced manifest version to ${version}`);
+
+const pluginManifest = JSON.parse(fs.readFileSync(pluginManifestPath, 'utf8'));
+pluginManifest.version = version;
+fs.writeFileSync(pluginManifestPath, `${JSON.stringify(pluginManifest, null, 2)}\n`, 'utf8');
+
+console.log(`Synced extension and plugin manifest versions to ${version}`);
