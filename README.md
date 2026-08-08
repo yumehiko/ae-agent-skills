@@ -1,9 +1,9 @@
 # ae-agent-skills
 
-`ae-agent-skills` enables coding agents (Codex / Gemini / Claude Code) to operate Adobe After Effects.
-It installs `ae-agent-skill` (After Effects CEP panel), `ae-cli`, and agent skills so you can ask your agent to create compositions or edit existing scenes.
+`ae-agent-skills` lets Codex, Gemini, and Claude Code operate Adobe After Effects.
+It installs the After Effects extension, `ae-cli`, and agent skills with one command.
 
-Japanese README: [README.ja.md](README.ja.md)
+日本語: [README.ja.md](README.ja.md)
 
 ## Quick Start
 
@@ -13,10 +13,8 @@ Japanese README: [README.ja.md](README.ja.md)
 npx ae-agent-skills install
 ```
 
-2. Restart After Effects, then open `Window > Extensions (Beta) > ae-agent-skill`.
-3. Launch Codex, Gemini, or Claude Code and ask it to perform an After Effects task.
-
-First request example (create a composition):
+2. Restart After Effects and open `Window > Extensions (Beta) > ae-agent-skill`.
+3. Launch your agent and ask it to perform an After Effects task.
 
 ```text
 Use $aftereffects-declarative to create a 1920x1080, 30fps, 5-second composition.
@@ -24,90 +22,24 @@ Set a dark gray background, place "Hello AE Agent" text at the center,
 and add a 0.5-second fade-in animation.
 ```
 
-In Claude Code, invoke the skill as a slash command:
+In Claude Code, use `/aftereffects-declarative` instead of `$aftereffects-declarative`.
 
-```text
-Use /aftereffects-declarative to create a 1920x1080, 30fps, 5-second composition.
-Set a dark gray background, place "Hello AE Agent" text at the center,
-and add a 0.5-second fade-in animation.
-```
+## Choosing a skill
 
-4. After the agent finishes, confirm the composition is created in After Effects.
-
-Footage editing request example:
-
-```text
-Use $aftereffects-declarative to take 12.5–18 seconds and 25–31 seconds from interview.mp4,
-then place those cuts sequentially in a composition.
-```
-
-As of `v0.4.0`, file import, source reuse, and multi-cut footage placement are supported. `v0.5.0`
-adds per-cut volume, mute, fade-in, and fade-out controls. `v0.6.0` adds whole-layer font, size,
-fill, stroke, tracking, leading, and paragraph alignment controls. `v0.7.0` adds visual-bounds
-alignment, equal distribution, and composition or safe-area placement references.
-
-To choose an agent explicitly:
-
-```bash
-npx ae-agent-skills install --agent codex
-npx ae-agent-skills install --agent gemini
-npx ae-agent-skills install --agent claude
-npx ae-agent-skills install --agent all
-```
-
-## What the installer does
-
-1. Prompts for target agent (`codex` / `gemini` / `claude` / `all`) when `--agent` is omitted.
-2. Installs the signed ZXP extension via `UPIA` or `ExManCmd`.
-3. Installs `ae-cli` and the standard `skills/<skill-name>/SKILL.md` packages.
-4. Initializes `~/ae-agent-skills/` with `work/`, `done/`, `scene.schema.json`, and `references/`.
-
-`all` means Codex + Gemini + Claude Code.
-Codex user skills are installed under `~/.agents/skills/<skill-name>/`.
-Gemini user skills are installed under `~/.gemini/skills/<skill-name>/`.
-Claude Code user skills are installed under `~/.claude/skills/<skill-name>/SKILL.md`.
-Claude Code slash commands are installed under `~/.claude/commands/<command>.md`.
-
-The npm package is also a Codex plugin with `.codex-plugin/plugin.json` and the same canonical
-`skills/` directory. The one-command setup remains the primary installation path; no separate
-plugin installation is required after running `npx ae-agent-skills install`.
+- `$aftereffects-declarative`: The default for new compositions and repeatable scene-level edits.
+- `$aftereffects-cli`: For focused adjustments to existing scenes and debugging.
 
 ## Updating
 
-1. Save the current After Effects project and quit After Effects.
-2. Run the latest installer with the same agent target used for the initial installation:
+Quit After Effects, then run the installer for the agent you previously installed:
 
 ```bash
 npx --yes ae-agent-skills@latest install --agent codex
 ```
 
-To update every supported agent installation:
+Replace `codex` with `gemini`, `claude`, or `all` as needed. Restart After Effects when it finishes.
 
-```bash
-npx --yes ae-agent-skills@latest install --agent all
-```
+## Documentation
 
-3. Restart After Effects and open `Window > Extensions (Beta) > ae-agent-skill`.
-4. Verify the bridge connection:
-
-```bash
-ae-cli health
-```
-
-The update replaces the CEP extension, `ae-cli`, agent skills, `scene.schema.json`, and `references/`
-with their latest versions. Files under `~/ae-agent-skills/work/` and `~/ae-agent-skills/done/` are preserved.
-Managed Codex skills from the legacy `~/.codex/skills/` location are removed after they are copied to
-`~/.agents/skills/`; unrelated user skills are not changed.
-
-## Which skill to use
-
-- `$aftereffects-declarative`: default for new compositions and repeatable footage, audio, text, or layout edits
-- `$aftereffects-cli`: best for local footage, audio, text style, layout, or property changes and debugging
-
-## Docs
-
-- CLI usage: [docs/cli.md](docs/cli.md)
-- Development: [docs/development.md](docs/development.md)
-- Declarative skill source: [skills/aftereffects-declarative/SKILL.md](skills/aftereffects-declarative/SKILL.md)
-- CLI skill source: [skills/aftereffects-cli/SKILL.md](skills/aftereffects-cli/SKILL.md)
-- Codex plugin manifest: [.codex-plugin/plugin.json](.codex-plugin/plugin.json)
+- [CLI usage](docs/cli.md)
+- [Development](docs/development.md)
