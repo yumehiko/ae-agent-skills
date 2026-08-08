@@ -2,6 +2,10 @@
   "name": "ae-agent-skills",
   "version": "0.7.1",
   "description": "After Effects agent skills and CLI for composition building, footage, audio, text, and layout.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yumehiko/ae-agent-skills.git"
+  },
   "type": "module",
   "bin": {
     "ae-agent-skills": "bin/ae-agent-setup.mjs",
