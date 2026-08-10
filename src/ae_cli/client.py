@@ -196,6 +196,40 @@ class AEClient:
         )
         return self._handle_response(response)
 
+    def add_comp_layer(
+        self,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+        name: str | None = None,
+        start_time: float | None = None,
+        in_point: float | None = None,
+        out_point: float | None = None,
+    ) -> Dict[str, Any]:
+        """Add an existing project composition as a layer in the active comp."""
+        has_id = comp_id is not None
+        has_name = comp_name is not None and len(comp_name) > 0
+        if has_id == has_name:
+            raise ValueError("Provide exactly one of comp_id or comp_name.")
+        payload: Dict[str, Any] = {}
+        if has_id:
+            payload["compId"] = comp_id
+        else:
+            payload["compName"] = comp_name
+        if name is not None:
+            payload["name"] = name
+        if start_time is not None:
+            payload["startTime"] = start_time
+        if in_point is not None:
+            payload["inPoint"] = in_point
+        if out_point is not None:
+            payload["outPoint"] = out_point
+        response = requests.post(
+            self._url("/comp-layer"),
+            json=payload,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
     def set_footage_cut(
         self,
         source_in: float,

@@ -24,6 +24,9 @@ function getLayers() {
                 summary.source.type = "footage";
                 summary.sourceIn = layer.inPoint - layer.startTime;
                 summary.sourceOut = layer.outPoint - layer.startTime;
+            } else if (layer instanceof AVLayer && layer.source instanceof CompItem) {
+                summary.source = aeCompItemSummary(layer.source);
+                summary.source.type = "comp";
             }
             if (layer instanceof AVLayer && typeof aeAudioLayerSummary === "function") {
                 summary.audio = aeAudioLayerSummary(layer);

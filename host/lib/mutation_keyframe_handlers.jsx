@@ -138,6 +138,21 @@ function buildDefaultTemporalEase(dimensions) {
     return eases;
 }
 
+function removePropertyKeyframes(layer, propertyPath) {
+    var prop = resolveProperty(layer, propertyPath);
+    if (!prop) {
+        throw new Error("Property with path '" + propertyPath + "' not found.");
+    }
+    if (typeof prop.numKeys !== "number" || typeof prop.removeKey !== "function") {
+        throw new Error("Property does not expose removable keyframes: " + propertyPath);
+    }
+    var removed = prop.numKeys;
+    for (var i = prop.numKeys; i >= 1; i--) {
+        prop.removeKey(i);
+    }
+    return removed;
+}
+
 function applyKeyframeInterpolation(prop, keyIndex, inInterpName, outInterpName) {
     if (!inInterpName && !outInterpName) {
         return;

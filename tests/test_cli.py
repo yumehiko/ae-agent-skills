@@ -224,6 +224,32 @@ def test_build_parser_parses_add_footage_layer_cut() -> None:
     assert args.timeline_in == 3.0
 
 
+def test_build_parser_parses_add_comp_layer() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "add-comp-layer",
+            "--comp-name",
+            "TX01_Title",
+            "--name",
+            "Title 01",
+            "--start-time",
+            "2",
+            "--in-point",
+            "2",
+            "--out-point",
+            "3.8",
+        ]
+    )
+    assert args.command == "add-comp-layer"
+    assert args.comp_id is None
+    assert args.comp_name == "TX01_Title"
+    assert args.name == "Title 01"
+    assert args.start_time == 2.0
+    assert args.in_point == 2.0
+    assert args.out_point == 3.8
+
+
 def test_build_parser_parses_set_footage_cut_by_name() -> None:
     parser = build_parser()
     args = parser.parse_args(
@@ -621,6 +647,25 @@ def test_run_set_layer_audio_requires_a_setting(capsys) -> None:
     captured = capsys.readouterr()
     assert code == 1
     assert "Provide --mute" in captured.err
+
+
+def test_run_add_comp_layer_rejects_invalid_in_out(capsys) -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "add-comp-layer",
+            "--comp-id",
+            "12",
+            "--in-point",
+            "4",
+            "--out-point",
+            "3",
+        ]
+    )
+    code = run_command(args)
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "--out-point must be greater" in captured.err
 
 
 def test_run_set_layer_audio_rejects_negative_fade(capsys) -> None:

@@ -232,3 +232,36 @@ test('setupAgentWorkspace installs the text style and layout scene example', () 
     fs.rmSync(tempHome, { recursive: true, force: true });
   }
 });
+
+test('setupAgentWorkspace installs the composition assembly example', () => {
+  const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-workspace-home-'));
+  try {
+    setupAgentWorkspace({ home: tempHome });
+    const installed = path.join(
+      tempHome,
+      'ae-agent-skills',
+      'references',
+      'comp-assembly.example.json',
+    );
+    const example = JSON.parse(fs.readFileSync(installed, 'utf8'));
+    assert.equal(example.assets[0].type, 'comp');
+    assert.equal(example.layers[0].type, 'comp');
+    assert.equal(example.layers[0].sourceId, example.assets[0].id);
+  } finally {
+    fs.rmSync(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('scene schema defaults animations to declarative keyframe replacement', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const schema = JSON.parse(
+    fs.readFileSync(path.join(root, 'schemas', 'scene.schema.json'), 'utf8'),
+  );
+  const animation = schema.$defs.animation;
+
+  assert.deepEqual(animation.properties.keyframeMode.enum, ['replace', 'merge']);
+  assert.equal(animation.properties.keyframeMode.default, 'replace');
+  assert.equal('minItems' in animation.properties.keyframes, false);
+  assert.equal(schema.$defs.composition.properties.width.type, 'integer');
+  assert.equal(schema.$defs.composition.properties.height.type, 'integer');
+});

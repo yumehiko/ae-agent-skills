@@ -214,6 +214,9 @@ function aeNormalizeLayerTypeForScene(layer) {
         }
     } catch (eNullType) {}
     var typeName = String(getLayerTypeName(layer)).toLowerCase();
+    if (typeName === "precomp") {
+        return "comp";
+    }
     if (typeName === "video" || typeName === "audio" || typeName === "avlayer") {
         return "footage";
     }
@@ -409,11 +412,19 @@ function aeValidateSceneSpec(scene) {
             if (comp.name !== undefined && typeof comp.name !== "string") {
                 errors.push("composition.name must be a string when specified.");
             }
-            if (comp.width !== undefined && (!aeIsFiniteNumber(comp.width) || comp.width <= 0)) {
-                errors.push("composition.width must be a positive number when specified.");
+            if (comp.width !== undefined && (
+                !aeIsFiniteNumber(comp.width)
+                || comp.width <= 0
+                || Math.floor(comp.width) !== comp.width
+            )) {
+                errors.push("composition.width must be a positive integer when specified.");
             }
-            if (comp.height !== undefined && (!aeIsFiniteNumber(comp.height) || comp.height <= 0)) {
-                errors.push("composition.height must be a positive number when specified.");
+            if (comp.height !== undefined && (
+                !aeIsFiniteNumber(comp.height)
+                || comp.height <= 0
+                || Math.floor(comp.height) !== comp.height
+            )) {
+                errors.push("composition.height must be a positive integer when specified.");
             }
             if (comp.duration !== undefined && (!aeIsFiniteNumber(comp.duration) || comp.duration <= 0)) {
                 errors.push("composition.duration must be a positive number when specified.");
@@ -434,6 +445,7 @@ function aeValidateSceneSpec(scene) {
     }
 
     var assetIds = {};
+    var assetTypes = {};
     var assets = scene.assets;
     if (assets !== undefined) {
         if (!(assets instanceof Array)) {
@@ -453,19 +465,39 @@ function aeValidateSceneSpec(scene) {
                 } else {
                     assetIds[asset.id] = true;
                 }
-                if (asset.type !== "footage") {
-                    errors.push(assetPrefix + ".type must be footage.");
+                if (asset.type !== "footage" && asset.type !== "comp") {
+                    errors.push(assetPrefix + ".type must be footage or comp.");
+                } else if (typeof asset.id === "string" && asset.id.length > 0) {
+                    assetTypes[asset.id] = asset.type;
                 }
-                if (typeof asset.path !== "string" || asset.path.length === 0) {
-                    errors.push(assetPrefix + ".path is required and must be a non-empty string.");
-                } else {
-                    var assetFile = new File(asset.path);
-                    if (!assetFile.exists) {
-                        errors.push(assetPrefix + ".path was not found: " + assetFile.fsName);
+                if (asset.type === "footage") {
+                    if (typeof asset.path !== "string" || asset.path.length === 0) {
+                        errors.push(assetPrefix + ".path is required for footage and must be a non-empty string.");
+                    } else {
+                        var assetFile = new File(asset.path);
+                        if (!assetFile.exists) {
+                            errors.push(assetPrefix + ".path was not found: " + assetFile.fsName);
+                        }
                     }
-                }
-                if (asset.name !== undefined && typeof asset.name !== "string") {
-                    errors.push(assetPrefix + ".name must be a string when specified.");
+                    if (asset.name !== undefined && typeof asset.name !== "string") {
+                        errors.push(assetPrefix + ".name must be a string when specified.");
+                    }
+                } else if (asset.type === "comp") {
+                    var hasAssetCompId = asset.compId !== undefined;
+                    var hasAssetCompName = typeof asset.compName === "string" && asset.compName.length > 0;
+                    if (hasAssetCompId === hasAssetCompName) {
+                        errors.push(assetPrefix + " must specify exactly one of compId or compName.");
+                    }
+                    if (hasAssetCompId && (
+                        !aeIsFiniteNumber(asset.compId)
+                        || asset.compId <= 0
+                        || Math.floor(asset.compId) !== asset.compId
+                    )) {
+                        errors.push(assetPrefix + ".compId must be a positive integer when specified.");
+                    }
+                    if (asset.compName !== undefined && !hasAssetCompName) {
+                        errors.push(assetPrefix + ".compName must be a non-empty string when specified.");
+                    }
                 }
             }
         }
@@ -503,8 +535,9 @@ function aeValidateSceneSpec(scene) {
                         && normalizedType !== "solid"
                         && normalizedType !== "shape"
                         && normalizedType !== "footage"
+                        && normalizedType !== "comp"
                     ) {
-                        errors.push(prefix + ".type must be one of: text, null, solid, shape, footage.");
+                        errors.push(prefix + ".type must be one of: text, null, solid, shape, footage, comp.");
                     }
                 }
                 if (layer.name !== undefined && typeof layer.name !== "string") {
@@ -527,11 +560,16 @@ function aeValidateSceneSpec(scene) {
                 if (layer.sourceId !== undefined && (typeof layer.sourceId !== "string" || layer.sourceId.length === 0)) {
                     errors.push(prefix + ".sourceId must be a non-empty string when specified.");
                 }
-                if (String(layer.type).toLowerCase() === "footage") {
+                var sourceLayerType = String(layer.type).toLowerCase();
+                if (sourceLayerType === "footage" || sourceLayerType === "comp") {
                     if (typeof layer.sourceId !== "string" || layer.sourceId.length === 0) {
-                        errors.push(prefix + ".sourceId is required for footage layers.");
+                        errors.push(prefix + ".sourceId is required for footage and comp layers.");
                     } else if (!assetIds[layer.sourceId]) {
                         errors.push(prefix + ".sourceId references an unknown asset: " + layer.sourceId);
+                    } else if (assetTypes[layer.sourceId] !== sourceLayerType) {
+                        errors.push(
+                            prefix + ".sourceId must reference an asset with type " + sourceLayerType + "."
+                        );
                     }
                 }
 
@@ -803,6 +841,7 @@ function aeValidateSceneSpec(scene) {
                     if (!(animations instanceof Array)) {
                         errors.push(prefix + ".animations must be an array when specified.");
                     } else {
+                        var animationPaths = {};
                         for (var m = 0; m < animations.length; m++) {
                             var animation = animations[m];
                             var animationPrefix = prefix + ".animations[" + m + "]";
@@ -812,9 +851,23 @@ function aeValidateSceneSpec(scene) {
                             }
                             if (typeof animation.propertyPath !== "string" || animation.propertyPath.length === 0) {
                                 errors.push(animationPrefix + ".propertyPath is required and must be a string.");
+                            } else if (animationPaths[animation.propertyPath]) {
+                                errors.push(
+                                    animationPrefix + ".propertyPath is duplicated in this layer: "
+                                    + animation.propertyPath
+                                );
+                            } else {
+                                animationPaths[animation.propertyPath] = true;
                             }
-                            if (!(animation.keyframes instanceof Array) || animation.keyframes.length === 0) {
-                                errors.push(animationPrefix + ".keyframes must be a non-empty array.");
+                            if (
+                                animation.keyframeMode !== undefined
+                                && animation.keyframeMode !== "replace"
+                                && animation.keyframeMode !== "merge"
+                            ) {
+                                errors.push(animationPrefix + ".keyframeMode must be replace or merge.");
+                            }
+                            if (!(animation.keyframes instanceof Array)) {
+                                errors.push(animationPrefix + ".keyframes must be an array.");
                             } else {
                                 for (var n = 0; n < animation.keyframes.length; n++) {
                                     var keyframe = animation.keyframes[n];
@@ -914,7 +967,7 @@ function aeResolveSceneComp(spec, mutate) {
     return targetComp;
 }
 
-function aeResolveSceneAssets(scene, mutate) {
+function aeResolveSceneAssets(scene, mutate, targetComp) {
     var assetSpecs = scene.assets || [];
     var byId = {};
     var summaries = [];
@@ -922,18 +975,33 @@ function aeResolveSceneAssets(scene, mutate) {
     var reusedCount = 0;
     for (var i = 0; i < assetSpecs.length; i++) {
         var assetSpec = assetSpecs[i];
-        var existing = aeFindFootageByPath(assetSpec.path);
-        var item = existing;
+        var item = null;
         var imported = false;
-        if (!item && mutate) {
-            var resolved = aeResolveOrImportFootage(
-                assetSpec.path,
-                assetSpec.name !== undefined ? assetSpec.name : null
+        if (assetSpec.type === "footage") {
+            var existing = aeFindFootageByPath(assetSpec.path);
+            item = existing;
+            if (!item && mutate) {
+                var resolved = aeResolveOrImportFootage(
+                    assetSpec.path,
+                    assetSpec.name !== undefined ? assetSpec.name : null
+                );
+                item = resolved.item;
+                imported = !resolved.reused;
+            } else if (item && mutate && assetSpec.name !== undefined) {
+                item.name = String(assetSpec.name);
+            }
+        } else if (assetSpec.type === "comp") {
+            var resolvedComp = aeResolveCompByIdOrName(
+                assetSpec.compId !== undefined ? assetSpec.compId : null,
+                assetSpec.compName !== undefined ? assetSpec.compName : null
             );
-            item = resolved.item;
-            imported = !resolved.reused;
-        } else if (item && mutate && assetSpec.name !== undefined) {
-            item.name = String(assetSpec.name);
+            if (resolvedComp.error) {
+                throw new Error("assets[" + i + "]: " + resolvedComp.error);
+            }
+            item = resolvedComp.item;
+            if (targetComp && item === targetComp) {
+                throw new Error("assets[" + i + "]: A composition cannot contain itself as a layer.");
+            }
         }
         if (item) {
             byId[String(assetSpec.id)] = item;
@@ -943,16 +1011,19 @@ function aeResolveSceneAssets(scene, mutate) {
         } else if (item) {
             reusedCount += 1;
         }
-        summaries.push({
+        var summary = {
             id: String(assetSpec.id),
-            type: "footage",
-            path: new File(assetSpec.path).fsName,
+            type: assetSpec.type,
             itemId: item ? item.id : null,
             itemName: item ? item.name : (assetSpec.name !== undefined ? assetSpec.name : null),
             imported: imported,
-            reused: !!item && !imported,
-            plannedImport: !mutate && !item
-        });
+            reused: !!item && !imported
+        };
+        if (assetSpec.type === "footage") {
+            summary.path = new File(assetSpec.path).fsName;
+            summary.plannedImport = !mutate && !item;
+        }
+        summaries.push(summary);
     }
     return {
         byId: byId,
@@ -1018,20 +1089,22 @@ function aeApplyLayerTiming(comp, layerId, timing) {
     }
     var hasIn = timing.inPoint !== undefined;
     var hasOut = timing.outPoint !== undefined;
+    if (timing.startTime !== undefined) {
+        var layer = comp.layer(layerId);
+        if (!layer) {
+            throw new Error("Layer not found while setting timing: layerId=" + layerId);
+        }
+        // startTime can shift the layer's current in/out points. Apply it first so
+        // explicitly declared inPoint/outPoint remain the final timeline values.
+        layer.startTime = Number(timing.startTime);
+        count += 1;
+    }
     if (hasIn || hasOut) {
         aeInvokeMutation(
             setInOutPoint,
             [layerId, null, hasIn ? timing.inPoint : null, hasOut ? timing.outPoint : null],
             "setInOutPoint"
         );
-        count += 1;
-    }
-    if (timing.startTime !== undefined) {
-        var layer = comp.layer(layerId);
-        if (!layer) {
-            throw new Error("Layer not found while setting timing: layerId=" + layerId);
-        }
-        layer.startTime = Number(timing.startTime);
         count += 1;
     }
     return count;
@@ -1061,11 +1134,14 @@ function aeBuildLayerCreateOptions(layerSpec) {
 function aeResolveOrCreateSceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAssets) {
     var normalizedType = String(layerSpec.type).toLowerCase();
     var sceneId = layerSpec.id !== undefined ? String(layerSpec.id) : null;
-    var footageItem = null;
-    if (normalizedType === "footage") {
-        footageItem = sceneAssets[String(layerSpec.sourceId)];
-        if (!footageItem) {
-            throw new Error("Footage asset '" + layerSpec.sourceId + "' was not resolved.");
+    var sourceItem = null;
+    if (normalizedType === "footage" || normalizedType === "comp") {
+        sourceItem = sceneAssets[String(layerSpec.sourceId)];
+        if (!sourceItem) {
+            throw new Error(
+                (normalizedType === "comp" ? "Composition" : "Footage")
+                + " asset '" + layerSpec.sourceId + "' was not resolved."
+            );
         }
     }
     var layer = null;
@@ -1095,7 +1171,7 @@ function aeResolveOrCreateSceneLayer(comp, layerSpec, layerIndex, sceneLayerInde
             createdPayload = aeInvokeMutation(
                 addFootageLayer,
                 [
-                    footageItem.id,
+                    sourceItem.id,
                     null,
                     null,
                     layerSpec.name !== undefined ? layerSpec.name : null,
@@ -1105,6 +1181,15 @@ function aeResolveOrCreateSceneLayer(comp, layerSpec, layerIndex, sceneLayerInde
                 ],
                 "addFootageLayer"
             );
+        } else if (normalizedType === "comp") {
+            var createdCompLayer = comp.layers.add(sourceItem);
+            if (!createdCompLayer) {
+                throw new Error("Failed to add composition layer for layers[" + layerIndex + "].");
+            }
+            if (layerSpec.name !== undefined) {
+                createdCompLayer.name = String(layerSpec.name);
+            }
+            createdPayload = { layerId: createdCompLayer.index };
         } else {
             var options = aeBuildLayerCreateOptions(layerSpec);
             createdPayload = aeInvokeMutation(addLayer, [normalizedType, JSON.stringify(options)], "addLayer");
@@ -1130,11 +1215,11 @@ function aeResolveOrCreateSceneLayer(comp, layerSpec, layerIndex, sceneLayerInde
             + normalizedType + ", got " + existingType + "."
         );
     }
-    if (normalizedType === "footage" && layer.source !== footageItem) {
+    if ((normalizedType === "footage" || normalizedType === "comp") && layer.source !== sourceItem) {
         if (typeof layer.replaceSource !== "function") {
-            throw new Error("Existing footage layer source cannot be replaced.");
+            throw new Error("Existing source layer cannot be replaced.");
         }
-        layer.replaceSource(footageItem, false);
+        layer.replaceSource(sourceItem, false);
     }
     return { layer: layer, created: created, sceneId: sceneId, layerType: normalizedType };
 }
@@ -1144,6 +1229,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     var layer = resolved.layer;
     var layerId = layer.index;
     var operationCount = resolved.created ? 1 : 0;
+    var keyframesRemoved = 0;
 
     if (layerSpec.name !== undefined && layer.name !== layerSpec.name) {
         layer.name = layerSpec.name;
@@ -1248,6 +1334,14 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     var animations = layerSpec.animations || [];
     for (var m = 0; m < animations.length; m++) {
         var animation = animations[m];
+        var keyframeMode = animation.keyframeMode !== undefined
+            ? String(animation.keyframeMode).toLowerCase()
+            : "replace";
+        if (keyframeMode === "replace") {
+            var removedForAnimation = removePropertyKeyframes(layer, animation.propertyPath);
+            keyframesRemoved += removedForAnimation;
+            operationCount += removedForAnimation;
+        }
         var keyframes = animation.keyframes || [];
         for (var n = 0; n < keyframes.length; n++) {
             var keyframe = keyframes[n];
@@ -1280,6 +1374,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
         layerUid: layer ? aeTryGetLayerUid(layer) : null,
         layerName: layer ? layer.name : null,
         layerType: resolved.layerType,
+        keyframesRemoved: keyframesRemoved,
         operations: operationCount
     };
 }
@@ -1352,17 +1447,22 @@ function applyScene(sceneJSON, optionsJSON) {
             }
             var animations = layer.animations || [];
             for (var j = 0; j < animations.length; j++) {
+                if (animations[j].keyframeMode === undefined || animations[j].keyframeMode === "replace") {
+                    operationsPlanned += 1;
+                }
                 operationsPlanned += (animations[j].keyframes || []).length;
             }
         }
 
         var comp = null;
         var compSummary = null;
+        var compSpec = scene.composition || {};
+        var compositionChanges = [];
+        var appliedCompositionChanges = [];
         if (validateOnly) {
             try {
                 comp = aeResolveSceneComp(scene, false);
             } catch (eValidateComp) {
-                var compSpec = scene.composition || {};
                 var canUseVirtualComp = compSpec.name !== undefined && compSpec.createIfMissing !== false;
                 if (!canUseVirtualComp) {
                     throw eValidateComp;
@@ -1372,6 +1472,7 @@ function applyScene(sceneJSON, optionsJSON) {
                     name: compSpec.name,
                     width: compSpec.width !== undefined ? compSpec.width : 1920,
                     height: compSpec.height !== undefined ? compSpec.height : 1080,
+                    pixelAspect: compSpec.pixelAspect !== undefined ? compSpec.pixelAspect : 1.0,
                     duration: compSpec.duration !== undefined ? compSpec.duration : 8.0,
                     frameRate: compSpec.frameRate !== undefined ? compSpec.frameRate : 30.0
                 };
@@ -1379,15 +1480,25 @@ function applyScene(sceneJSON, optionsJSON) {
         } else {
             comp = aeResolveSceneComp(scene, true);
         }
-        if (!compSummary) {
+        if (comp) {
+            compositionChanges = aePlanCompositionSettingChanges(comp, compSpec);
+            operationsPlanned += compositionChanges.length;
+        }
+        if (!compSummary && comp) {
             compSummary = {
                 id: comp.id,
                 name: comp.name,
                 width: comp.width,
                 height: comp.height,
+                pixelAspect: comp.pixelAspect,
                 duration: comp.duration,
                 frameRate: comp.frameRate
             };
+            if (validateOnly) {
+                for (var c = 0; c < compositionChanges.length; c++) {
+                    compSummary[compositionChanges[c].field] = compositionChanges[c].declared;
+                }
+            }
         }
 
         var declaredSceneIds = aeBuildDeclaredSceneIdSet(layers);
@@ -1395,12 +1506,13 @@ function applyScene(sceneJSON, optionsJSON) {
         operationsPlanned += deleteTargets.length;
 
         if (validateOnly) {
-            var assetPlan = aeResolveSceneAssets(scene, false);
+            var assetPlan = aeResolveSceneAssets(scene, false, comp);
             return encodePayload({
                 status: "success",
                 mode: "validate",
                 applyMode: applyMode,
                 composition: compSummary,
+                compositionChanges: compositionChanges,
                 assetCount: assetSpecs.length,
                 assets: assetPlan.summaries,
                 layerCount: layers.length,
@@ -1416,11 +1528,13 @@ function applyScene(sceneJSON, optionsJSON) {
         var parentAppliedCount = 0;
         var appliedLayouts = [];
         var layoutMovedCount = 0;
+        var keyframesRemovedCount = 0;
         var deletedLayers = [];
         var resolvedAssets = null;
         app.beginUndoGroup("Apply Scene");
         try {
-            resolvedAssets = aeResolveSceneAssets(scene, true);
+            appliedCompositionChanges = aeApplyCompositionSettingChanges(comp, compositionChanges);
+            resolvedAssets = aeResolveSceneAssets(scene, true, comp);
             deletedLayers = aeDeleteLayerTargets(deleteTargets);
             var sceneLayerIndex = aeBuildSceneLayerIndex(comp);
             for (var m = 0; m < layers.length; m++) {
@@ -1432,6 +1546,7 @@ function applyScene(sceneJSON, optionsJSON) {
                     resolvedAssets.byId
                 );
                 appliedLayers.push(applied);
+                keyframesRemovedCount += applied.keyframesRemoved || 0;
                 if (applied.created) {
                     createdCount += 1;
                 } else {
@@ -1522,10 +1637,21 @@ function applyScene(sceneJSON, optionsJSON) {
             app.endUndoGroup();
         }
 
+        compSummary = {
+            id: comp.id,
+            name: comp.name,
+            width: comp.width,
+            height: comp.height,
+            pixelAspect: comp.pixelAspect,
+            duration: comp.duration,
+            frameRate: comp.frameRate
+        };
+
         return encodePayload({
             status: "success",
             mode: "apply",
             composition: compSummary,
+            compositionChanges: appliedCompositionChanges,
             applyMode: applyMode,
             assetCount: assetSpecs.length,
             importedCount: resolvedAssets ? resolvedAssets.importedCount : 0,
@@ -1535,6 +1661,7 @@ function applyScene(sceneJSON, optionsJSON) {
             operationsPlanned: operationsPlanned,
             createdCount: createdCount,
             reusedCount: reusedCount,
+            keyframesRemovedCount: keyframesRemovedCount,
             parentAppliedCount: parentAppliedCount,
             layoutCount: appliedLayouts.length,
             layoutMovedCount: layoutMovedCount,

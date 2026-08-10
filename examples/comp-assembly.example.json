@@ -1,0 +1,42 @@
+{
+  "composition": {
+    "compName": "Main",
+    "setActive": true
+  },
+  "assets": [
+    {
+      "id": "tx-01-source",
+      "type": "comp",
+      "compName": "TX01_Title"
+    },
+    {
+      "id": "tx-02-source",
+      "type": "comp",
+      "compName": "TX02_Subtitle"
+    }
+  ],
+  "layers": [
+    {
+      "id": "tx-01",
+      "type": "comp",
+      "name": "TX01_Title",
+      "sourceId": "tx-01-source",
+      "timing": {
+        "startTime": 0,
+        "inPoint": 0,
+        "outPoint": 1.8
+      }
+    },
+    {
+      "id": "tx-02",
+      "type": "comp",
+      "name": "TX02_Subtitle",
+      "sourceId": "tx-02-source",
+      "timing": {
+        "startTime": 2,
+        "inPoint": 2,
+        "outPoint": 3.8
+      }
+    }
+  ]
+}
