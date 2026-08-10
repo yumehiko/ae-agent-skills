@@ -56,6 +56,17 @@ range from `source-in` through `source-out` onto the composition beginning at `t
 `--path` directly imports the footage only when necessary before adding the layer.
 Use `set-footage-cut` to recut an existing footage layer with the same timing model.
 
+## Adding an existing composition as a layer
+
+```bash
+ae-cli set-active-comp --comp-name "Main"
+ae-cli add-comp-layer --comp-name "TX01_Title" \
+  --name "Title 01" --start-time 2 --in-point 2 --out-point 3.8
+```
+
+`add-comp-layer` adds an existing project composition to the active composition as a precomp layer.
+Select the source by unique `--comp-name` or by `--comp-id`. A composition cannot contain itself.
+
 ## Volume, mute, and fades
 
 ```bash
@@ -125,6 +136,13 @@ ae-cli apply-scene --scene-file examples/footage-edit.example.json --validate-on
 ae-cli apply-scene --scene-file examples/footage-edit.example.json
 ```
 
+Composition assembly example (create `Main`, `TX01_Title`, and `TX02_Subtitle` first):
+
+```bash
+ae-cli apply-scene --scene-file examples/comp-assembly.example.json --validate-only
+ae-cli apply-scene --scene-file examples/comp-assembly.example.json
+```
+
 Scenes declare each source once in `assets[]`. Multiple `type: "footage"` layers can reference it by
 `sourceId` and select cuts with `timing.sourceIn`, `sourceOut`, and `timelineIn`.
 Set audio with `audio.muted`, `levelDb`, `fadeIn`, and `fadeOut` on each footage layer. Declarative
@@ -135,9 +153,43 @@ Text layers accept `textStyle` fields for `font`, `fontSize`, fill, stroke, `tra
 Top-level `layout[]` entries apply ordered `align` or `distribute` operations and reference scene
 layer ids through `layerIds`. Each later operation sees the bounds produced by earlier operations.
 For layers with `parentId`, declared `transform` values remain parent-local so first apply and reapply match.
+To place an existing composition, declare `{"id":"tx01","type":"comp","compName":"TX01_Title"}`
+in `assets[]`, then reference it with `sourceId` from a `type: "comp"` layer. Use
+`timing.startTime`, `inPoint`, and `outPoint` for timeline placement.
 
 `apply-scene` modes:
 
 - `merge` (default): upsert only
 - `replace-managed`: remove unmanaged `aeSceneId:*` leftovers, then apply
 - `clear-all`: clear comp, then apply
+
+## Declarative convergence
+
+- Declared `composition.width`, `height`, `duration`, `frameRate`, and `pixelAspect` are applied to existing compositions as well as new ones. Validate responses report planned `compositionChanges`; apply responses report the verified results in the same field.
+- Each `animations[]` entry owns its property's key set. `keyframeMode` defaults to `replace`, which removes every existing key before creating the declared keys. An empty `keyframes: []` clears the property.
+- Use `"keyframeMode": "merge"` on an animation only when undeclared existing keys must remain.
+- Declaring the same animation `propertyPath` more than once on a layer is a validation error.
+- `easeIn` and `easeOut` use `[speed, influence]`; influence is a percentage from 0.1 through 100. Multi-dimensional properties may use one pair per dimension.
+- Layout supports 2D parent chains and writes parent-local Position from visual bounds. It does not support 3D parent chains.
+
+## Effect parameter example
+
+```json
+{
+  "effects": [
+    {
+      "matchName": "ADBE Drop Shadow",
+      "params": [
+        { "propertyIndex": 1, "value": [0, 0, 0, 1] },
+        { "propertyIndex": 2, "value": 60 },
+        { "propertyIndex": 3, "value": 135 },
+        { "propertyIndex": 4, "value": 12 },
+        { "propertyIndex": 5, "value": 8 }
+      ]
+    }
+  ]
+}
+```
+
+Effect color values use AE-native normalized RGBA (four values from 0 to 1), unlike text and shape RGB values.
+Parameter order varies by effect; inspect `properties --layer-name <layer> --include-group "ADBE Effect Parade" --include-group-children` before applying values.

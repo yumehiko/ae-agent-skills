@@ -58,6 +58,37 @@
         }
       ]
     },
+    "temporalEasePair": {
+      "type": "array",
+      "description": "Temporal ease tuple [speed, influence]. Influence is a percentage from 0.1 to 100.",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 100
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "temporalEase": {
+      "description": "One [speed, influence] tuple for all temporal dimensions, or one tuple per dimension.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/temporalEasePair"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/temporalEasePair"
+          }
+        }
+      ]
+    },
     "layoutReference": {
       "type": "string",
       "enum": [
@@ -233,7 +264,7 @@
         }
       ]
     },
-    "asset": {
+    "footageAsset": {
       "type": "object",
       "required": [
         "id",
@@ -258,6 +289,53 @@
       },
       "additionalProperties": false
     },
+    "compAsset": {
+      "type": "object",
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "comp"
+        },
+        "compId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "compName": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "compId"
+          ]
+        },
+        {
+          "required": [
+            "compName"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "asset": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/footageAsset"
+        },
+        {
+          "$ref": "#/$defs/compAsset"
+        }
+      ]
+    },
     "composition": {
       "type": "object",
       "properties": {
@@ -274,12 +352,12 @@
           "minLength": 1
         },
         "width": {
-          "type": "number",
-          "exclusiveMinimum": 0
+          "type": "integer",
+          "minimum": 1
         },
         "height": {
-          "type": "number",
-          "exclusiveMinimum": 0
+          "type": "integer",
+          "minimum": 1
         },
         "duration": {
           "type": "number",
@@ -564,8 +642,12 @@
             "hold"
           ]
         },
-        "easeIn": {},
-        "easeOut": {}
+        "easeIn": {
+          "$ref": "#/$defs/temporalEase"
+        },
+        "easeOut": {
+          "$ref": "#/$defs/temporalEase"
+        }
       },
       "additionalProperties": false
     },
@@ -582,10 +664,18 @@
         },
         "keyframes": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/keyframe"
           }
+        },
+        "keyframeMode": {
+          "type": "string",
+          "description": "replace (default) removes all existing keys on the property before applying this declaration; merge preserves keys at undeclared times.",
+          "enum": [
+            "replace",
+            "merge"
+          ],
+          "default": "replace"
         }
       },
       "additionalProperties": false
@@ -675,7 +765,8 @@
             "null",
             "solid",
             "shape",
-            "footage"
+            "footage",
+            "comp"
           ]
         },
         "name": {
@@ -799,7 +890,10 @@
           "if": {
             "properties": {
               "type": {
-                "const": "footage"
+                "enum": [
+                  "footage",
+                  "comp"
+                ]
               }
             },
             "required": [

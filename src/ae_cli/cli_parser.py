@@ -103,6 +103,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Composition time where the selected source range starts (default: 0)",
     )
 
+    add_comp_layer_parser = subparsers.add_parser(
+        "add-comp-layer",
+        help="Add an existing project composition as a layer in the active composition",
+    )
+    comp_source_group = add_comp_layer_parser.add_mutually_exclusive_group(required=True)
+    comp_source_group.add_argument("--comp-id", type=int, help="Source composition project item id")
+    comp_source_group.add_argument("--comp-name", help="Unique source composition name")
+    add_comp_layer_parser.add_argument("--name", help="Optional layer name")
+    add_comp_layer_parser.add_argument("--start-time", type=float, help="Layer start time in seconds")
+    add_comp_layer_parser.add_argument("--in-point", type=float, help="Layer in point in seconds")
+    add_comp_layer_parser.add_argument("--out-point", type=float, help="Layer out point in seconds")
+
     set_footage_cut_parser = subparsers.add_parser(
         "set-footage-cut",
         help="Set the source range and timeline placement of an existing footage layer",

@@ -398,6 +398,9 @@ function routeRequest(req, res, bridgeToken) {
         handleGetComps(res);
         return;
     }
+    if (typeof routeCompRequest === 'function' && routeCompRequest(pathname, method, req, res)) {
+        return;
+    }
     if (typeof routeFootageRequest === 'function' && routeFootageRequest(pathname, method, req, res)) {
         return;
     }

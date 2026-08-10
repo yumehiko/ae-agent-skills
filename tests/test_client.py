@@ -279,6 +279,46 @@ def test_add_footage_layer_posts_cut_payload(monkeypatch) -> None:
     }
 
 
+def test_add_comp_layer_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse({"status": "success", "data": {"layerId": 3}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.add_comp_layer(
+        comp_name="TX01_Title",
+        name="Title 01",
+        start_time=2.0,
+        in_point=2.0,
+        out_point=3.8,
+    )
+
+    assert captured["url"] == "http://127.0.0.1:8080/comp-layer"
+    assert captured["timeout"] == 5.0
+    assert captured["json"] == {
+        "compName": "TX01_Title",
+        "name": "Title 01",
+        "startTime": 2.0,
+        "inPoint": 2.0,
+        "outPoint": 3.8,
+    }
+
+
+def test_add_comp_layer_requires_exactly_one_source_selector() -> None:
+    client = AEClient()
+    try:
+        client.add_comp_layer()
+    except ValueError as exc:
+        assert "exactly one" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+
 def test_set_footage_cut_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 

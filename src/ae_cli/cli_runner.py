@@ -116,6 +116,30 @@ def _run_set_footage_cut(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_add_comp_layer(client: AEClient, args: argparse.Namespace) -> None:
+    if args.comp_id is not None and args.comp_id <= 0:
+        raise ValueError("--comp-id must be a positive integer.")
+    for label, value in (
+        ("--start-time", args.start_time),
+        ("--in-point", args.in_point),
+        ("--out-point", args.out_point),
+    ):
+        if value is not None and not math.isfinite(value):
+            raise ValueError(f"{label} must be a finite number.")
+    if args.in_point is not None and args.out_point is not None and args.out_point <= args.in_point:
+        raise ValueError("--out-point must be greater than --in-point.")
+    _print_json(
+        client.add_comp_layer(
+            comp_id=args.comp_id,
+            comp_name=args.comp_name,
+            name=args.name,
+            start_time=args.start_time,
+            in_point=args.in_point,
+            out_point=args.out_point,
+        )
+    )
+
+
 def _run_get_layer_audio(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(client.get_layer_audio(**_layer_selector_kwargs(args)))
 
@@ -498,6 +522,7 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "list-footage": _run_list_footage,
     "import-footage": _run_import_footage,
     "add-footage-layer": _run_add_footage_layer,
+    "add-comp-layer": _run_add_comp_layer,
     "set-footage-cut": _run_set_footage_cut,
     "get-layer-audio": _run_get_layer_audio,
     "set-layer-audio": _run_set_layer_audio,

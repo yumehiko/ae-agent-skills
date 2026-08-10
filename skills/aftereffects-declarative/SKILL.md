@@ -1,6 +1,6 @@
 ---
 name: aftereffects-declarative
-description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/footage cuts/audio/text styles/layout/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage, audio, text, or visual-bounds layout editing.
+description: Primary After Effects workflow using ae-cli apply-scene with declarative JSON (composition/assets/comp layers/footage cuts/audio/text styles/layout/layers/animations/expressions/parent/repeater/effect params). Use this by default for composition building and repeatable footage, audio, text, or visual-bounds layout editing.
 ---
 
 # aftereffects-declarative
@@ -30,7 +30,7 @@ After Effects を宣言型 JSON で構築する標準スキル。
 ## 基本フロー
 
 1. 疎通確認: `ae-cli health`
-2. `~/ae-agent-skills/scene.schema.json` と `~/ae-agent-skills/references/scene.example.json` を確認（フッテージ編集は `footage-edit.example.json` も確認）
+2. `~/ae-agent-skills/scene.schema.json` と `~/ae-agent-skills/references/scene.example.json` を確認（フッテージ編集は `footage-edit.example.json`、プリコンポ配置は `comp-assembly.example.json` も確認）
 3. scene JSON を作成/更新（作業中は `~/ae-agent-skills/work/` 配下）
 4. `--validate-only` で検証
 5. 実適用
@@ -42,6 +42,7 @@ After Effects を宣言型 JSON で構築する標準スキル。
 - schema: `~/ae-agent-skills/scene.schema.json`
 - サンプル: `~/ae-agent-skills/references/scene.example.json`
 - フッテージ編集サンプル: `~/ae-agent-skills/references/footage-edit.example.json`
+- プリコンポ配置サンプル: `~/ae-agent-skills/references/comp-assembly.example.json`
 - CLIリファレンス（日本語）: `~/ae-agent-skills/references/cli.ja.md`
 - CLIリファレンス（英語）: `~/ae-agent-skills/references/cli.md`
 
@@ -80,12 +81,18 @@ ae-cli expression-errors
 - `parentId` を持つレイヤーの `transform` は親座標系で宣言し、初回適用と再適用で同じ値を使う
 - 推測でキーを作らず、必ず `~/ae-agent-skills/scene.schema.json` を正として合わせる
 - アニメーション対象プロパティは `animations` で管理
+- `animations[].keyframeMode` は既定の `replace` を使い、宣言したキー集合へ完全に置換する
+- 既存の宣言外キーを意図的に残す場合だけ `keyframeMode: merge` を使う
+- キーを全削除する場合は `keyframes: []` を宣言する
+- 同じレイヤー内で同一 `propertyPath` を複数のanimationへ分割しない
 - 3Dベクトルには2D入力可（`[x,y] -> [x,y,0]` 自動補完）
 - Repeater は `layers[].repeaters[]`
 - Effect 値は `layers[].effects[].params[]`
 - expression は `layers[].expressions[]`
 - Essential Graphics は `layers[].essentialProperties[]`
 - フッテージは `assets[]` に1度宣言し、`type: footage` のレイヤーから `sourceId` で参照する
+- 既存コンポは `assets[]` に `type: comp` と `compId` または一意な `compName` で宣言し、`type: comp` のレイヤーから `sourceId` で参照する
+- コンポレイヤーの本編上の配置は `timing.startTime` / `inPoint` / `outPoint` を使う
 - フッテージの `assets[].path` は実在する絶対パスを使う
 - カット編集は `timing.sourceIn` / `sourceOut` / `timelineIn` を使う
 - `sourceIn` と `sourceOut` は必ず対で指定し、同じ `sourceId` を複数レイヤーから参照してよい
@@ -104,7 +111,16 @@ ae-cli expression-errors
 - `align` は `horizontal` / `vertical`、`distribute` は `axis` と `mode: gaps | centers` を指定する
 - 基準は `comp` / `action-safe` / `title-safe` / `selection`。safe既定値は10% / 20%で、必要なら `marginPercent` で上書きする
 - layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない
+- 2D親子付きレイヤーはlayout対象にできる。親transformを含むvisual boundsから親座標系へ書き戻す
 - expression 内の effect 参照は表示名ではなく matchName を推奨（例: `ADBE Slider Control-0001`）
+- `easeIn` / `easeOut` は `[speed, influence]`。influenceは0.1〜100の百分率
+- EffectカラーはAEネイティブRGBA `[r,g,b,a]`（0〜1）を使い、パラメータは事前に`properties`で確認する
+
+## 再適用セマンティクス
+
+- 既存compにも `composition.width` / `height` / `duration` / `frameRate` / `pixelAspect` を宣言値として適用する
+- `--validate-only` の `compositionChanges` でcomp設定の変更予定を確認する
+- animationは既定で既存キーを削除してから再構築するため、人手キーを残す場合は明示的に `keyframeMode: merge` を選ぶ
 
 ## フッテージ音声の例
 

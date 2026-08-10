@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: Command-by-command After Effects editing via ae-cli, including footage cuts, audio changes, whole-layer text styling, and visual-bounds alignment or distribution. Best for surgical edits on existing human-made scenes and for debugging.
+description: Command-by-command After Effects editing via ae-cli, including comp-layer assembly, footage cuts, audio changes, whole-layer text styling, and visual-bounds alignment or distribution. Best for surgical edits on existing human-made scenes and for debugging.
 ---
 
 # aftereffects-cli
@@ -53,6 +53,7 @@ description: Command-by-command After Effects editing via ae-cli, including foot
 - comp:
   - `ae-cli create-comp ...`
   - `ae-cli set-active-comp ...`
+  - `ae-cli add-comp-layer (--comp-id <id> | --comp-name <name>) [--name <layer>] [--start-time <sec>] [--in-point <sec>] [--out-point <sec>]`
   - `ae-cli delete-comp ...`
 - レイヤー/プロパティ:
   - `ae-cli add-layer ...`
@@ -106,6 +107,7 @@ ae-cli layers
 ## 注意
 
 - フッテージのカットは `--source-in` と `--source-out` を対で指定し、配置先を `--timeline-in` で指定する。
+- プリコンポ配置は対象本編を `set-active-comp` で選び、`add-comp-layer` の `--comp-id` または一意な `--comp-name` でソースを指定する。
 - `import-footage` と `add-footage-layer --path` は同じファイルパスのProjectItemを再利用する。
 - `set-layer-audio` の `--level-db` は左右チャンネルへ同じ値を設定する。
 - `--fade-in` / `--fade-out` はレイヤーのin/outを基準にAudio Levelsキーフレームを作る。
