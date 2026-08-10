@@ -33,3 +33,4 @@ node_modules/
 # Scene JSON workspace (user-local artifacts)
 work/
 done/
+.bridge-token

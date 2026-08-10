@@ -19,6 +19,17 @@ Default bridge URL:
 - `AE_BRIDGE_URL` if set
 - otherwise `http://127.0.0.1:8080`
 
+## Local bridge authentication
+
+The After Effects panel creates a new authentication token each time it starts and stores it in
+`~/ae-agent-skills/.bridge-token` with owner-only permissions. `ae-cli` reads this file automatically,
+so no configuration is normally required.
+
+Use `AE_BRIDGE_TOKEN_FILE` to change the file location or `AE_BRIDGE_TOKEN` when the token must be
+provided directly. Do not place the token directly in command-line arguments.
+
+The bridge accepts authenticated CLI traffic from localhost and rejects browser-originated requests.
+
 ## Common commands
 
 ```bash

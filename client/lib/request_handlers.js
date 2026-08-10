@@ -1,19 +1,5 @@
 function applyCommonResponseHeaders(res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
-}
-
-function handleCorsPreflight(req, res) {
-    if (req.method !== 'OPTIONS') {
-        return false;
-    }
-    res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    });
-    res.end();
-    return true;
 }
 
 function handleBridgeDataCall(script, res, contextLabel) {
@@ -390,14 +376,11 @@ function handleNotFound(req, res) {
     log(`404 Not Found: ${req.method} ${req.url}`);
 }
 
-function routeRequest(req, res) {
+function routeRequest(req, res, bridgeToken) {
     log(`Request received: ${req.method} ${req.url}`);
 
-    if (handleCorsPreflight(req, res)) {
-        return;
-    }
-
     applyCommonResponseHeaders(res);
+    if (!authorizeBridgeRequest(req, res, bridgeToken)) return;
 
     const [pathname, queryString = ''] = req.url.split('?');
     const method = (req.method || 'GET').toUpperCase();

@@ -19,6 +19,16 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 - `AE_BRIDGE_URL` があればそれを使用
 - なければ `http://127.0.0.1:8080`
 
+## ローカルブリッジ認証
+
+After Effectsパネルは起動ごとに認証トークンを生成し、`~/ae-agent-skills/.bridge-token`へ
+所有者だけが読める権限で保存します。`ae-cli`はこのファイルを自動的に読み込むため、通常は設定不要です。
+
+保存先を変更する場合は`AE_BRIDGE_TOKEN_FILE`、トークンを直接供給する必要がある場合は
+`AE_BRIDGE_TOKEN`を使用できます。トークンをコマンドライン引数へ直接書かないでください。
+
+ブリッジはlocalhostからの認証済みCLI通信だけを受け付け、Webページ由来のリクエストを拒否します。
+
 ## よく使うコマンド
 
 ```bash

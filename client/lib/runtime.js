@@ -1,6 +1,8 @@
 let http = null;
 let path = null;
 let fs = null;
+let os = null;
+let crypto = null;
 let nodeReady = true;
 let nodeInitError = null;
 
@@ -8,6 +10,8 @@ try {
     http = require('http');
     path = require('path');
     fs = require('fs');
+    os = require('os');
+    crypto = require('crypto');
 } catch (e) {
     nodeReady = false;
     nodeInitError = e;

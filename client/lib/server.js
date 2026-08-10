@@ -11,8 +11,9 @@ function startBridgeServer() {
         return;
     }
 
+    const bridgeToken = createBridgeToken();
     const server = http.createServer((req, res) => {
-        routeRequest(req, res);
+        routeRequest(req, res, bridgeToken);
     });
 
     server.on('error', (err) => {
@@ -25,8 +26,15 @@ function startBridgeServer() {
     });
 
     server.listen(BRIDGE_PORT, '127.0.0.1', () => {
+        try {
+            writeBridgeTokenFile(bridgeToken);
+        } catch (err) {
+            log(`Failed to secure bridge token: ${err ? err.toString() : 'Unknown error'}`);
+            server.close();
+            return;
+        }
         log(`Server listening on http://127.0.0.1:${BRIDGE_PORT}`);
-        log('HTTPブリッジを起動しました。CLI から利用してください。');
+        log('認証済みHTTPブリッジを起動しました。CLI から利用してください。');
     });
 
     log('main.js loaded.');

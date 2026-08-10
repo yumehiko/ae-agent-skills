@@ -9,7 +9,7 @@ from typing import Any, Callable
 
 import requests
 
-from .client import AEBridgeError, AEClient
+from .client import AEBridgeError, AEClient, load_bridge_token
 
 
 def _print_json(data: Any) -> None:
@@ -533,9 +533,12 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
 
 
 def run_command(args: argparse.Namespace) -> int:
-    client = AEClient(base_url=args.base_url, timeout=args.timeout)
-
     try:
+        client = AEClient(
+            base_url=args.base_url,
+            timeout=args.timeout,
+            token_loader=load_bridge_token,
+        )
         handler = COMMAND_HANDLERS.get(args.command)
         if handler is None:
             print(f"ae-cli error: Unknown command: {args.command}", file=sys.stderr)

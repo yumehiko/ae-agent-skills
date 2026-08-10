@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import requests
 
-from ae_cli.client import AEBridgeError, AEClient
+from ae_cli.client import AEBridgeError, AEClient, load_bridge_token
 
 
 class DummyResponse:
@@ -18,6 +19,59 @@ class DummyResponse:
 
     def json(self) -> Any:
         return self._payload
+
+
+def test_load_bridge_token_prefers_environment(monkeypatch) -> None:
+    token = "ab" * 32
+    monkeypatch.setenv("AE_BRIDGE_TOKEN", token)
+    monkeypatch.setenv("AE_BRIDGE_TOKEN_FILE", "/does/not/exist")
+    assert load_bridge_token() == token
+
+
+def test_load_bridge_token_reads_configured_file(monkeypatch, tmp_path: Path) -> None:
+    token = "cd" * 32
+    token_path = tmp_path / "bridge-token"
+    token_path.write_text(f"{token}\n", encoding="utf-8")
+    monkeypatch.delenv("AE_BRIDGE_TOKEN", raising=False)
+    monkeypatch.setenv("AE_BRIDGE_TOKEN_FILE", str(token_path))
+    assert load_bridge_token() == token
+
+
+def test_load_bridge_token_rejects_invalid_value(monkeypatch) -> None:
+    monkeypatch.setenv("AE_BRIDGE_TOKEN", "not-a-token")
+    try:
+        load_bridge_token()
+    except AEBridgeError as exc:
+        assert "Invalid bridge token" in str(exc)
+    else:
+        raise AssertionError("AEBridgeError was not raised")
+
+
+def test_authenticated_client_sets_token_header() -> None:
+    token = "ef" * 32
+    client = AEClient(token=token)
+    assert client._requests.headers["X-AE-Bridge-Token"] == token
+
+
+def test_authenticated_client_loads_token_lazily(monkeypatch) -> None:
+    token = "12" * 32
+    calls: list[str] = []
+
+    class FakeSession:
+        def __init__(self) -> None:
+            self.headers: dict[str, str] = {}
+
+        def get(self, _url: str, timeout: float) -> DummyResponse:
+            assert timeout == 10.0
+            assert self.headers["X-AE-Bridge-Token"] == token
+            return DummyResponse({"status": "ok"})
+
+    monkeypatch.setattr(requests, "Session", FakeSession)
+    client = AEClient(token_loader=lambda: calls.append("loaded") or token)
+
+    assert calls == []
+    assert client.health() == {"status": "ok"}
+    assert calls == ["loaded"]
 
 
 def test_handle_response_returns_data_payload() -> None:

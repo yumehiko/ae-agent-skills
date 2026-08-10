@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
-from typing import Any, Dict, List
+import os
+from pathlib import Path
+from typing import Any, Callable, Dict, List
 
 import requests
 
@@ -15,6 +17,58 @@ class AEBridgeError(RuntimeError):
     def __init__(self, message: str, payload: Dict[str, Any] | None = None):
         super().__init__(message)
         self.payload = payload
+
+
+def _validate_bridge_token(token: str, source: str) -> str:
+    token = token.strip()
+    try:
+        token_bytes = bytes.fromhex(token)
+    except ValueError as exc:
+        raise AEBridgeError(f"Invalid bridge token in {source}.") from exc
+    if len(token_bytes) != 32:
+        raise AEBridgeError(f"Invalid bridge token in {source}.")
+    return token
+
+
+def load_bridge_token() -> str:
+    """Load the per-session bridge token from the environment or user workspace."""
+    env_token = os.environ.get("AE_BRIDGE_TOKEN")
+    if env_token:
+        return _validate_bridge_token(env_token, "AE_BRIDGE_TOKEN")
+
+    configured_path = os.environ.get("AE_BRIDGE_TOKEN_FILE")
+    token_path = (
+        Path(configured_path).expanduser()
+        if configured_path
+        else Path.home() / "ae-agent-skills" / ".bridge-token"
+    )
+    try:
+        token = token_path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise AEBridgeError(
+            f"Bridge token not found at {token_path}. "
+            "Open the ae-agent-skill panel in After Effects and try again."
+        ) from exc
+    return _validate_bridge_token(token, str(token_path))
+
+
+class _AuthenticatedRequests:
+    def __init__(self, token_loader: Callable[[], str]):
+        self._token_loader = token_loader
+        self._session: requests.Session | None = None
+
+    def _get_session(self) -> requests.Session:
+        if self._session is None:
+            session = requests.Session()
+            session.headers.update({"X-AE-Bridge-Token": self._token_loader()})
+            self._session = session
+        return self._session
+
+    def get(self, *args: Any, **kwargs: Any) -> requests.Response:
+        return self._get_session().get(*args, **kwargs)
+
+    def post(self, *args: Any, **kwargs: Any) -> requests.Response:
+        return self._get_session().post(*args, **kwargs)
 
 
 def _compact_json(value: Any, max_len: int = 120) -> str:
@@ -86,6 +140,17 @@ class AEClient:
 
     base_url: str = "http://127.0.0.1:8080"
     timeout: float = 10.0
+    token: str | None = None
+    token_loader: Callable[[], str] | None = None
+
+    def __post_init__(self) -> None:
+        self._requests = requests
+        if self.token:
+            session = requests.Session()
+            session.headers.update({"X-AE-Bridge-Token": self.token})
+            self._requests = session
+        elif self.token_loader:
+            self._requests = _AuthenticatedRequests(self.token_loader)
 
     @staticmethod
     def _layer_selector_payload(layer_id: int | None = None, layer_name: str | None = None) -> Dict[str, Any]:
@@ -126,23 +191,23 @@ class AEClient:
 
     def health(self) -> Dict[str, Any]:
         """Check bridge health endpoint."""
-        response = requests.get(self._url("/health"), timeout=self.timeout)
+        response = self._requests.get(self._url("/health"), timeout=self.timeout)
         response.raise_for_status()
         return response.json()
 
     def get_layers(self) -> List[Dict[str, Any]]:
         """Return the list of layers in the active composition."""
-        response = requests.get(self._url("/layers"), timeout=self.timeout)
+        response = self._requests.get(self._url("/layers"), timeout=self.timeout)
         return self._handle_response(response)
 
     def list_comps(self) -> List[Dict[str, Any]]:
         """Return the list of compositions in the current project."""
-        response = requests.get(self._url("/comps"), timeout=self.timeout)
+        response = self._requests.get(self._url("/comps"), timeout=self.timeout)
         return self._handle_response(response)
 
     def list_footage(self) -> List[Dict[str, Any]]:
         """Return file-based footage items in the current project."""
-        response = requests.get(self._url("/footage"), timeout=self.timeout)
+        response = self._requests.get(self._url("/footage"), timeout=self.timeout)
         return self._handle_response(response)
 
     def import_footage(self, path: str, name: str | None = None) -> Dict[str, Any]:
@@ -150,7 +215,7 @@ class AEClient:
         payload: Dict[str, Any] = {"path": path}
         if name is not None:
             payload["name"] = name
-        response = requests.post(
+        response = self._requests.post(
             self._url("/footage"),
             json=payload,
             timeout=self.timeout,
@@ -189,7 +254,7 @@ class AEClient:
             payload["sourceOut"] = source_out
         if timeline_in is not None:
             payload["timelineIn"] = timeline_in
-        response = requests.post(
+        response = self._requests.post(
             self._url("/footage-layer"),
             json=payload,
             timeout=self.timeout,
@@ -209,7 +274,7 @@ class AEClient:
         payload["sourceIn"] = source_in
         payload["sourceOut"] = source_out
         payload["timelineIn"] = timeline_in
-        response = requests.post(
+        response = self._requests.post(
             self._url("/footage-cut"),
             json=payload,
             timeout=self.timeout,
@@ -223,7 +288,7 @@ class AEClient:
     ) -> Dict[str, Any]:
         """Return mute state, current levels, and Audio Levels keyframes for a layer."""
         params = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
-        response = requests.get(
+        response = self._requests.get(
             self._url("/layer-audio"),
             params=params,
             timeout=self.timeout,
@@ -251,7 +316,7 @@ class AEClient:
             payload["fadeOut"] = fade_out
         if len(payload) == 1:
             raise ValueError("Provide at least one audio setting.")
-        response = requests.post(
+        response = self._requests.post(
             self._url("/layer-audio"),
             json=payload,
             timeout=self.timeout,
@@ -263,7 +328,7 @@ class AEClient:
         params: Dict[str, Any] = {"limit": limit}
         if query is not None:
             params["query"] = query
-        response = requests.get(self._url("/fonts"), params=params, timeout=self.timeout)
+        response = self._requests.get(self._url("/fonts"), params=params, timeout=self.timeout)
         return self._handle_response(response)
 
     def get_text_style(
@@ -273,7 +338,7 @@ class AEClient:
     ) -> Dict[str, Any]:
         """Return the whole-layer text style for a text layer."""
         params = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
-        response = requests.get(self._url("/text-style"), params=params, timeout=self.timeout)
+        response = self._requests.get(self._url("/text-style"), params=params, timeout=self.timeout)
         return self._handle_response(response)
 
     def set_text_style(
@@ -287,7 +352,7 @@ class AEClient:
         payload.update({key: value for key, value in style.items() if value is not None})
         if len(payload) == 1:
             raise ValueError("Provide at least one text style setting.")
-        response = requests.post(self._url("/text-style"), json=payload, timeout=self.timeout)
+        response = self._requests.post(self._url("/text-style"), json=payload, timeout=self.timeout)
         return self._handle_response(response)
 
     @staticmethod
@@ -324,7 +389,7 @@ class AEClient:
             payload["offset"] = offset
         if margin_percent is not None:
             payload["marginPercent"] = margin_percent
-        response = requests.post(self._url("/layout-align"), json=payload, timeout=self.timeout)
+        response = self._requests.post(self._url("/layout-align"), json=payload, timeout=self.timeout)
         return self._handle_response(response)
 
     def distribute_layers(
@@ -342,7 +407,7 @@ class AEClient:
         payload.update({"axis": axis, "mode": mode, "reference": reference, "time": time})
         if margin_percent is not None:
             payload["marginPercent"] = margin_percent
-        response = requests.post(self._url("/layout-distribute"), json=payload, timeout=self.timeout)
+        response = self._requests.post(self._url("/layout-distribute"), json=payload, timeout=self.timeout)
         return self._handle_response(response)
 
     def create_comp(
@@ -355,7 +420,7 @@ class AEClient:
         pixel_aspect: float = 1.0,
     ) -> Dict[str, Any]:
         """Create a composition in the current project."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/comps"),
             json={
                 "name": name,
@@ -376,7 +441,7 @@ class AEClient:
             payload["compId"] = comp_id
         if comp_name is not None:
             payload["compName"] = comp_name
-        response = requests.post(
+        response = self._requests.post(
             self._url("/active-comp"),
             json=payload,
             timeout=self.timeout,
@@ -385,12 +450,12 @@ class AEClient:
 
     def get_selected_properties(self) -> List[Dict[str, Any]]:
         """Return the currently selected properties across layers."""
-        response = requests.get(self._url("/selected-properties"), timeout=self.timeout)
+        response = self._requests.get(self._url("/selected-properties"), timeout=self.timeout)
         return self._handle_response(response)
 
     def get_expression_errors(self) -> Dict[str, Any]:
         """Return expression error diagnostics for the active composition."""
-        response = requests.get(self._url("/expression-errors"), timeout=self.timeout)
+        response = self._requests.get(self._url("/expression-errors"), timeout=self.timeout)
         return self._handle_response(response)
 
     def get_properties(
@@ -425,7 +490,7 @@ class AEClient:
         if time is not None:
             params.append(("time", time))
 
-        response = requests.get(
+        response = self._requests.get(
             self._url("/properties"),
             params=params,
             timeout=self.timeout,
@@ -443,7 +508,7 @@ class AEClient:
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
         payload["propertyPath"] = property_path
         payload["expression"] = expression
-        response = requests.post(
+        response = self._requests.post(
             self._url("/expression"),
             json=payload,
             timeout=self.timeout,
@@ -461,7 +526,7 @@ class AEClient:
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
         payload["propertyPath"] = property_path
         payload["value"] = value
-        response = requests.post(
+        response = self._requests.post(
             self._url("/property-value"),
             json=payload,
             timeout=self.timeout,
@@ -494,7 +559,7 @@ class AEClient:
         if ease_out is not None:
             payload["easeOut"] = ease_out
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/keyframes"),
             json=payload,
             timeout=self.timeout,
@@ -513,7 +578,7 @@ class AEClient:
         payload["propertyPath"] = property_path
         if essential_name is not None:
             payload["essentialName"] = essential_name
-        response = requests.post(
+        response = self._requests.post(
             self._url("/essential-property"),
             json=payload,
             timeout=self.timeout,
@@ -533,7 +598,7 @@ class AEClient:
         if effect_name:
             payload["effectName"] = effect_name
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/effects"),
             json=payload,
             timeout=self.timeout,
@@ -574,7 +639,7 @@ class AEClient:
         if end_opacity is not None:
             payload["endOpacity"] = end_opacity
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/shape-repeater"),
             json=payload,
             timeout=self.timeout,
@@ -636,7 +701,7 @@ class AEClient:
         if shape_roundness is not None:
             payload["shapeRoundness"] = shape_roundness
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/layers"),
             json=payload,
             timeout=self.timeout,
@@ -657,7 +722,7 @@ class AEClient:
         if out_point is not None:
             payload["outPoint"] = out_point
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/layer-in-out"),
             json=payload,
             timeout=self.timeout,
@@ -673,7 +738,7 @@ class AEClient:
         """Move layer timing by delta seconds."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
         payload["delta"] = delta
-        response = requests.post(
+        response = self._requests.post(
             self._url("/layer-time"),
             json=payload,
             timeout=self.timeout,
@@ -682,7 +747,7 @@ class AEClient:
 
     def set_cti(self, time: float) -> Dict[str, Any]:
         """Set composition current time indicator."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/cti"),
             json={"time": time},
             timeout=self.timeout,
@@ -691,7 +756,7 @@ class AEClient:
 
     def set_work_area(self, start: float, duration: float) -> Dict[str, Any]:
         """Set composition work area start and duration."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/work-area"),
             json={
                 "start": start,
@@ -706,7 +771,7 @@ class AEClient:
         payload: Dict[str, Any] = {"childLayerId": child_layer_id}
         if parent_layer_id is not None:
             payload["parentLayerId"] = parent_layer_id
-        response = requests.post(
+        response = self._requests.post(
             self._url("/layer-parent"),
             json=payload,
             timeout=self.timeout,
@@ -720,7 +785,7 @@ class AEClient:
         move_all_attributes: bool = False,
     ) -> Dict[str, Any]:
         """Precompose selected layers."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/precompose"),
             json={
                 "layerIds": layer_ids,
@@ -733,7 +798,7 @@ class AEClient:
 
     def duplicate_layer(self, layer_id: int) -> Dict[str, Any]:
         """Duplicate a layer."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/duplicate-layer"),
             json={"layerId": layer_id},
             timeout=self.timeout,
@@ -759,7 +824,7 @@ class AEClient:
         if to_bottom:
             payload["toBottom"] = True
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/layer-order"),
             json=payload,
             timeout=self.timeout,
@@ -768,7 +833,7 @@ class AEClient:
 
     def delete_layer(self, layer_id: int) -> Dict[str, Any]:
         """Delete a layer in the active composition."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/delete-layer"),
             json={"layerId": layer_id},
             timeout=self.timeout,
@@ -783,7 +848,7 @@ class AEClient:
         if comp_name is not None:
             payload["compName"] = comp_name
 
-        response = requests.post(
+        response = self._requests.post(
             self._url("/delete-comp"),
             json=payload,
             timeout=self.timeout,
@@ -797,7 +862,7 @@ class AEClient:
         mode: str = "merge",
     ) -> Dict[str, Any]:
         """Apply a declarative scene JSON payload."""
-        response = requests.post(
+        response = self._requests.post(
             self._url("/scene"),
             json={
                 "scene": scene,

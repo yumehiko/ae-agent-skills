@@ -186,6 +186,10 @@ test('plugin manifest packages the canonical skills and matches the npm version'
   );
   assert.equal(pkg.files.includes('.codex-plugin'), true);
   assert.equal(pkg.files.includes('skills'), true);
+  assert.equal(pkg.files.includes('docs'), false);
+  assert.equal(pkg.files.includes('docs/cli.ja.md'), true);
+  assert.equal(pkg.files.includes('docs/cli.md'), true);
+  assert.equal(pkg.files.includes('scripts/signing'), false);
 });
 
 test('setupAgentWorkspace installs the footage editing example', () => {

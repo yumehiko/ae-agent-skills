@@ -24,8 +24,8 @@
     "templates",
     "schemas",
     "examples",
-    "docs",
-    "scripts/signing",
+    "docs/cli.ja.md",
+    "docs/cli.md",
     "CSXS",
     "client",
     "host"
