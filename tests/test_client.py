@@ -281,15 +281,21 @@ def test_add_footage_layer_posts_cut_payload(monkeypatch) -> None:
 
 def test_add_comp_layer_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
+    token = "34" * 32
 
-    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
-        captured["url"] = url
-        captured["json"] = json
-        captured["timeout"] = timeout
-        return DummyResponse({"status": "success", "data": {"layerId": 3}})
+    class FakeSession:
+        def __init__(self) -> None:
+            self.headers: dict[str, str] = {}
 
-    monkeypatch.setattr(requests, "post", fake_post)
-    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+        def post(self, url: str, json: Any, timeout: float) -> DummyResponse:
+            captured["url"] = url
+            captured["json"] = json
+            captured["timeout"] = timeout
+            captured["token"] = self.headers.get("X-AE-Bridge-Token")
+            return DummyResponse({"status": "success", "data": {"layerId": 3}})
+
+    monkeypatch.setattr(requests, "Session", FakeSession)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0, token=token)
     client.add_comp_layer(
         comp_name="TX01_Title",
         name="Title 01",
@@ -300,6 +306,7 @@ def test_add_comp_layer_posts_expected_payload(monkeypatch) -> None:
 
     assert captured["url"] == "http://127.0.0.1:8080/comp-layer"
     assert captured["timeout"] == 5.0
+    assert captured["token"] == token
     assert captured["json"] == {
         "compName": "TX01_Title",
         "name": "Title 01",

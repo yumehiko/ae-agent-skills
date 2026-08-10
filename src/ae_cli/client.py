@@ -288,7 +288,7 @@ class AEClient:
             payload["inPoint"] = in_point
         if out_point is not None:
             payload["outPoint"] = out_point
-        response = requests.post(
+        response = self._requests.post(
             self._url("/comp-layer"),
             json=payload,
             timeout=self.timeout,
