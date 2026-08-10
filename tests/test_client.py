@@ -168,11 +168,34 @@ def test_get_properties_supports_layer_name(monkeypatch) -> None:
     assert captured["params"] == [("layerName", "Control")]
 
 
+def test_get_properties_supports_comp_and_keyframe_options(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        captured["params"] = params
+        return DummyResponse({"status": "success", "data": []})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.get_properties(
+        layer_name="Control",
+        comp_name="TX01_Title",
+        include_keyframes=True,
+    )
+    assert captured["params"] == [
+        ("layerName", "Control"),
+        ("includeKeyframes", "true"),
+        ("compName", "TX01_Title"),
+    ]
+
+
 def test_get_expression_errors_calls_expected_endpoint(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
-    def fake_get(url: str, timeout: float) -> DummyResponse:
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
         captured["url"] = url
+        captured["params"] = params
         captured["timeout"] = timeout
         return DummyResponse({"status": "success", "data": {"count": 0, "issues": []}})
 
@@ -182,7 +205,78 @@ def test_get_expression_errors_calls_expected_endpoint(monkeypatch) -> None:
     client.get_expression_errors()
 
     assert captured["url"] == "http://127.0.0.1:8080/expression-errors"
+    assert captured["params"] == {}
     assert captured["timeout"] == 5.0
+
+
+def test_query_commands_support_comp_selectors_and_bounds(monkeypatch) -> None:
+    calls: list[tuple[str, Any]] = []
+
+    def fake_get(url: str, params: Any, timeout: float) -> DummyResponse:
+        calls.append((url, params))
+        return DummyResponse({"status": "success", "data": {}})
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+
+    client.get_layers(comp_id=17)
+    client.get_expression_errors(comp_name="TX01_Title")
+    client.get_layer_bounds(layer_name="Title", comp_id=17, time=1.25)
+
+    assert calls == [
+        ("http://127.0.0.1:8080/layers", {"compId": 17}),
+        ("http://127.0.0.1:8080/expression-errors", {"compName": "TX01_Title"}),
+        (
+            "http://127.0.0.1:8080/layer-bounds",
+            {"layerName": "Title", "compId": 17, "time": 1.25},
+        ),
+    ]
+
+
+def test_query_commands_reject_multiple_comp_selectors() -> None:
+    client = AEClient()
+    try:
+        client.get_layers(comp_id=17, comp_name="TX01_Title")
+    except ValueError as exc:
+        assert "at most one" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+
+def test_create_snapshot_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        captured["timeout"] = timeout
+        return DummyResponse(
+            {
+                "status": "success",
+                "data": {"outPath": "/tmp/frame.png", "width": 540, "height": 960},
+            }
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+
+    client.create_snapshot(
+        comp_name="TX01_Title",
+        time=1.25,
+        scale=0.5,
+        out_path="/tmp/frame.png",
+    )
+
+    assert captured == {
+        "url": "http://127.0.0.1:8080/snapshot",
+        "json": {
+            "compName": "TX01_Title",
+            "time": 1.25,
+            "scale": 0.5,
+            "outPath": "/tmp/frame.png",
+        },
+        "timeout": 5.0,
+    }
 
 
 def test_create_comp_posts_expected_payload(monkeypatch) -> None:

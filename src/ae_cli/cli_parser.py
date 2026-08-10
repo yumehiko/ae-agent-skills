@@ -19,6 +19,18 @@ def _add_layer_list_selector(parser: argparse.ArgumentParser) -> None:
     selector_group.add_argument("--layer-name", dest="layer_names", action="append")
 
 
+def _add_optional_comp_selector(parser: argparse.ArgumentParser) -> None:
+    selector_group = parser.add_mutually_exclusive_group()
+    selector_group.add_argument("--comp-id", type=int)
+    selector_group.add_argument("--comp-name")
+
+
+def _add_required_comp_selector(parser: argparse.ArgumentParser) -> None:
+    selector_group = parser.add_mutually_exclusive_group(required=True)
+    selector_group.add_argument("--comp-id", type=int)
+    selector_group.add_argument("--comp-name")
+
+
 def _add_layout_reference_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--reference",
@@ -49,11 +61,16 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("health", help="Check bridge health")
-    subparsers.add_parser("layers", help="Get active composition layers")
+    layers_parser = subparsers.add_parser("layers", help="Get layers without changing the active comp")
+    _add_optional_comp_selector(layers_parser)
     subparsers.add_parser("list-comps", help="List compositions in the current project")
     subparsers.add_parser("list-footage", help="List file-based footage items in the current project")
     subparsers.add_parser("selected-properties", help="Get currently selected properties")
-    subparsers.add_parser("expression-errors", help="Get expression errors in the active composition")
+    expression_errors_parser = subparsers.add_parser(
+        "expression-errors",
+        help="Get expression errors without changing the active comp",
+    )
+    _add_optional_comp_selector(expression_errors_parser)
 
     create_comp_parser = subparsers.add_parser("create-comp", help="Create a composition")
     create_comp_parser.add_argument("--name", required=True)
@@ -218,11 +235,35 @@ def build_parser() -> argparse.ArgumentParser:
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     _add_layer_selector(properties_parser)
+    _add_optional_comp_selector(properties_parser)
     properties_parser.add_argument("--include-group", action="append", default=[])
     properties_parser.add_argument("--exclude-group", action="append", default=[])
     properties_parser.add_argument("--max-depth", type=int)
     properties_parser.add_argument("--include-group-children", action="store_true")
+    properties_parser.add_argument("--include-keyframes", action="store_true")
     properties_parser.add_argument("--time", type=float, help="Evaluate properties at the specified comp time")
+
+    bounds_parser = subparsers.add_parser(
+        "bounds",
+        help="Get visual layer bounds in composition coordinates",
+    )
+    _add_layer_selector(bounds_parser)
+    _add_optional_comp_selector(bounds_parser)
+    bounds_parser.add_argument("--time", type=float, default=0.0)
+
+    snapshot_parser = subparsers.add_parser(
+        "snapshot",
+        help="Render one composition frame to a new PNG file",
+    )
+    _add_required_comp_selector(snapshot_parser)
+    snapshot_parser.add_argument("--time", type=float, default=0.0)
+    snapshot_parser.add_argument("--out", required=True, help="Output PNG path")
+    snapshot_parser.add_argument(
+        "--scale",
+        type=float,
+        default=1.0,
+        help="Output scale greater than 0 and at most 1 (default: 1)",
+    )
 
     expression_parser = subparsers.add_parser("set-expression", help="Set expression on a property")
     _add_layer_selector(expression_parser)

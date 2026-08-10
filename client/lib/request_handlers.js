@@ -7,6 +7,16 @@ function handleBridgeDataCall(script, res, contextLabel) {
     evalHostScript(script, (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
+            if (parsedResult
+                && typeof parsedResult.status === 'string'
+                && parsedResult.status.toLowerCase() === 'error') {
+                sendJson(res, 400, {
+                    status: 'error',
+                    message: parsedResult.message || `${contextLabel} failed`,
+                });
+                log(`${contextLabel} failed: ${parsedResult.message || 'Unknown error'}`);
+                return;
+            }
             sendJson(res, 200, { status: 'success', data: parsedResult });
             log(`${contextLabel} successful.`);
         } catch (e) {
@@ -61,13 +71,59 @@ function normalizeLayerSelector(layerIdRaw, layerNameRaw) {
     };
 }
 
+function normalizeOptionalCompQuerySelector(searchParams) {
+    const compIdParam = searchParams.get('compId');
+    const compNameParam = searchParams.get('compName');
+    const hasCompId = compIdParam !== null && compIdParam !== '';
+    const hasCompName = compNameParam !== null && compNameParam.trim() !== '';
+    if (hasCompId && hasCompName) {
+        return { ok: false, error: 'Provide at most one of compId or compName' };
+    }
+    if (hasCompId) {
+        const compId = Number(compIdParam);
+        if (!Number.isInteger(compId) || compId <= 0) {
+            return { ok: false, error: 'compId must be a positive integer' };
+        }
+        return {
+            ok: true,
+            compId,
+            compName: null,
+            compIdLiteral: String(compId),
+            compNameLiteral: 'null',
+        };
+    }
+    if (hasCompName) {
+        const compName = compNameParam.trim();
+        return {
+            ok: true,
+            compId: null,
+            compName,
+            compIdLiteral: 'null',
+            compNameLiteral: toExtendScriptStringLiteral(compName),
+        };
+    }
+    return {
+        ok: true,
+        compId: null,
+        compName: null,
+        compIdLiteral: 'null',
+        compNameLiteral: 'null',
+    };
+}
+
 function handleHealth(res) {
     sendJson(res, 200, { status: 'ok' });
     log('Health check responded with ok.');
 }
 
-function handleGetLayers(res) {
-    handleBridgeDataCall('getLayers()', res, 'getLayers()');
+function handleGetLayers(searchParams, res) {
+    const compSelector = normalizeOptionalCompQuerySelector(searchParams);
+    if (!compSelector.ok) {
+        sendBadRequest(res, compSelector.error);
+        return;
+    }
+    const script = `getLayers(${compSelector.compIdLiteral}, ${compSelector.compNameLiteral})`;
+    handleBridgeDataCall(script, res, 'getLayers()');
 }
 
 function handleGetComps(res) {
@@ -78,8 +134,14 @@ function handleGetSelectedProperties(res) {
     handleBridgeDataCall('getSelectedProperties()', res, 'getSelectedProperties()');
 }
 
-function handleGetExpressionErrors(res) {
-    handleBridgeDataCall('getExpressionErrors()', res, 'getExpressionErrors()');
+function handleGetExpressionErrors(searchParams, res) {
+    const compSelector = normalizeOptionalCompQuerySelector(searchParams);
+    if (!compSelector.ok) {
+        sendBadRequest(res, compSelector.error);
+        return;
+    }
+    const script = `getExpressionErrors(${compSelector.compIdLiteral}, ${compSelector.compNameLiteral})`;
+    handleBridgeDataCall(script, res, 'getExpressionErrors()');
 }
 
 function handleCreateComp(req, res) {
@@ -174,7 +236,14 @@ function handleGetProperties(searchParams, res) {
     const excludeGroups = searchParams.getAll('excludeGroup').filter(Boolean);
     const maxDepthParam = searchParams.get('maxDepth');
     const includeGroupChildrenParam = searchParams.get('includeGroupChildren');
+    const includeKeyframesParam = searchParams.get('includeKeyframes');
     const timeParam = searchParams.get('time');
+    const compSelector = normalizeOptionalCompQuerySelector(searchParams);
+    if (!compSelector.ok) {
+        sendBadRequest(res, compSelector.error);
+        log('getProperties failed: invalid comp selector');
+        return;
+    }
 
     let maxDepth;
     if (maxDepthParam !== null) {
@@ -195,6 +264,15 @@ function handleGetProperties(searchParams, res) {
         }
         includeGroupChildren = includeGroupChildrenParam === 'true';
     }
+    let includeKeyframes;
+    if (includeKeyframesParam !== null) {
+        if (!['true', 'false'].includes(includeKeyframesParam)) {
+            sendBadRequest(res, 'includeKeyframes must be true or false');
+            log('getProperties failed: invalid includeKeyframes');
+            return;
+        }
+        includeKeyframes = includeKeyframesParam === 'true';
+    }
     let time;
     if (timeParam !== null) {
         const parsedTime = Number(timeParam);
@@ -212,7 +290,10 @@ function handleGetProperties(searchParams, res) {
     if (excludeGroups.length > 0) options.excludeGroups = excludeGroups;
     if (maxDepth !== undefined) options.maxDepth = maxDepth;
     if (includeGroupChildren !== undefined) options.includeGroupChildren = includeGroupChildren;
+    if (includeKeyframes !== undefined) options.includeKeyframes = includeKeyframes;
     if (time !== undefined) options.time = time;
+    if (compSelector.compId !== null) options.compId = compSelector.compId;
+    if (compSelector.compName !== null) options.compName = compSelector.compName;
 
     const optionsLiteral = Object.keys(options).length > 0
         ? toExtendScriptStringLiteral(JSON.stringify(options))
@@ -222,6 +303,47 @@ function handleGetProperties(searchParams, res) {
     const script = `getProperties(${layerIdLiteral}, ${optionsLiteral})`;
 
     handleBridgeDataCall(script, res, `getProperties(${layerIdLiteral}, options=${optionsLabel})`);
+}
+
+function handleGetLayerBounds(searchParams, res) {
+    const layerIdParam = searchParams.get('layerId');
+    const layerNameParam = searchParams.get('layerName');
+    const hasLayerId = layerIdParam !== null && layerIdParam !== '';
+    const hasLayerName = layerNameParam !== null && layerNameParam.trim() !== '';
+    if ((hasLayerId && hasLayerName) || (!hasLayerId && !hasLayerName)) {
+        sendBadRequest(res, 'Provide exactly one of layerId or layerName');
+        return;
+    }
+    let layerId = null;
+    if (hasLayerId) {
+        layerId = Number(layerIdParam);
+        if (!Number.isInteger(layerId) || layerId <= 0) {
+            sendBadRequest(res, 'layerId must be a positive integer');
+            return;
+        }
+    }
+    const compSelector = normalizeOptionalCompQuerySelector(searchParams);
+    if (!compSelector.ok) {
+        sendBadRequest(res, compSelector.error);
+        return;
+    }
+    const timeParam = searchParams.get('time');
+    let time = 0.0;
+    if (timeParam !== null) {
+        time = Number(timeParam);
+        if (!isFinite(time)) {
+            sendBadRequest(res, 'time must be a finite number');
+            return;
+        }
+    }
+    const options = { time };
+    if (hasLayerName) options.layerName = layerNameParam.trim();
+    if (compSelector.compId !== null) options.compId = compSelector.compId;
+    if (compSelector.compName !== null) options.compName = compSelector.compName;
+    const optionsLiteral = toExtendScriptStringLiteral(JSON.stringify(options));
+    const layerIdLiteral = layerId === null ? 'null' : String(layerId);
+    const script = `getLayerBounds(${layerIdLiteral}, ${optionsLiteral})`;
+    handleBridgeDataCall(script, res, 'getLayerBounds()');
 }
 
 function handleSetExpression(req, res) {
@@ -391,7 +513,7 @@ function routeRequest(req, res, bridgeToken) {
         return;
     }
     if (pathname === '/layers' && method === 'GET') {
-        handleGetLayers(res);
+        handleGetLayers(searchParams, res);
         return;
     }
     if (pathname === '/comps' && method === 'GET') {
@@ -399,6 +521,10 @@ function routeRequest(req, res, bridgeToken) {
         return;
     }
     if (typeof routeCompRequest === 'function' && routeCompRequest(pathname, method, req, res)) {
+        return;
+    }
+    if (typeof routeSnapshotRequest === 'function'
+        && routeSnapshotRequest(pathname, method, req, res)) {
         return;
     }
     if (typeof routeFootageRequest === 'function' && routeFootageRequest(pathname, method, req, res)) {
@@ -434,12 +560,16 @@ function routeRequest(req, res, bridgeToken) {
         handleGetProperties(searchParams, res);
         return;
     }
+    if (pathname === '/layer-bounds' && method === 'GET') {
+        handleGetLayerBounds(searchParams, res);
+        return;
+    }
     if (pathname === '/selected-properties' && method === 'GET') {
         handleGetSelectedProperties(res);
         return;
     }
     if (pathname === '/expression-errors' && method === 'GET') {
-        handleGetExpressionErrors(res);
+        handleGetExpressionErrors(searchParams, res);
         return;
     }
     if (pathname === '/expression' && method === 'POST') {

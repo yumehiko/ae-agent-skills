@@ -1379,7 +1379,46 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     };
 }
 
+function aeGetActiveSceneComp() {
+    if (app.project && app.project.activeItem instanceof CompItem) {
+        return app.project.activeItem;
+    }
+    return null;
+}
+
+function aeActivateSceneCompForMutation(comp, compSpec, previousActiveComp) {
+    var state = {
+        previousActiveComp: previousActiveComp,
+        shouldRestore: compSpec.setActive === false
+            && previousActiveComp
+            && previousActiveComp !== comp,
+        restored: false
+    };
+    if (app.project.activeItem !== comp) {
+        aeInvokeMutation(setActiveComp, [comp.id, null], "setActiveComp(apply target)");
+    }
+    return state;
+}
+
+function aeRestoreSceneActiveComp(state) {
+    if (!state || state.restored || !state.shouldRestore || !state.previousActiveComp) {
+        return;
+    }
+    state.restored = true;
+    try {
+        aeInvokeMutation(
+            setActiveComp,
+            [state.previousActiveComp.id, null],
+            "setActiveComp(restore)"
+        );
+    } catch (eRestoreActiveComp) {
+        log("applyScene() could not restore the previous active comp: " + eRestoreActiveComp.toString());
+    }
+}
+
 function applyScene(sceneJSON, optionsJSON) {
+    var activeCompState = null;
+
     try {
         ensureJSON();
 
@@ -1478,7 +1517,16 @@ function applyScene(sceneJSON, optionsJSON) {
                 };
             }
         } else {
+            var previousActiveComp = aeGetActiveSceneComp();
             comp = aeResolveSceneComp(scene, true);
+            // Several legacy mutation helpers resolve layers from activeItem. Keep
+            // the declarative target active while applying, then restore the
+            // previous viewer when composition.setActive is false.
+            activeCompState = aeActivateSceneCompForMutation(
+                comp,
+                compSpec,
+                previousActiveComp
+            );
         }
         if (comp) {
             compositionChanges = aePlanCompositionSettingChanges(comp, compSpec);
@@ -1647,6 +1695,8 @@ function applyScene(sceneJSON, optionsJSON) {
             frameRate: comp.frameRate
         };
 
+        aeRestoreSceneActiveComp(activeCompState);
+
         return encodePayload({
             status: "success",
             mode: "apply",
@@ -1672,6 +1722,7 @@ function applyScene(sceneJSON, optionsJSON) {
             appliedLayers: appliedLayers
         });
     } catch (e) {
+        aeRestoreSceneActiveComp(activeCompState);
         log("applyScene() threw: " + e.toString());
         return encodePayload({ status: "error", message: e.toString() });
     }

@@ -1,11 +1,99 @@
-function getLayers() {
+function aeResolveQueryComp(compId, compName) {
+    var hasId = compId !== null && compId !== undefined && compId !== "";
+    var hasName = compName !== null && compName !== undefined && String(compName).length > 0;
+    if (hasId || hasName) {
+        return aeResolveCompByIdOrName(hasId ? compId : null, hasName ? compName : null);
+    }
+    var activeComp = app.project ? app.project.activeItem : null;
+    if (!activeComp || !(activeComp instanceof CompItem)) {
+        return { item: null, error: "Active composition not found." };
+    }
+    return { item: activeComp, error: null };
+}
+
+function aeQueryIsNullLayer(layer) {
+    try {
+        return layer.nullLayer === true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function aeQueryValueToJSON(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+    if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+        return value;
+    }
+    if (value instanceof Array) {
+        var values = [];
+        for (var i = 0; i < value.length; i++) {
+            values.push(aeQueryValueToJSON(value[i]));
+        }
+        return values;
+    }
+    try {
+        return value.toString();
+    } catch (e) {
+        return "";
+    }
+}
+
+function aeQueryInterpolationName(interpolationType) {
+    try {
+        if (interpolationType === KeyframeInterpolationType.LINEAR) return "linear";
+        if (interpolationType === KeyframeInterpolationType.BEZIER) return "bezier";
+        if (interpolationType === KeyframeInterpolationType.HOLD) return "hold";
+    } catch (e) {}
+    return "unknown";
+}
+
+function aeQueryTemporalEase(eases) {
+    if (!eases || !(eases instanceof Array) || eases.length === 0) {
+        return null;
+    }
+    var serialized = [];
+    for (var i = 0; i < eases.length; i++) {
+        serialized.push([Number(eases[i].speed), Number(eases[i].influence)]);
+    }
+    return serialized.length === 1 ? serialized[0] : serialized;
+}
+
+function aeQueryPropertyKeyframes(prop) {
+    var keyframes = [];
+    var numKeys = 0;
+    try {
+        numKeys = Number(prop.numKeys) || 0;
+    } catch (eNumKeys) {}
+    for (var i = 1; i <= numKeys; i++) {
+        var keyframe = {
+            index: i,
+            time: Number(prop.keyTime(i)),
+            value: aeQueryValueToJSON(prop.keyValue(i)),
+            inInterpolation: aeQueryInterpolationName(prop.keyInInterpolationType(i)),
+            outInterpolation: aeQueryInterpolationName(prop.keyOutInterpolationType(i))
+        };
+        try {
+            keyframe.inTemporalEase = aeQueryTemporalEase(prop.keyInTemporalEase(i));
+        } catch (eInEase) {}
+        try {
+            keyframe.outTemporalEase = aeQueryTemporalEase(prop.keyOutTemporalEase(i));
+        } catch (eOutEase) {}
+        keyframes.push(keyframe);
+    }
+    return keyframes;
+}
+
+function getLayers(compId, compName) {
     try {
         ensureJSON();
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            log("getLayers(): Active composition not found.");
-            return encodePayload({ status: "error", message: "Active composition not found." });
+        var resolvedComp = aeResolveQueryComp(compId, compName);
+        if (resolvedComp.error) {
+            log("getLayers(): " + resolvedComp.error);
+            return encodePayload({ status: "error", message: resolvedComp.error });
         }
+        var comp = resolvedComp.item;
 
         var layers = [];
         for (var i = 1; i <= comp.numLayers; i++) {
@@ -15,6 +103,7 @@ function getLayers() {
                 layerUid: aeTryGetLayerUid(layer),
                 name: layer.name,
                 type: getLayerTypeName(layer),
+                isNull: aeQueryIsNullLayer(layer),
                 startTime: layer.startTime,
                 inPoint: layer.inPoint,
                 outPoint: layer.outPoint
@@ -80,12 +169,6 @@ function listComps() {
 function getProperties(layerId, optionsJSON) {
     try {
         ensureJSON();
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            log("getProperties(): Active composition not found.");
-            return encodePayload({ status: "Error", message: "Active composition not found." });
-        }
-
         var options = {};
         if (optionsJSON && optionsJSON !== "null") {
             try {
@@ -95,6 +178,12 @@ function getProperties(layerId, optionsJSON) {
                 options = {};
             }
         }
+        var resolvedComp = aeResolveQueryComp(options.compId, options.compName);
+        if (resolvedComp.error) {
+            log("getProperties(): " + resolvedComp.error);
+            return encodePayload({ status: "error", message: resolvedComp.error });
+        }
+        var comp = resolvedComp.item;
 
         function normalizeStringArray(value) {
             if (!value) {
@@ -131,6 +220,7 @@ function getProperties(layerId, optionsJSON) {
         var excludeGroups = normalizeStringArray(options.excludeGroups);
         var maxDepth = parseMaxDepth(options.maxDepth);
         var includeGroupChildren = options.includeGroupChildren === true;
+        var includeKeyframes = options.includeKeyframes === true;
         var evaluationTime = null;
         if (options.time !== null && options.time !== undefined) {
             evaluationTime = Number(options.time);
@@ -198,12 +288,16 @@ function getProperties(layerId, optionsJSON) {
                     try {
                         hasExpression = prop.expressionEnabled;
                     } catch (e) {}
-                    properties.push({
+                    var propertySummary = {
                         name: prop.name,
                         path: currentPath,
                         value: aePropertyValueToString(prop),
                         hasExpression: hasExpression
-                    });
+                    };
+                    if (includeKeyframes) {
+                        propertySummary.keyframes = aeQueryPropertyKeyframes(prop);
+                    }
+                    properties.push(propertySummary);
                 }
 
                 var shouldRecurse = aeCanTraverseProperty(prop)
@@ -235,6 +329,50 @@ function getProperties(layerId, optionsJSON) {
     } catch (e) {
         log("getProperties() threw: " + e.toString());
         return encodePayload({ status: "Error", message: e.toString() });
+    }
+}
+
+function getLayerBounds(layerId, optionsJSON) {
+    try {
+        ensureJSON();
+        var options = {};
+        if (optionsJSON && optionsJSON !== "null") {
+            options = JSON.parse(optionsJSON);
+        }
+        var resolvedComp = aeResolveQueryComp(options.compId, options.compName);
+        if (resolvedComp.error) {
+            return encodePayload({ status: "error", message: resolvedComp.error });
+        }
+        var comp = resolvedComp.item;
+        var layerName = options.layerName !== undefined ? String(options.layerName) : null;
+        var resolvedLayer = aeResolveLayer(comp, layerId, layerName);
+        if (resolvedLayer.error) {
+            return encodePayload({ status: "error", message: resolvedLayer.error });
+        }
+        var time = options.time !== undefined ? Number(options.time) : 0.0;
+        if (!isFinite(time)) {
+            return encodePayload({ status: "error", message: "time must be a finite number." });
+        }
+        var layer = resolvedLayer.layer;
+        if (aeQueryIsNullLayer(layer)) {
+            return encodePayload({
+                status: "error",
+                message: "Null layer '" + layer.name + "' does not have visual bounds."
+            });
+        }
+        var bounds = aeLayoutLayerBounds(layer, time);
+        return encodePayload({
+            compId: comp.id,
+            compName: comp.name,
+            time: time,
+            layerId: layer.index,
+            layerUid: aeTryGetLayerUid(layer),
+            layerName: layer.name,
+            bounds: bounds
+        });
+    } catch (e) {
+        log("getLayerBounds() threw: " + e.toString());
+        return encodePayload({ status: "error", message: e.toString() });
     }
 }
 
@@ -328,13 +466,14 @@ function getSelectedProperties() {
     }
 }
 
-function getExpressionErrors() {
+function getExpressionErrors(compId, compName) {
     try {
         ensureJSON();
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            return encodePayload({ status: "Error", message: "Active composition not found." });
+        var resolvedComp = aeResolveQueryComp(compId, compName);
+        if (resolvedComp.error) {
+            return encodePayload({ status: "error", message: resolvedComp.error });
         }
+        var comp = resolvedComp.item;
 
         function getPathIdentifier(prop) {
             return aeGetPropertyIdentifier(prop, null);

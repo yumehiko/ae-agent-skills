@@ -165,6 +165,23 @@ class AEClient:
             payload["layerName"] = layer_name
         return payload
 
+    @staticmethod
+    def _optional_comp_selector_payload(
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
+        has_id = comp_id is not None
+        has_name = comp_name is not None and len(comp_name) > 0
+        if has_id and has_name:
+            raise ValueError("Provide at most one of comp_id or comp_name.")
+        if has_id:
+            if comp_id <= 0:
+                raise ValueError("comp_id must be a positive integer.")
+            return {"compId": comp_id}
+        if has_name:
+            return {"compName": comp_name}
+        return {}
+
     def _url(self, path: str) -> str:
         return f"{self.base_url.rstrip('/')}{path}"
 
@@ -195,9 +212,14 @@ class AEClient:
         response.raise_for_status()
         return response.json()
 
-    def get_layers(self) -> List[Dict[str, Any]]:
-        """Return the list of layers in the active composition."""
-        response = self._requests.get(self._url("/layers"), timeout=self.timeout)
+    def get_layers(
+        self,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Return layers from the selected or active composition."""
+        params = self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name)
+        response = self._requests.get(self._url("/layers"), params=params, timeout=self.timeout)
         return self._handle_response(response)
 
     def list_comps(self) -> List[Dict[str, Any]]:
@@ -487,9 +509,18 @@ class AEClient:
         response = self._requests.get(self._url("/selected-properties"), timeout=self.timeout)
         return self._handle_response(response)
 
-    def get_expression_errors(self) -> Dict[str, Any]:
-        """Return expression error diagnostics for the active composition."""
-        response = self._requests.get(self._url("/expression-errors"), timeout=self.timeout)
+    def get_expression_errors(
+        self,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Return expression errors from the selected or active composition."""
+        params = self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name)
+        response = self._requests.get(
+            self._url("/expression-errors"),
+            params=params,
+            timeout=self.timeout,
+        )
         return self._handle_response(response)
 
     def get_properties(
@@ -500,7 +531,10 @@ class AEClient:
         exclude_groups: List[str] | None = None,
         max_depth: int | None = None,
         include_group_children: bool = False,
+        include_keyframes: bool = False,
         time: float | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> List[Dict[str, Any]]:
         """Return the property tree for the specified layer."""
         params: List[tuple[str, Any]] = []
@@ -521,12 +555,61 @@ class AEClient:
             params.append(("maxDepth", max_depth))
         if include_group_children:
             params.append(("includeGroupChildren", "true"))
+        if include_keyframes:
+            params.append(("includeKeyframes", "true"))
         if time is not None:
             params.append(("time", time))
+        comp_selector = self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name)
+        for key, value in comp_selector.items():
+            params.append((key, value))
 
         response = self._requests.get(
             self._url("/properties"),
             params=params,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def get_layer_bounds(
+        self,
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+        time: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Return visual layer bounds in composition coordinates."""
+        params = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        params.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
+        params["time"] = time
+        response = self._requests.get(
+            self._url("/layer-bounds"),
+            params=params,
+            timeout=self.timeout,
+        )
+        return self._handle_response(response)
+
+    def create_snapshot(
+        self,
+        out_path: str,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+        time: float = 0.0,
+        scale: float = 1.0,
+    ) -> Dict[str, Any]:
+        """Render one composition frame to a new PNG file."""
+        comp_selector = self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name)
+        if not comp_selector:
+            raise ValueError("Provide exactly one of comp_id or comp_name.")
+        payload: Dict[str, Any] = {
+            "outPath": out_path,
+            "time": time,
+            "scale": scale,
+        }
+        payload.update(comp_selector)
+        response = self._requests.post(
+            self._url("/snapshot"),
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)

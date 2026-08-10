@@ -1,4 +1,4 @@
 interface:
   display_name: "After Effects CLI"
-  short_description: "Edit existing After Effects scenes with ae-cli"
-  default_prompt: "Use $aftereffects-cli to inspect and surgically edit an existing After Effects scene."
+  short_description: "Inspect, snapshot, and edit After Effects scenes"
+  default_prompt: "Use $aftereffects-cli to inspect, snapshot, and surgically edit an existing After Effects scene."

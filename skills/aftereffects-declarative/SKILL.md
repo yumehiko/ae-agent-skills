@@ -34,7 +34,8 @@ After Effects を宣言型 JSON で構築する標準スキル。
 3. scene JSON を作成/更新（作業中は `~/ae-agent-skills/work/` 配下）
 4. `--validate-only` で検証
 5. 実適用
-6. `layers` / `properties` / `expression-errors` で確認
+6. compを直接指定した `layers` / `properties --include-keyframes` / `bounds` / `expression-errors` で数値確認
+7. `snapshot` で見た目をPNG確認
 7. 完了版は `~/ae-agent-skills/done/` 配下へコピーして保管
 
 ## 参照ファイル（固定）
@@ -63,9 +64,11 @@ ae-cli apply-scene --scene-file <scene.json> --validate-only
 ae-cli apply-scene --scene-file <scene.json>
 ae-cli apply-scene --scene-file <scene.json> --mode replace-managed
 ae-cli apply-scene --scene-file <scene.json> --mode clear-all
-ae-cli layers
-ae-cli properties --layer-name <layer> --include-group <group> --include-group-children
-ae-cli expression-errors
+ae-cli layers --comp-name <comp>
+ae-cli properties --layer-name <layer> --comp-name <comp> --include-group <group> --include-group-children --include-keyframes
+ae-cli bounds --layer-name <layer> --comp-name <comp> --time <sec>
+ae-cli expression-errors --comp-name <comp>
+ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S>] # 0 < S <= 1
 ```
 
 ### apply mode 指針
@@ -255,9 +258,11 @@ ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json
 
 1. `ae-cli apply-scene --scene-file <scene.json> --validate-only`
 2. `ae-cli apply-scene --scene-file <scene.json>`
-3. `ae-cli expression-errors` で失敗箇所を確認
-4. 対象レイヤーに対して `ae-cli properties --layer-name <layer> --include-group <group> --include-group-children` を実行し、`propertyPath` を再特定
-5. scene JSON の `propertyPath` を修正して再適用
+3. `ae-cli expression-errors --comp-name <comp>` で失敗箇所を確認
+4. 対象レイヤーに対して `ae-cli properties --layer-name <layer> --comp-name <comp> --include-group <group> --include-group-children --include-keyframes` を実行し、`propertyPath` とキーを確認
+5. 実寸が関係する場合は `ae-cli bounds --layer-name <layer> --comp-name <comp> --time <sec>` でcomp座標のvisual boundsを確認
+6. `ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale 0.5]` で見た目を確認
+7. scene JSON を修正して再適用
 
 ## トラブル時
 

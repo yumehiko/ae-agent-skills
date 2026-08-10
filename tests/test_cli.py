@@ -427,8 +427,56 @@ def test_build_parser_parses_distribute_layers_by_id() -> None:
 
 def test_build_parser_parses_expression_errors() -> None:
     parser = build_parser()
-    args = parser.parse_args(["expression-errors"])
+    args = parser.parse_args(["expression-errors", "--comp-name", "TX01_Title"])
     assert args.command == "expression-errors"
+    assert args.comp_name == "TX01_Title"
+
+
+def test_build_parser_parses_query_inspection_options() -> None:
+    parser = build_parser()
+
+    layers_args = parser.parse_args(["layers", "--comp-id", "17"])
+    assert layers_args.comp_id == 17
+
+    properties_args = parser.parse_args(
+        [
+            "properties",
+            "--layer-name",
+            "Title",
+            "--comp-name",
+            "TX01_Title",
+            "--include-keyframes",
+        ]
+    )
+    assert properties_args.comp_name == "TX01_Title"
+    assert properties_args.include_keyframes is True
+
+    bounds_args = parser.parse_args(
+        ["bounds", "--layer-id", "2", "--comp-id", "17", "--time", "1.25"]
+    )
+    assert bounds_args.command == "bounds"
+    assert bounds_args.layer_id == 2
+    assert bounds_args.comp_id == 17
+    assert bounds_args.time == 1.25
+
+    snapshot_args = parser.parse_args(
+        [
+            "snapshot",
+            "--comp-name",
+            "TX01_Title",
+            "--time",
+            "1.25",
+            "--out",
+            "/tmp/frame.png",
+            "--scale",
+            "0.5",
+        ]
+    )
+    assert snapshot_args.command == "snapshot"
+    assert snapshot_args.comp_name == "TX01_Title"
+    assert snapshot_args.time == 1.25
+    assert snapshot_args.out == "/tmp/frame.png"
+    assert snapshot_args.scale == 0.5
 
 
 def test_build_parser_parses_set_keyframe_json_value() -> None:

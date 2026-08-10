@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ae-agent-skills"
-version = "0.9.0"
+version = "0.11.0"
 description = "CLI and agent skills for After Effects composition building, footage, audio, text, and layout."
 readme = "README.md"
 requires-python = ">=3.10"

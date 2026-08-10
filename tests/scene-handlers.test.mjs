@@ -152,3 +152,36 @@ test('scene layer apply preserves undeclared keys in explicit merge mode', () =>
   assert.equal(context.mutationCalls.length, 1);
   assert.equal(result.keyframesRemoved, 0);
 });
+
+test('scene mutation temporarily activates a non-active target and restores the previous comp', () => {
+  const context = createContext();
+  vm.runInContext(`
+    CompItem = function CompItem(id) { this.id = id; };
+    previousComp = new CompItem(10);
+    targetComp = new CompItem(20);
+    app = { project: { activeItem: previousComp } };
+    activeCompCalls = [];
+    setActiveComp = function() {};
+    aeInvokeMutation = function(fn, args, label) {
+      activeCompCalls.push({ id: args[0], label: label });
+      app.project.activeItem = args[0] === targetComp.id ? targetComp : previousComp;
+      return { status: "success" };
+    };
+    activeCompState = aeActivateSceneCompForMutation(
+      targetComp,
+      { setActive: false },
+      aeGetActiveSceneComp()
+    );
+    aeRestoreSceneActiveComp(activeCompState);
+    aeRestoreSceneActiveComp(activeCompState);
+  `, context);
+
+  assert.deepEqual(
+    Array.from(context.activeCompCalls, (call) => ({ id: call.id, label: call.label })),
+    [
+      { id: 20, label: 'setActiveComp(apply target)' },
+      { id: 10, label: 'setActiveComp(restore)' },
+    ],
+  );
+  assert.equal(context.app.project.activeItem, context.previousComp);
+});

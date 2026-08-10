@@ -57,12 +57,19 @@ def _layer_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+def _comp_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "comp_id": getattr(args, "comp_id", None),
+        "comp_name": getattr(args, "comp_name", None),
+    }
+
+
 def _run_health(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.health())
 
 
-def _run_layers(client: AEClient, _args: argparse.Namespace) -> None:
-    _print_json(client.get_layers())
+def _run_layers(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.get_layers(**_comp_selector_kwargs(args)))
 
 
 def _run_list_comps(client: AEClient, _args: argparse.Namespace) -> None:
@@ -316,8 +323,8 @@ def _run_selected_properties(client: AEClient, _args: argparse.Namespace) -> Non
     _print_json(client.get_selected_properties())
 
 
-def _run_expression_errors(client: AEClient, _args: argparse.Namespace) -> None:
-    _print_json(client.get_expression_errors())
+def _run_expression_errors(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.get_expression_errors(**_comp_selector_kwargs(args)))
 
 
 def _run_properties(client: AEClient, args: argparse.Namespace) -> None:
@@ -328,7 +335,39 @@ def _run_properties(client: AEClient, args: argparse.Namespace) -> None:
             exclude_groups=args.exclude_group,
             max_depth=args.max_depth,
             include_group_children=args.include_group_children,
+            include_keyframes=args.include_keyframes,
             time=args.time,
+            **_comp_selector_kwargs(args),
+        )
+    )
+
+
+def _run_bounds(client: AEClient, args: argparse.Namespace) -> None:
+    if not math.isfinite(args.time):
+        raise ValueError("--time must be a finite number.")
+    _print_json(
+        client.get_layer_bounds(
+            **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
+            time=args.time,
+        )
+    )
+
+
+def _run_snapshot(client: AEClient, args: argparse.Namespace) -> None:
+    if not math.isfinite(args.time):
+        raise ValueError("--time must be a finite number.")
+    if not math.isfinite(args.scale) or args.scale <= 0 or args.scale > 1:
+        raise ValueError("--scale must be greater than 0 and at most 1.")
+    output_path = Path(args.out).expanduser().resolve()
+    if output_path.suffix.lower() != ".png":
+        raise ValueError("--out must end with .png.")
+    _print_json(
+        client.create_snapshot(
+            out_path=str(output_path),
+            **_comp_selector_kwargs(args),
+            time=args.time,
+            scale=args.scale,
         )
     )
 
@@ -536,6 +575,8 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "selected-properties": _run_selected_properties,
     "expression-errors": _run_expression_errors,
     "properties": _run_properties,
+    "bounds": _run_bounds,
+    "snapshot": _run_snapshot,
     "set-expression": _run_set_expression,
     "set-property": _run_set_property,
     "set-keyframe": _run_set_keyframe,

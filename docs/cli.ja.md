@@ -39,6 +39,43 @@ ae-cli selected-properties
 ae-cli expression-errors
 ```
 
+## アクティブコンポを変えずに検査
+
+```bash
+ae-cli layers --comp-name "TX01_Title"
+ae-cli expression-errors --comp-id 17
+ae-cli properties --layer-name "Title" --comp-name "TX01_Title" --include-keyframes
+ae-cli bounds --layer-name "Title" --comp-name "TX01_Title" --time 1.25
+```
+
+`layers`、`expression-errors`、`properties`、`bounds` は任意の `--comp-id` または一意な
+`--comp-name` を受け付けます。省略時だけアクティブコンポを使い、明示したコンポをビューアで
+アクティブにする副作用はありません。コンポ名が重複する場合は `--comp-id` を使用してください。
+
+`layers` の各レイヤーには `isNull` が常に含まれるため、AE内部ではSolidとして表現される
+制御用ヌルも判別できます。`properties --include-keyframes` は各プロパティに `keyframes` を追加し、
+時刻、値、in/out補間と、取得可能な場合はtemporal easeを返します。
+
+`bounds` は指定時刻のvisual boundsをコンポ座標で返します。矩形には `left` / `top` /
+`right` / `bottom` / `width` / `height` / `centerX` / `centerY` が含まれます。アンカーポイント、
+scale、rotation、2D親子transformを反映し、null、3D、3D親子関係、visual boundsを持たない
+レイヤーは明示的なエラーになります。
+
+## コンポのスナップショット
+
+```bash
+ae-cli snapshot --comp-name "TX01_Title" \
+  --time 1.25 --out "/absolute/path/tx01-1.25.png" --scale 0.5
+```
+
+指定compの1フレームをPNGへ保存します。`--comp-id` または一意な `--comp-name` は必須、
+`--time` の既定は0秒、`--scale` は0より大きく1以下（既定1）です。出力先の親ディレクトリは
+事前に存在する必要があり、既存ファイルは上書きしません。
+
+After Effectsは最終パスへ直接書かず、同じディレクトリのランダムな一時PNGへ出力します。
+PNG終端まで書き込まれたことを待ってから最終名へ移動し、失敗時は一時ファイルを削除します。viewer tabやactive compは
+変更しません。縮小時は一時compを内部で作成し、出力後に削除します。
+
 ## フッテージの読み込みとカット配置
 
 ```bash

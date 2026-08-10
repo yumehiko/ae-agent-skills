@@ -40,6 +40,43 @@ ae-cli selected-properties
 ae-cli expression-errors
 ```
 
+## Inspect without changing the active composition
+
+```bash
+ae-cli layers --comp-name "TX01_Title"
+ae-cli expression-errors --comp-id 17
+ae-cli properties --layer-name "Title" --comp-name "TX01_Title" --include-keyframes
+ae-cli bounds --layer-name "Title" --comp-name "TX01_Title" --time 1.25
+```
+
+`layers`, `expression-errors`, `properties`, and `bounds` accept an optional `--comp-id` or unique
+`--comp-name`. They use the active composition only when neither selector is supplied and never activate
+an explicitly selected composition in the viewer. Use `--comp-id` when composition names are duplicated.
+
+Every layer returned by `layers` includes `isNull`, allowing controller nulls to be distinguished even
+though AE internally reports them as solids. `properties --include-keyframes` adds `keyframes` to every
+property with time, value, in/out interpolation, and temporal ease when AE exposes it.
+
+`bounds` returns composition-space visual bounds at the requested time: `left`, `top`, `right`, `bottom`,
+`width`, `height`, `centerX`, and `centerY`. It accounts for anchor point, scale, rotation, and 2D parent
+transforms. Nulls, 3D layers, 3D parent chains, and layers without visual bounds return explicit errors.
+
+## Composition snapshots
+
+```bash
+ae-cli snapshot --comp-name "TX01_Title" \
+  --time 1.25 --out "/absolute/path/tx01-1.25.png" --scale 0.5
+```
+
+Render one composition frame to PNG. A `--comp-id` or unique `--comp-name` is required. `--time` defaults
+to 0 seconds and `--scale` must be greater than 0 and at most 1 (default 1). The output directory must
+already exist, and snapshot refuses to overwrite an existing file.
+
+After Effects writes to a randomized temporary PNG in the output directory. The bridge promotes it to
+the final name only after verifying the complete PNG end marker and removes it on failure. The command does not
+change the viewer tab or active composition. Downscaled snapshots use a temporary composition that is
+removed after rendering.
+
 ## Importing and cutting footage
 
 ```bash

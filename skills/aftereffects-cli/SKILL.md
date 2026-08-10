@@ -1,6 +1,6 @@
 ---
 name: aftereffects-cli
-description: Command-by-command After Effects editing via ae-cli, including comp-layer assembly, footage cuts, audio changes, whole-layer text styling, and visual-bounds alignment or distribution. Best for surgical edits on existing human-made scenes and for debugging.
+description: Command-by-command After Effects editing and inspection via ae-cli, including PNG snapshots, comp-layer assembly, footage cuts, audio changes, whole-layer text styling, and visual-bounds alignment or distribution. Best for surgical edits, visual verification, and debugging of existing scenes.
 ---
 
 # aftereffects-cli
@@ -28,11 +28,12 @@ description: Command-by-command After Effects editing via ae-cli, including comp
 2. 状態確認:
    - `ae-cli list-comps`
    - `ae-cli list-footage`
-   - `ae-cli layers`
+   - `ae-cli layers [--comp-id <id> | --comp-name <name>]`
    - `ae-cli selected-properties`
-   - `ae-cli expression-errors`
+   - `ae-cli expression-errors [--comp-id <id> | --comp-name <name>]`
 3. 必要な更新コマンドを最小回数で実行
 4. 変更後に `layers` / `properties` で結果確認
+5. 見た目が重要なら `snapshot` で指定時刻をPNG確認
 
 ## 参照ファイル（固定）
 
@@ -56,6 +57,10 @@ description: Command-by-command After Effects editing via ae-cli, including comp
   - `ae-cli add-comp-layer (--comp-id <id> | --comp-name <name>) [--name <layer>] [--start-time <sec>] [--in-point <sec>] [--out-point <sec>]`
   - `ae-cli delete-comp ...`
 - レイヤー/プロパティ:
+  - `ae-cli layers [--comp-id <id> | --comp-name <name>]`
+  - `ae-cli properties (--layer-id <id> | --layer-name <name>) [--comp-id <id> | --comp-name <name>] [--include-keyframes]`
+  - `ae-cli bounds (--layer-id <id> | --layer-name <name>) [--comp-id <id> | --comp-name <name>] [--time <sec>]`
+  - `ae-cli snapshot (--comp-id <id> | --comp-name <name>) [--time <sec>] --out <absolute.png> [--scale <S>]`（`0 < S <= 1`）
   - `ae-cli add-layer ...`
   - `ae-cli set-property ...`
   - `ae-cli set-keyframe ...`
@@ -118,6 +123,11 @@ ae-cli layers
 - 配置基準のsafe既定値はaction-safe 10%、title-safe 20%。必要なら `--margin-percent` で上書きする。
 - `gaps` は実寸の隙間、`centers` は中心間隔を均等化する。`selection` は対象全体の現在の外周を保持する。
 - layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない。
+- 読み取り時は `layers` / `properties` / `bounds` / `expression-errors` にcompを直接指定する。viewerを切り替える必要はない。
+- `layers` の `isNull` で制御用ヌルを判別する。AE内部表現の `type: "Solid"` だけで判断しない。
+- animation検証は `properties --include-keyframes`、文字や帯の実寸検証は `bounds` を使う。
+- 見た目は `snapshot` で確認する。既存出力は上書きされないため、毎回一意なPNGパスを使う。
+- `snapshot --scale` は0より大きく1以下。viewer tabとactive compを切り替えない。
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。
 - expression の不調は `ae-cli expression-errors` で確認する。
