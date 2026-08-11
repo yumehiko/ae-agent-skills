@@ -13,11 +13,6 @@ export const SKILL_SOURCES = [
   { name: 'aftereffects-declarative' },
 ];
 
-export const CLAUDE_COMMAND_SOURCES = [
-  { sourceName: 'aftereffects-cli.md', destinationName: 'aftereffects-cli.md' },
-  { sourceName: 'aftereffects-declarative.md', destinationName: 'aftereffects-declarative.md' },
-];
-
 export const WORKSPACE_RESOURCE_SOURCES = [
   { source: ['schemas', 'scene.schema.json'], destination: ['scene.schema.json'] },
   { source: ['examples', 'scene.example.json'], destination: ['references', 'scene.example.json'] },
@@ -50,9 +45,6 @@ export const AGENT_REGISTRY = [
     id: 'claude',
     destRoot({ home }) {
       return path.join(home, '.claude', 'skills');
-    },
-    commandsRoot({ home }) {
-      return path.join(home, '.claude', 'commands');
     },
     isDetected({ home, fsModule }) {
       return fsModule.existsSync(path.join(home, '.claude'));
@@ -161,11 +153,6 @@ export function getSkillInstallTargets(
       destRoot: agent.destRoot({ home, env }),
     };
   });
-}
-
-export function getClaudeCommandInstallTarget({ home = os.homedir() } = {}) {
-  const claude = AGENT_REGISTRY.find((entry) => entry.id === 'claude');
-  return claude.commandsRoot({ home });
 }
 
 function ask(question) {
@@ -337,26 +324,6 @@ export function installSkills(
         }
       }
     }
-  }
-
-  if (expandAgentTarget(agent).includes('claude')) {
-    installClaudeCommands({ root, home });
-  }
-}
-
-export function installClaudeCommands({ root = getRepoRoot(), home = os.homedir() } = {}) {
-  const sourceRoot = path.join(root, 'templates', 'claude', 'commands');
-  const destRoot = getClaudeCommandInstallTarget({ home });
-  fs.mkdirSync(destRoot, { recursive: true });
-
-  for (const command of CLAUDE_COMMAND_SOURCES) {
-    const source = path.join(sourceRoot, command.sourceName);
-    const destination = path.join(destRoot, command.destinationName);
-    if (!fs.existsSync(source)) {
-      throw new Error(`Claude command source not found: ${source}`);
-    }
-    fs.copyFileSync(source, destination);
-    console.log(`Installed claude command: ${destination}`);
   }
 }
 

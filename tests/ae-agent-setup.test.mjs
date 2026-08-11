@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 
 import {
   expandAgentTarget,
-  getClaudeCommandInstallTarget,
   getDetectedAgents,
   getSkillInstallTargets,
   installSkills,
@@ -63,13 +62,9 @@ test('getSkillInstallTargets resolves personal skill directories', () => {
     { kind: 'gemini', destRoot: '/Users/example/.gemini/skills' },
     { kind: 'claude', destRoot: '/Users/example/.claude/skills' },
   ]);
-  assert.equal(
-    getClaudeCommandInstallTarget({ home: '/Users/example' }),
-    '/Users/example/.claude/commands',
-  );
 });
 
-test('installSkills copies standard skill directories and Claude slash commands', () => {
+test('installSkills copies standard skill directories for Claude', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-setup-test-root-'));
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-setup-test-home-'));
 
@@ -94,23 +89,9 @@ test('installSkills copies standard skill directories and Claude slash commands'
       'name: aftereffects-declarative\n',
       'utf8',
     );
-    const commandRoot = path.join(tempRoot, 'templates', 'claude', 'commands');
-    fs.mkdirSync(commandRoot, { recursive: true });
-    fs.writeFileSync(
-      path.join(commandRoot, 'aftereffects-cli.md'),
-      'Use aftereffects-cli\n',
-      'utf8',
-    );
-    fs.writeFileSync(
-      path.join(commandRoot, 'aftereffects-declarative.md'),
-      'Use aftereffects-declarative\n',
-      'utf8',
-    );
-
     installSkills('claude', { root: tempRoot, home: tempHome, env: {} });
 
     const claudeSkillRoot = path.join(tempHome, '.claude', 'skills');
-    const claudeCommandRoot = path.join(tempHome, '.claude', 'commands');
     assert.equal(
       fs.readFileSync(path.join(claudeSkillRoot, 'aftereffects-cli', 'SKILL.md'), 'utf8'),
       'name: aftereffects-cli\n',
@@ -125,14 +106,6 @@ test('installSkills copies standard skill directories and Claude slash commands'
         'utf8',
       ),
       'interface:\n  display_name: "After Effects CLI"\n',
-    );
-    assert.equal(
-      fs.readFileSync(path.join(claudeCommandRoot, 'aftereffects-cli.md'), 'utf8'),
-      'Use aftereffects-cli\n',
-    );
-    assert.equal(
-      fs.readFileSync(path.join(claudeCommandRoot, 'aftereffects-declarative.md'), 'utf8'),
-      'Use aftereffects-declarative\n',
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -185,11 +158,21 @@ test('plugin manifest packages the canonical skills and matches the npm version'
     true,
   );
   assert.equal(pkg.files.includes('.codex-plugin'), true);
+  assert.equal(pkg.files.includes('LICENSE'), true);
+  assert.equal(pkg.files.includes('THIRD_PARTY_NOTICES.md'), true);
   assert.equal(pkg.files.includes('skills'), true);
   assert.equal(pkg.files.includes('docs'), false);
   assert.equal(pkg.files.includes('docs/cli.ja.md'), true);
   assert.equal(pkg.files.includes('docs/cli.md'), true);
+  assert.equal(pkg.files.includes('templates'), false);
+  assert.equal(pkg.files.includes('CSXS'), false);
+  assert.equal(pkg.files.includes('client'), false);
+  assert.equal(pkg.files.includes('host'), false);
   assert.equal(pkg.files.includes('scripts/signing'), false);
+  assert.equal(
+    fs.readFileSync(path.join(root, 'client', 'THIRD_PARTY_NOTICES.md'), 'utf8'),
+    fs.readFileSync(path.join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8'),
+  );
 });
 
 test('setupAgentWorkspace installs the footage editing example', () => {

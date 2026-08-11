@@ -18,17 +18,15 @@
   },
   "files": [
     ".codex-plugin",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "bin",
     "skills",
-    "templates",
     "schemas",
     "examples/*.json",
     "examples/*.py",
     "docs/cli.ja.md",
-    "docs/cli.md",
-    "CSXS",
-    "client",
-    "host"
+    "docs/cli.md"
   ],
   "engines": {
     "node": ">=18"
