@@ -108,6 +108,23 @@ function aeLayoutValidateDistributeOptions(comp, options) {
     return common;
 }
 
+function aeLayoutValidateVisualCenterOptions(comp, options) {
+    if (!options || typeof options !== "object" || options instanceof Array) {
+        throw new Error("layout options must be an object.");
+    }
+    var allowed = { time: true };
+    for (var key in options) {
+        if (options.hasOwnProperty(key) && !allowed[key]) {
+            throw new Error("Unknown visual-center option: " + key);
+        }
+    }
+    if (options.time !== undefined
+        && (!aeLayoutIsFiniteNumber(options.time) || options.time < 0 || options.time > comp.duration)) {
+        throw new Error("time must be between 0 and the composition duration.");
+    }
+    return { time: options.time === undefined ? Number(comp.time) : Number(options.time) };
+}
+
 function aeLayoutResolveLayers(comp, selectors, minimumCount) {
     if (!selectors || typeof selectors !== "object" || selectors instanceof Array) {
         throw new Error("layer selectors must be an object.");
@@ -476,6 +493,64 @@ function aeDistributeLayerRefs(comp, layers, rawOptions) {
     }
 }
 
+function aeVisualCenterLayerRefs(comp, layers, rawOptions) {
+    var options = aeLayoutValidateVisualCenterOptions(comp, rawOptions);
+    var previousTime = comp.time;
+    var summaries = [];
+    var movedCount = 0;
+    try {
+        comp.time = options.time;
+        for (var i = 0; i < layers.length; i++) {
+            var layer = layers[i];
+            aeLayoutEnsureLayerSupported(layer);
+            var anchor = aeLayoutGetTransformProperty(layer, "ADBE Anchor Point");
+            if (!anchor) throw new Error("Layer '" + layer.name + "' does not expose Anchor Point.");
+            try {
+                if (anchor.expressionEnabled) {
+                    throw new Error("Layer '" + layer.name + "' has an Anchor Point expression; visual-center is not supported.");
+                }
+            } catch (eAnchorExpression) {
+                if (String(eAnchorExpression).indexOf("visual-center is not supported") >= 0) throw eAnchorExpression;
+            }
+            var rect = layer.sourceRectAtTime(options.time, false);
+            var anchorBefore = anchor.valueAtTime(options.time, false);
+            var anchorAfter = [
+                Number(rect.left) + (Number(rect.width) / 2),
+                Number(rect.top) + (Number(rect.height) / 2)
+            ];
+            if (anchorBefore instanceof Array && anchorBefore.length === 3) anchorAfter.push(Number(anchorBefore[2]));
+            var boundsBefore = aeLayoutLayerBounds(layer, options.time);
+            aeLayoutSetPropertyValueAtTime(anchor, options.time, anchorAfter);
+            var boundsAfterAnchor = aeLayoutLayerBounds(layer, options.time);
+            var move = aeLayoutMoveLayerByCompDelta(
+                layer,
+                options.time,
+                boundsBefore.centerX - boundsAfterAnchor.centerX,
+                boundsBefore.centerY - boundsAfterAnchor.centerY
+            );
+            if (move.moved) movedCount += 1;
+            summaries.push({
+                layerId: layer.index,
+                layerUid: aeTryGetLayerUid(layer),
+                layerName: layer.name,
+                anchorPointBefore: anchorBefore,
+                anchorPointAfter: anchorAfter,
+                positionBefore: move.before,
+                positionAfter: move.after,
+                bounds: aeLayoutLayerBounds(layer, options.time)
+            });
+        }
+        return {
+            type: "visual-center",
+            time: options.time,
+            movedCount: movedCount,
+            layers: summaries
+        };
+    } finally {
+        comp.time = previousTime;
+    }
+}
+
 function aeValidateSceneLayoutSpecs(layoutSpecs, sceneLayerIds, compSpec, errors) {
     if (layoutSpecs === undefined) {
         return;
@@ -497,8 +572,8 @@ function aeValidateSceneLayoutSpecs(layoutSpecs, sceneLayerIds, compSpec, errors
             errors.push(prefix + " must be an object.");
             continue;
         }
-        if (spec.type !== "align" && spec.type !== "distribute") {
-            errors.push(prefix + ".type must be align or distribute.");
+        if (spec.type !== "align" && spec.type !== "distribute" && spec.type !== "visual-center") {
+            errors.push(prefix + ".type must be align, distribute, or visual-center.");
         }
         var minimumCount = spec.type === "distribute" ? 2 : 1;
         if (!(spec.layerIds instanceof Array) || spec.layerIds.length < minimumCount) {
@@ -528,6 +603,8 @@ function aeValidateSceneLayoutSpecs(layoutSpecs, sceneLayerIds, compSpec, errors
                 aeLayoutValidateAlignOptions(validationComp, options);
             } else if (spec.type === "distribute") {
                 aeLayoutValidateDistributeOptions(validationComp, options);
+            } else if (spec.type === "visual-center") {
+                aeLayoutValidateVisualCenterOptions(validationComp, options);
             }
         } catch (e) {
             errors.push(prefix + ": " + e.toString());
@@ -565,6 +642,21 @@ function distributeLayers(selectorsJSON, optionsJSON) {
         return encodePayload({ status: "success", layout: aeDistributeLayerRefs(comp, layers, options) });
     } catch (e) {
         log("distributeLayers() threw: " + e.toString());
+        return encodePayload({ status: "error", message: e.toString() });
+    }
+}
+
+function visualCenterLayers(selectorsJSON, optionsJSON) {
+    try {
+        ensureJSON();
+        var comp = app.project ? app.project.activeItem : null;
+        if (!comp || !(comp instanceof CompItem)) throw new Error("Active composition not found.");
+        var selectors = JSON.parse(selectorsJSON);
+        var options = JSON.parse(optionsJSON);
+        var layers = aeLayoutResolveLayers(comp, selectors, 1);
+        return encodePayload({ status: "success", layout: aeVisualCenterLayerRefs(comp, layers, options) });
+    } catch (e) {
+        log("visualCenterLayers() threw: " + e.toString());
         return encodePayload({ status: "error", message: e.toString() });
     }
 }

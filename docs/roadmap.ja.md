@@ -13,7 +13,7 @@
 | v0.9.0 | 宣言値への収束 | リリース済み・実機確認済み | 既存comp設定更新・実値照合、animationのkeyframe replace既定・明示merge |
 | v0.10.0 | 読み取り・検証 | 実装・実機確認済み | comp指定layers/expression-errors、bounds、keyframe情報、isNull |
 | v0.11.0 | ビジュアル検証 | 実装・実機確認済み（dirty / Undoは未観測） | comp snapshotのPNG出力、時刻・scale指定、失敗時cleanup |
-| v0.12.0 | テキスト表現 | 検討 | テキストアニメーター、文字範囲スタイル |
+| v0.12.0 | テキスト表現 | 実装・実機確認済み | テキストアニメーター、文字範囲スタイル、visual-center、上位DSL例 |
 
 各バージョンでは、scene JSON、個別CLI、スキーマ、agent skill、使用例、自動テスト、After Effects実機テストまでを完了条件とする。
 
@@ -52,3 +52,12 @@
 - 出力失敗時に最終PNGと `.part.png` が残らない
 - 既存出力を上書きせず、元ファイルを保持する
 - snapshot前後でProjectのdirty状態やundo履歴に予期しない影響がないか確認する
+
+## v0.12.0 実機確認項目
+
+- Position / Scale / Opacity / Rotationを持つRange Selector animatorがscene再適用で重複しない
+- selectorのStart / End / Offset / Amountとキーフレーム補間・easeが宣言どおりになる
+- After Effects 24.3以降で半開区間のfont / fontSize / fill / stroke / trackingが混在できる
+- `textStyle` と `textStyleRanges` の再適用で、宣言から消した文字範囲スタイルが基準スタイルへ戻る
+- `visual-center` 前後でvisual boundsのcomp座標が変わらず、アンカーポイントだけが視覚中央へ移る
+- `examples/gen_telop.py` の生成sceneをvalidate/applyし、再適用してもレイヤーとanimatorが重複しない

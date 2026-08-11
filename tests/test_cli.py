@@ -157,6 +157,25 @@ def test_build_parser_parses_add_shape_repeater() -> None:
     assert args.end_opacity == 0.0
 
 
+def test_build_parser_parses_v012_text_and_visual_center_commands() -> None:
+    parser = build_parser()
+    ranges = parser.parse_args(
+        ["set-text-style-ranges", "--layer-name", "Title", "--ranges-file", "ranges.json"]
+    )
+    animators = parser.parse_args(
+        ["set-text-animators", "--layer-id", "2", "--animators-file", "animators.json"]
+    )
+    visual = parser.parse_args(
+        ["visual-center", "--layer-name", "Title", "--time", "1.25"]
+    )
+
+    assert (ranges.command, ranges.ranges_file) == ("set-text-style-ranges", "ranges.json")
+    assert (animators.command, animators.animators_file) == ("set-text-animators", "animators.json")
+    assert visual.command == "visual-center"
+    assert visual.layer_names == ["Title"]
+    assert visual.time == 1.25
+
+
 def test_build_parser_parses_create_comp() -> None:
     parser = build_parser()
     args = parser.parse_args(

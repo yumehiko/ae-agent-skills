@@ -130,7 +130,19 @@ ae-cli set-text-style --layer-name "Title" \
 `--font` は `list-fonts` が返すPostScript名を指定します。色は0〜1または0〜255のRGBです。
 `--leading` は手動行送りへ切り替わるため、`--auto-leading` とは同時指定できません。
 指定した項目だけを更新し、未指定のスタイルは保持します。対象はテキストレイヤー全体です。
-文字単位の混在スタイルとテキストアニメーターは対象外です。
+
+文字範囲スタイルとRange SelectorテキストアニメーターはJSON配列で指定します。
+
+```bash
+ae-cli set-text-style-ranges --layer-name "Title" --ranges-file ranges.json
+ae-cli set-text-animators --layer-name "Title" --animators-file animators.json
+```
+
+範囲は0始まり・終端を含まない `{ "start": 0, "end": 3, "style": {...} }` です。
+`font` / `fontSize` / fill / stroke / `tracking` を文字範囲ごとに設定できます。この機能は
+`TextDocument.characterRange()`を使うためAfter Effects 24.3以降が必要です。
+テキストアニメーターはPosition / Scale / Opacity / Rotationと、百分率Range Selectorの
+Start / End / Offset / Amountおよびそのキーフレームに対応します。
 
 ## 整列・均等配置
 
@@ -141,6 +153,8 @@ ae-cli align-layers --layer-name "Title" \
 ae-cli distribute-layers \
   --layer-name "Card A" --layer-name "Card B" --layer-name "Card C" \
   --axis horizontal --mode gaps --reference action-safe
+
+ae-cli visual-center --layer-name "Title" --time 0.8
 ```
 
 `reference` は `comp` / `action-safe` / `title-safe` / `selection` から選びます。
@@ -151,6 +165,7 @@ ae-cli distribute-layers \
 レイヤー実寸にはアンカーポイント、拡大縮小、回転、2D親子関係が反映されます。対象は可視の
 2D AVレイヤーです。3Dレイヤー、3D親子関係、Position expressionは明示的に拒否します。
 Positionにキーフレームがある場合は`--time`の位置へ値を設定します。
+`visual-center` は指定時刻のvisual bounds中央へアンカーポイントを移し、コンポ上の見た目の位置を保持します。
 
 ## 宣言的シーン適用
 
@@ -178,6 +193,22 @@ ae-cli apply-scene --scene-file examples/footage-edit.example.json
 ae-cli apply-scene --scene-file examples/comp-assembly.example.json --validate-only
 ae-cli apply-scene --scene-file examples/comp-assembly.example.json
 ```
+
+テロップ量産用の上位DSL例:
+
+```bash
+python examples/gen_telop.py --out-dir work/telops
+for scene in work/telops/*.scene.json; do
+  ae-cli apply-scene --scene-file "$scene" --validate-only
+done
+```
+
+既定はmacOS標準の日本語対応PostScript名 `HiraginoSans-W6` です。別環境では
+`list-fonts` で確認した日本語対応フォントを `--font` に指定してください。
+
+`layers[].textStyleRanges` は再適用時の基準を復元するため同じレイヤーの `textStyle` を必須とします。
+`layers[].textAnimators` は `aeSceneTextAnimator:*` 管理アニメーターを置換します。
+`layout[]` の `type: "visual-center"` は `align` より前に置くと、アンカーを整えてから配置できます。
 
 sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` レイヤーから
 `sourceId` で参照できます。カット範囲は `timing.sourceIn` / `sourceOut` / `timelineIn` で指定します。
@@ -207,6 +238,8 @@ sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` �
 - 同一レイヤー内で同じ `propertyPath` を複数のanimationへ宣言するとvalidation errorになります。
 - `easeIn` / `easeOut` は `[speed, influence]` です。`influence` は0.1〜100の百分率で、多次元プロパティでは各次元分の配列も指定できます。
 - layoutは2D親子付きレイヤーに対応し、親transformを含むvisual boundsから親座標系のPositionを書き戻します。3D親子関係には対応しません。
+- `textStyleRanges` は `textStyle` で全体を基準化してから半開区間の文字スタイルを再適用します。
+- `textAnimators` は管理対象を再構築するため、selector animationのキー集合も毎回宣言値へ置換されます。
 
 ## エフェクトパラメータ例
 

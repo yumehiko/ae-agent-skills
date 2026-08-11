@@ -34,7 +34,7 @@ Python パッケージ版は `pyproject.toml` も同じ値に揃えます。
 ### 1) バージョン更新
 
 ```bash
-npm version 0.11.0 --no-git-tag-version
+npm version 0.12.0 --no-git-tag-version
 ```
 
 ### 2) 署名付き ZXP ビルド
@@ -85,10 +85,10 @@ SIGN_CERT_PASSWORD='your-password' \
 
 ```bash
 git add package.json pyproject.toml CSXS/manifest.xml
-git commit -m "release: v0.11.0"
-git tag v0.11.0
+git commit -m "release: v0.12.0"
+git tag v0.12.0
 git push origin HEAD
-git push origin v0.11.0
+git push origin v0.12.0
 ```
 
 ### 4) GitHub Release 作成（ZXP添付）
@@ -97,8 +97,8 @@ git push origin v0.11.0
 Release を公開すると `.github/workflows/publish-npm.yml` が起動し、npm Trusted Publishing (OIDC) で同じバージョンを自動公開します。
 
 ```bash
-gh release create v0.11.0 dist/ae-agent-skill-0.11.0.zxp \
-  --title v0.11.0 \
+gh release create v0.12.0 dist/ae-agent-skill-0.12.0.zxp \
+  --title v0.12.0 \
   --notes "Release notes"
 ```
 

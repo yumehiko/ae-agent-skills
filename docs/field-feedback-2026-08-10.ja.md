@@ -14,14 +14,14 @@
 | 5 | レイヤーのvisual boundsを取得できない | 完了（実機確認済み） | v0.10.0 |
 | 6 | layers / expression-errorsがactive comp固定 | 完了（実機確認済み） | v0.10.0 |
 | 7 | propertiesでキーフレームを取得できない | 完了（実機確認済み） | v0.10.0 |
-| 8 | 2D親子付きlayoutの可否と視覚中心揃えが不明 | 部分対応 | v0.7〜v0.9、残件は将来検討 |
+| 8 | 2D親子付きlayoutの可否と視覚中心揃えが不明 | 実装済み・実機確認待ち | v0.7〜v0.12 |
 | 9 | easeIn / easeOutの形式が不明 | 実装済み | v0.9.0 |
-| 10 | text animator未対応 | 未実装 | v0.12.0 |
-| 11 | 文字範囲スタイル未対応 | 未実装 | v0.12.0以降 |
+| 10 | text animator未対応 | 実装済み・実機確認待ち | v0.12.0 |
+| 11 | 文字範囲スタイル未対応 | 実装済み・実機確認待ち | v0.12.0 |
 | 12 | effectのカラーパラメータ指定が不明 | ドキュメント対応済み | v0.9.0 |
 | 13 | layersでnullとsolidを区別できない | 完了（実機確認済み） | v0.10.0 |
 
-補足提案の「上位DSLからscene JSONを生成する量産例」も未対応。テキスト機能の設計時に、`gen_telop.py` 相当の最小例を追加する。
+補足提案の「上位DSLからscene JSONを生成する量産例」は `examples/gen_telop.py` として追加済み。
 
 ## v0.10.0 読み取り・検証
 
@@ -83,9 +83,21 @@ Guideにはこのメソッドが掲載されていないため、実行時に存
 
 ## v0.12.0 テキスト表現
 
-- Range Selectorを使うtext animatorのPosition / Scale / Opacity / Rotation
-- 文字範囲ごとのfill / font size等を、AE APIの実現可能範囲を確認して設計する
-- 上位DSLから複数sceneを生成する量産例を追加する
+- Range Selectorを使うtext animatorのPosition / Scale / Opacity / Rotationを `textAnimators[]` で宣言する
+- 文字範囲ごとのfont / font size / fill / stroke / trackingを `textStyleRanges[]` で宣言する（AE 24.3以降）
+- 上位DSLから複数sceneを生成する `examples/gen_telop.py` を追加する
+- `visual-center` でアンカーをvisual bounds中央へ移し、画面上の位置を保持する
+- 自動テストとAfter Effects実機確認を完了した。確認内容は下記に記録する
+
+## v0.12.0 After Effects実機確認（2026-08-10）
+
+- 専用comp `__AE_AGENT_V012_TEXT_TEST__` で、Range Selector animatorのPosition / Scale / Opacity / RotationとStartの2キーフレームを適用し、値・bezier補間・temporal easeを読み戻した
+- AEのText Animator Propertiesには未追加項目がhidden placeholderとして見えるため、既存判定すると`setValue`が失敗することを発見した。必ず`addProperty`で有効化し、失効した参照をproperty indexから取り直すよう修正して実機再確認した
+- `TEXT RANGE 2026` の半開区間 `[11, 15)` にfont / fontSize / fill / stroke / trackingを混在適用し、PNGで「2026」だけに反映されることを確認した。空の`textStyleRanges` / `textAnimators`で基準スタイルへの復帰とanimator削除も確認した
+- `visual-center` 前後のvisual boundsは誤差0.0001px未満で保持され、アンカーポイントとPositionだけが補正された
+- 同じsceneの再適用で対象レイヤーはUIDを維持し、管理対象animatorは1個のままで重複しなかった。expression errorは0件だった
+- `examples/gen_telop.py` を日本語対応PostScriptフォント`HiraginoSans-W6`で実行し、生成した3sceneをvalidate / apply / 再applyした。各compは1レイヤー・1animatorを維持した
+- Pythonテスト94件、Nodeテスト53件、両skill validator、`npm pack --dry-run`が成功した
 
 ## リリース運用
 

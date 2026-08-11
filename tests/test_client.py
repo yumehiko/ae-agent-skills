@@ -579,6 +579,33 @@ def test_set_text_style_requires_a_setting() -> None:
         raise AssertionError("ValueError was not raised")
 
 
+def test_text_ranges_and_animators_post_expected_payloads(monkeypatch) -> None:
+    captured: list[tuple[str, Any]] = []
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured.append((url, json))
+        return DummyResponse({"status": "success", "data": {}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    ranges = [{"start": 0, "end": 2, "style": {"fontSize": 120}}]
+    animators = [{"id": "reveal", "properties": {"opacity": 0}}]
+
+    client.set_text_style_ranges(ranges, layer_name="Title")
+    client.set_text_animators(animators, layer_id=2)
+
+    assert captured == [
+        (
+            "http://127.0.0.1:8080/text-style-ranges",
+            {"layerName": "Title", "textStyleRanges": ranges},
+        ),
+        (
+            "http://127.0.0.1:8080/text-animators",
+            {"layerId": 2, "textAnimators": animators},
+        ),
+    ]
+
+
 def test_align_layers_posts_expected_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
@@ -641,6 +668,24 @@ def test_distribute_layers_posts_expected_payload(monkeypatch) -> None:
         "time": 0,
     }
     assert captured["timeout"] == 5.0
+
+
+def test_visual_center_posts_expected_payload(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured["url"] = url
+        captured["json"] = json
+        return DummyResponse({"status": "success", "data": {"layout": {}}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+    client.visual_center_layers(layer_names=["Title"], time=1.25)
+
+    assert captured == {
+        "url": "http://127.0.0.1:8080/layout-visual-center",
+        "json": {"layerNames": ["Title"], "time": 1.25},
+    }
 
 
 def test_layout_selector_requires_exactly_one_selector_kind() -> None:

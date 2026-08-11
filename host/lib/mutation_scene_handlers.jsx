@@ -557,6 +557,31 @@ function aeValidateSceneSpec(scene) {
                         errors.push(prefix + ".textStyle: " + eTextStyle.toString());
                     }
                 }
+                var textStyleRanges = layer.textStyleRanges;
+                if (textStyleRanges !== undefined) {
+                    if (String(layer.type).toLowerCase() !== "text") {
+                        errors.push(prefix + ".textStyleRanges is only allowed for text layers.");
+                    }
+                    if (textStyle === undefined) {
+                        errors.push(prefix + ".textStyleRanges requires textStyle so repeated scene application can reset the base character style.");
+                    }
+                    try {
+                        aeValidateTextStyleRanges(textStyleRanges);
+                    } catch (eTextStyleRanges) {
+                        errors.push(prefix + ".textStyleRanges: " + eTextStyleRanges.toString());
+                    }
+                }
+                var textAnimators = layer.textAnimators;
+                if (textAnimators !== undefined) {
+                    if (String(layer.type).toLowerCase() !== "text") {
+                        errors.push(prefix + ".textAnimators is only allowed for text layers.");
+                    }
+                    try {
+                        aeValidateTextAnimators(textAnimators);
+                    } catch (eTextAnimators) {
+                        errors.push(prefix + ".textAnimators: " + eTextAnimators.toString());
+                    }
+                }
                 if (layer.sourceId !== undefined && (typeof layer.sourceId !== "string" || layer.sourceId.length === 0)) {
                     errors.push(prefix + ".sourceId must be a non-empty string when specified.");
                 }
@@ -1230,6 +1255,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     var layerId = layer.index;
     var operationCount = resolved.created ? 1 : 0;
     var keyframesRemoved = 0;
+    var textAnimatorSummary = null;
 
     if (layerSpec.name !== undefined && layer.name !== layerSpec.name) {
         layer.name = layerSpec.name;
@@ -1242,6 +1268,17 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     if (layerSpec.textStyle !== undefined) {
         aeApplyTextStyle(layer, layerSpec.textStyle);
         operationCount += 1;
+    }
+    if (layerSpec.textStyleRanges !== undefined) {
+        aeApplyTextStyleRanges(layer, layerSpec.textStyleRanges);
+        operationCount += layerSpec.textStyleRanges.length;
+    }
+    if (layerSpec.textAnimators !== undefined) {
+        textAnimatorSummary = aeApplyTextAnimators(layer, layerSpec.textAnimators);
+        operationCount += textAnimatorSummary.removedCount
+            + textAnimatorSummary.animatorCount
+            + textAnimatorSummary.keyframesAdded;
+        keyframesRemoved += textAnimatorSummary.keyframesRemoved;
     }
 
     var skipPropertyPaths = {};
@@ -1374,6 +1411,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
         layerUid: layer ? aeTryGetLayerUid(layer) : null,
         layerName: layer ? layer.name : null,
         layerType: resolved.layerType,
+        textAnimatorCount: textAnimatorSummary ? textAnimatorSummary.animatorCount : 0,
         keyframesRemoved: keyframesRemoved,
         operations: operationCount
     };
@@ -1471,6 +1509,17 @@ function applyScene(sceneJSON, optionsJSON) {
             }
             if (layer.textStyle !== undefined) {
                 operationsPlanned += 1;
+            }
+            operationsPlanned += (layer.textStyleRanges || []).length;
+            var textAnimators = layer.textAnimators || [];
+            operationsPlanned += textAnimators.length;
+            for (var ta = 0; ta < textAnimators.length; ta++) {
+                var selectorAnimations = textAnimators[ta].selector
+                    ? (textAnimators[ta].selector.animations || [])
+                    : [];
+                for (var tsa = 0; tsa < selectorAnimations.length; tsa++) {
+                    operationsPlanned += (selectorAnimations[tsa].keyframes || []).length;
+                }
             }
             operationsPlanned += (layer.propertyValues || []).length;
             var layerEffects = layer.effects || [];
@@ -1674,9 +1723,14 @@ function applyScene(sceneJSON, optionsJSON) {
                         layoutOptions[layoutKey] = layoutSpec[layoutKey];
                     }
                 }
-                var appliedLayout = layoutSpec.type === "align"
-                    ? aeAlignLayerRefs(comp, layoutLayers, layoutOptions)
-                    : aeDistributeLayerRefs(comp, layoutLayers, layoutOptions);
+                var appliedLayout = null;
+                if (layoutSpec.type === "align") {
+                    appliedLayout = aeAlignLayerRefs(comp, layoutLayers, layoutOptions);
+                } else if (layoutSpec.type === "distribute") {
+                    appliedLayout = aeDistributeLayerRefs(comp, layoutLayers, layoutOptions);
+                } else {
+                    appliedLayout = aeVisualCenterLayerRefs(comp, layoutLayers, layoutOptions);
+                }
                 appliedLayout.sceneLayerIds = layoutSpec.layerIds;
                 appliedLayouts.push(appliedLayout);
                 layoutMovedCount += appliedLayout.movedCount;

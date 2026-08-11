@@ -411,6 +411,34 @@ class AEClient:
         response = self._requests.post(self._url("/text-style"), json=payload, timeout=self.timeout)
         return self._handle_response(response)
 
+    def set_text_style_ranges(
+        self,
+        text_style_ranges: List[Dict[str, Any]],
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Apply half-open per-character style ranges (After Effects 24.3+)."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["textStyleRanges"] = text_style_ranges
+        response = self._requests.post(
+            self._url("/text-style-ranges"), json=payload, timeout=self.timeout
+        )
+        return self._handle_response(response)
+
+    def set_text_animators(
+        self,
+        text_animators: List[Dict[str, Any]],
+        layer_id: int | None = None,
+        layer_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Replace ae-agent managed Range Selector text animators."""
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload["textAnimators"] = text_animators
+        response = self._requests.post(
+            self._url("/text-animators"), json=payload, timeout=self.timeout
+        )
+        return self._handle_response(response)
+
     @staticmethod
     def _layer_list_selector_payload(
         layer_ids: List[int] | None = None,
@@ -464,6 +492,20 @@ class AEClient:
         if margin_percent is not None:
             payload["marginPercent"] = margin_percent
         response = self._requests.post(self._url("/layout-distribute"), json=payload, timeout=self.timeout)
+        return self._handle_response(response)
+
+    def visual_center_layers(
+        self,
+        layer_ids: List[int] | None = None,
+        layer_names: List[str] | None = None,
+        time: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Move anchor points to visual centers while preserving comp-space appearance."""
+        payload = self._layer_list_selector_payload(layer_ids=layer_ids, layer_names=layer_names)
+        payload["time"] = time
+        response = self._requests.post(
+            self._url("/layout-visual-center"), json=payload, timeout=self.timeout
+        )
         return self._handle_response(response)
 
     def create_comp(

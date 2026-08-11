@@ -133,6 +133,31 @@ function handleDistributeLayers(req, res) {
     });
 }
 
+function handleVisualCenterLayers(req, res) {
+    readJsonBody(req, res, (body) => {
+        const selectorResult = validateLayoutSelectors(body.layerIds, body.layerNames, 1);
+        if (selectorResult.error) {
+            sendBadRequest(res, selectorResult.error);
+            return;
+        }
+        if (body.time !== undefined && (
+            typeof body.time !== 'number' || !Number.isFinite(body.time) || body.time < 0
+        )) {
+            sendBadRequest(res, 'time must be a finite number greater than or equal to 0');
+            return;
+        }
+        const options = {};
+        if (body.time !== undefined) options.time = body.time;
+        const script = buildLayoutScript('visualCenterLayers', selectorResult.selectors, options);
+        handleBridgeMutationCall(
+            script,
+            res,
+            'visualCenterLayers()',
+            'Failed to visually center layer anchor points',
+        );
+    });
+}
+
 function routeLayoutRequest(pathname, method, req, res) {
     if (pathname === '/layout-align' && method === 'POST') {
         handleAlignLayers(req, res);
@@ -140,6 +165,10 @@ function routeLayoutRequest(pathname, method, req, res) {
     }
     if (pathname === '/layout-distribute' && method === 'POST') {
         handleDistributeLayers(req, res);
+        return true;
+    }
+    if (pathname === '/layout-visual-center' && method === 'POST') {
+        handleVisualCenterLayers(req, res);
         return true;
     }
     return false;

@@ -130,8 +130,19 @@ ae-cli set-text-style --layer-name "Title" \
 
 Pass a PostScript name returned by `list-fonts` to `--font`. RGB colors accept either 0–1 or
 0–255 values. `--leading` switches to manual leading and cannot be combined with `--auto-leading`.
-Only specified fields are updated. Styling applies to the entire text layer; mixed character styles
-and text animators are outside this release's scope.
+Only specified fields are updated. Styling applies to the entire text layer.
+
+Per-character ranges and Range Selector text animators use JSON arrays:
+
+```bash
+ae-cli set-text-style-ranges --layer-name "Title" --ranges-file ranges.json
+ae-cli set-text-animators --layer-name "Title" --animators-file animators.json
+```
+
+Ranges are zero-based and half-open: `{ "start": 0, "end": 3, "style": {...} }`. They support
+per-range font, font size, fill, stroke, and tracking. This requires After Effects 24.3 or newer.
+Text animators support Position, Scale, Opacity, and Rotation plus percentage Range Selector
+Start, End, Offset, Amount, and selector keyframes.
 
 ## Alignment and distribution
 
@@ -142,6 +153,8 @@ ae-cli align-layers --layer-name "Title" \
 ae-cli distribute-layers \
   --layer-name "Card A" --layer-name "Card B" --layer-name "Card C" \
   --axis horizontal --mode gaps --reference action-safe
+
+ae-cli visual-center --layer-name "Title" --time 0.8
 ```
 
 Choose `comp`, `action-safe`, `title-safe`, or `selection` as the reference. Safe-area defaults are
@@ -152,6 +165,8 @@ preserves the target group's current outer bounds; other references use the full
 Bounds account for anchor point, scale, rotation, and 2D parenting. Layout supports visible 2D AV
 layers and rejects 3D layers, 3D parent chains, and Position expressions. For animated Position,
 the command writes a value at `--time`.
+`visual-center` moves each anchor point to its visual-bounds center at `--time` while preserving its
+composition-space appearance.
 
 ## Declarative scene apply
 
@@ -179,6 +194,22 @@ Composition assembly example (create `Main`, `TX01_Title`, and `TX02_Subtitle` f
 ae-cli apply-scene --scene-file examples/comp-assembly.example.json --validate-only
 ae-cli apply-scene --scene-file examples/comp-assembly.example.json
 ```
+
+Higher-level DSL example for generating many telop scenes:
+
+```bash
+python examples/gen_telop.py --out-dir work/telops
+for scene in work/telops/*.scene.json; do
+  ae-cli apply-scene --scene-file "$scene" --validate-only
+done
+```
+
+The default is the macOS Japanese-capable PostScript font `HiraginoSans-W6`. On another setup,
+pass a Japanese-capable PostScript name returned by `list-fonts` with `--font`.
+
+`layers[].textStyleRanges` requires `textStyle` on the same layer so repeated application can restore
+the base style. `layers[].textAnimators` replaces `aeSceneTextAnimator:*` managed animators. Put a
+`layout[]` operation with `type: "visual-center"` before `align` to normalize anchors before placement.
 
 Scenes declare each source once in `assets[]`. Multiple `type: "footage"` layers can reference it by
 `sourceId` and select cuts with `timing.sourceIn`, `sourceOut`, and `timelineIn`.
@@ -208,6 +239,8 @@ in `assets[]`, then reference it with `sourceId` from a `type: "comp"` layer. Us
 - Declaring the same animation `propertyPath` more than once on a layer is a validation error.
 - `easeIn` and `easeOut` use `[speed, influence]`; influence is a percentage from 0.1 through 100. Multi-dimensional properties may use one pair per dimension.
 - Layout supports 2D parent chains and writes parent-local Position from visual bounds. It does not support 3D parent chains.
+- `textStyleRanges` reapplies half-open character ranges after `textStyle` establishes the base.
+- `textAnimators` rebuilds managed animators, so selector key sets are replaced by the declaration.
 
 ## Effect parameter example
 

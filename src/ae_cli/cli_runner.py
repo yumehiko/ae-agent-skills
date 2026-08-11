@@ -246,6 +246,30 @@ def _run_set_text_style(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_set_text_style_ranges(client: AEClient, args: argparse.Namespace) -> None:
+    ranges = _read_json_file(args.ranges_file, "ranges-file")
+    if not isinstance(ranges, list):
+        raise ValueError("--ranges-file must contain a JSON array.")
+    _print_json(
+        client.set_text_style_ranges(
+            text_style_ranges=ranges,
+            **_layer_selector_kwargs(args),
+        )
+    )
+
+
+def _run_set_text_animators(client: AEClient, args: argparse.Namespace) -> None:
+    animators = _read_json_file(args.animators_file, "animators-file")
+    if not isinstance(animators, list):
+        raise ValueError("--animators-file must contain a JSON array.")
+    _print_json(
+        client.set_text_animators(
+            text_animators=animators,
+            **_layer_selector_kwargs(args),
+        )
+    )
+
+
 def _layout_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "layer_ids": getattr(args, "layer_ids", None),
@@ -296,6 +320,17 @@ def _run_distribute_layers(client: AEClient, args: argparse.Namespace) -> None:
             mode=args.mode,
             reference=args.reference,
             margin_percent=args.margin_percent,
+            time=args.time,
+            **_layout_selector_kwargs(args),
+        )
+    )
+
+
+def _run_visual_center(client: AEClient, args: argparse.Namespace) -> None:
+    if not math.isfinite(args.time) or args.time < 0:
+        raise ValueError("--time must be a finite number greater than or equal to 0.")
+    _print_json(
+        client.visual_center_layers(
             time=args.time,
             **_layout_selector_kwargs(args),
         )
@@ -568,8 +603,11 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "list-fonts": _run_list_fonts,
     "get-text-style": _run_get_text_style,
     "set-text-style": _run_set_text_style,
+    "set-text-style-ranges": _run_set_text_style_ranges,
+    "set-text-animators": _run_set_text_animators,
     "align-layers": _run_align_layers,
     "distribute-layers": _run_distribute_layers,
+    "visual-center": _run_visual_center,
     "create-comp": _run_create_comp,
     "set-active-comp": _run_set_active_comp,
     "selected-properties": _run_selected_properties,

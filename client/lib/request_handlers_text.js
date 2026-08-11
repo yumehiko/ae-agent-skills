@@ -153,6 +153,23 @@ function handleSetTextStyle(req, res) {
     });
 }
 
+function handleSetTextJsonCollection(req, res, fieldName, hostFunction, contextLabel) {
+    readJsonBody(req, res, (body) => {
+        const selector = normalizeLayerSelector(body.layerId, body.layerName);
+        if (!selector.ok) {
+            sendBadRequest(res, selector.error);
+            return;
+        }
+        if (!Array.isArray(body[fieldName])) {
+            sendBadRequest(res, `${fieldName} must be an array`);
+            return;
+        }
+        const collectionLiteral = toExtendScriptStringLiteral(JSON.stringify(body[fieldName]));
+        const script = `${hostFunction}(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${collectionLiteral})`;
+        handleBridgeMutationCall(script, res, `${contextLabel}()`, `Failed to set ${fieldName}`);
+    });
+}
+
 function routeTextRequest(pathname, method, req, res, searchParams) {
     if (pathname === '/fonts' && method === 'GET') {
         handleListFonts(searchParams, res);
@@ -164,6 +181,26 @@ function routeTextRequest(pathname, method, req, res, searchParams) {
     }
     if (pathname === '/text-style' && method === 'POST') {
         handleSetTextStyle(req, res);
+        return true;
+    }
+    if (pathname === '/text-style-ranges' && method === 'POST') {
+        handleSetTextJsonCollection(
+            req,
+            res,
+            'textStyleRanges',
+            'setTextStyleRanges',
+            'setTextStyleRanges',
+        );
+        return true;
+    }
+    if (pathname === '/text-animators' && method === 'POST') {
+        handleSetTextJsonCollection(
+            req,
+            res,
+            'textAnimators',
+            'setTextAnimators',
+            'setTextAnimators',
+        );
         return true;
     }
     return false;

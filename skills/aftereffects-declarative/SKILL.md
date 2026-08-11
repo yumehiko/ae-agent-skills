@@ -109,9 +109,14 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 - `textStyle.font` は `ae-cli list-fonts` で取得したPostScript名を使う
 - `fillColor` / `strokeColor` は0〜1または0〜255のRGB配列を使う
 - `textStyle.leading` は手動行送りへ切り替わるため、`autoLeading: true` と併用しない
-- `textStyle` は宣言した項目だけを更新する。文字単位の混在スタイルやテキストアニメーターには使わない
+- `textStyle` はレイヤー全体の基準スタイル。文字範囲は `textStyleRanges[]`、Range Selectorアニメーションは `textAnimators[]` を使う
+- `textStyleRanges[]` は0始まり・終端を含まない `start` / `end` と文字スタイルを宣言する。After Effects 24.3以降が必要
+- `textStyleRanges` は再適用時に基準スタイルへ戻せるよう、同じレイヤーの `textStyle` と必ず併用する
+- `textAnimators[]` は `id`、Position / Scale / Opacity / Rotation、百分率selectorとStart / End / Offset / Amountのanimationを宣言する
+- `textAnimators` を宣言したレイヤーでは `aeSceneTextAnimator:*` 管理アニメーターを置換する。人手作成の別名アニメーターは保持する
 - 整列・分布はトップレベルの `layout[]` に上から順に宣言し、`layerIds` はscene layer idを参照する
 - `align` は `horizontal` / `vertical`、`distribute` は `axis` と `mode: gaps | centers` を指定する
+- `visual-center` はvisual bounds中央へアンカーポイントを移し、見た目の位置を保持する。通常は `align` より前に置く
 - 基準は `comp` / `action-safe` / `title-safe` / `selection`。safe既定値は10% / 20%で、必要なら `marginPercent` で上書きする
 - layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない
 - 2D親子付きレイヤーはlayout対象にできる。親transformを含むvisual boundsから親座標系へ書き戻す

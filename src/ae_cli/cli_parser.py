@@ -206,6 +206,28 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["left", "center", "right", "full-left", "full-center", "full-right", "full"],
     )
 
+    set_text_style_ranges_parser = subparsers.add_parser(
+        "set-text-style-ranges",
+        help="Apply half-open per-character text styles from a JSON array (AE 24.3+)",
+    )
+    _add_layer_selector(set_text_style_ranges_parser)
+    set_text_style_ranges_parser.add_argument(
+        "--ranges-file",
+        required=True,
+        help="UTF-8 JSON file containing an array of {start,end,style}",
+    )
+
+    set_text_animators_parser = subparsers.add_parser(
+        "set-text-animators",
+        help="Replace managed Range Selector text animators from a JSON array",
+    )
+    _add_layer_selector(set_text_animators_parser)
+    set_text_animators_parser.add_argument(
+        "--animators-file",
+        required=True,
+        help="UTF-8 JSON file containing text animator declarations",
+    )
+
     align_layers_parser = subparsers.add_parser(
         "align-layers",
         help="Align visual layer bounds to the comp, safe area, or selected bounds",
@@ -232,6 +254,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="gaps",
     )
     _add_layout_reference_options(distribute_layers_parser)
+
+    visual_center_parser = subparsers.add_parser(
+        "visual-center",
+        help="Move layer anchor points to visual centers without changing appearance",
+    )
+    _add_layer_list_selector(visual_center_parser)
+    visual_center_parser.add_argument("--time", type=float, default=0.0)
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
     _add_layer_selector(properties_parser)

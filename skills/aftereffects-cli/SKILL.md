@@ -80,9 +80,12 @@ description: Command-by-command After Effects editing and inspection via ae-cli,
   - `ae-cli list-fonts [--query <text>] [--limit <count>]`
   - `ae-cli get-text-style (--layer-id <id> | --layer-name <name>)`
   - `ae-cli set-text-style (--layer-id <id> | --layer-name <name>) [style options]`
+  - `ae-cli set-text-style-ranges (--layer-id <id> | --layer-name <name>) --ranges-file <json>`
+  - `ae-cli set-text-animators (--layer-id <id> | --layer-name <name>) --animators-file <json>`
 - 配置:
   - `ae-cli align-layers (--layer-id <id>... | --layer-name <name>...) [--horizontal left|center|right] [--vertical top|center|bottom] [--reference comp|action-safe|title-safe|selection]`
   - `ae-cli distribute-layers (--layer-id <id>... | --layer-name <name>...) --axis horizontal|vertical [--mode gaps|centers] [--reference comp|action-safe|title-safe|selection]`
+  - `ae-cli visual-center (--layer-id <id>... | --layer-name <name>...) [--time <sec>]`
 - タイムライン:
   - `ae-cli set-in-out-point ...`
   - `ae-cli move-layer-time ...`
@@ -119,7 +122,10 @@ ae-cli layers
 - `--mute` / `--unmute` だけを指定した場合は既存のAudio Levelsキーフレームを保持する。
 - フォント指定前に `list-fonts` を実行し、返されたPostScript名を `--font` に使う。
 - `set-text-style` は指定項目だけをテキストレイヤー全体へ適用する。色は0〜1または0〜255のRGBで指定する。
-- `--leading` と `--auto-leading` は併用しない。文字単位の混在スタイルやテキストアニメーターは対象外。
+- `--leading` と `--auto-leading` は併用しない。
+- 文字範囲スタイルは0始まり・終端を含まないrange JSONで指定し、After Effects 24.3以降で使う。
+- `set-text-animators` は `aeSceneTextAnimator:*` 管理アニメーターを置換する。人手作成アニメーターは保持する。
+- `visual-center` はvisual bounds中央へアンカーを移し、Positionを補正して見た目の位置を保持する。
 - 配置基準のsafe既定値はaction-safe 10%、title-safe 20%。必要なら `--margin-percent` で上書きする。
 - `gaps` は実寸の隙間、`centers` は中心間隔を均等化する。`selection` は対象全体の現在の外周を保持する。
 - layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない。

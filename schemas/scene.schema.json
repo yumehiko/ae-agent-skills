@@ -254,6 +254,21 @@
       ],
       "additionalProperties": false
     },
+    "visualCenterLayout": {
+      "type": "object",
+      "required": ["type", "layerIds"],
+      "properties": {
+        "type": { "const": "visual-center" },
+        "layerIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "time": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "layoutOperation": {
       "oneOf": [
         {
@@ -261,6 +276,9 @@
         },
         {
           "$ref": "#/$defs/distributeLayout"
+        },
+        {
+          "$ref": "#/$defs/visualCenterLayout"
         }
       ]
     },
@@ -515,6 +533,91 @@
             "const": true
           }
         }
+      },
+      "additionalProperties": false
+    },
+    "textRangeStyle": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "font": { "type": "string", "minLength": 1 },
+        "fontSize": { "type": "number", "minimum": 0.1, "maximum": 1296 },
+        "fillEnabled": { "type": "boolean" },
+        "fillColor": { "$ref": "#/$defs/rgbColor" },
+        "strokeEnabled": { "type": "boolean" },
+        "strokeColor": { "$ref": "#/$defs/rgbColor" },
+        "strokeWidth": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "strokeOverFill": { "type": "boolean" },
+        "tracking": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "textStyleRange": {
+      "type": "object",
+      "required": ["start", "end", "style"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end": { "type": "integer", "minimum": 1 },
+        "style": { "$ref": "#/$defs/textRangeStyle" }
+      },
+      "additionalProperties": false
+    },
+    "textSelectorAnimation": {
+      "type": "object",
+      "required": ["property", "keyframes"],
+      "properties": {
+        "property": {
+          "type": "string",
+          "enum": ["start", "end", "offset", "amount"]
+        },
+        "keyframes": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              { "$ref": "#/$defs/keyframe" },
+              {
+                "properties": {
+                  "value": { "type": "number" }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "textRangeSelector": {
+      "type": "object",
+      "properties": {
+        "start": { "type": "number" },
+        "end": { "type": "number" },
+        "offset": { "type": "number" },
+        "amount": { "type": "number" },
+        "animations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/textSelectorAnimation" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "textAnimatorProperties": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "position": { "$ref": "#/$defs/numberArray2or3" },
+        "scale": { "$ref": "#/$defs/numberArray2or3" },
+        "opacity": { "type": "number" },
+        "rotation": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "textAnimator": {
+      "type": "object",
+      "required": ["id", "properties"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "properties": { "$ref": "#/$defs/textAnimatorProperties" },
+        "selector": { "$ref": "#/$defs/textRangeSelector" }
       },
       "additionalProperties": false
     },
@@ -784,6 +887,14 @@
         "textStyle": {
           "$ref": "#/$defs/textStyle"
         },
+        "textStyleRanges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/textStyleRange" }
+        },
+        "textAnimators": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/textAnimator" }
+        },
         "sourceId": {
           "type": "string",
           "minLength": 1
@@ -933,6 +1044,21 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["textStyleRanges"] },
+              { "required": ["textAnimators"] }
+            ]
+          },
+          "then": {
+            "properties": { "type": { "const": "text" } }
+          }
+        },
+        {
+          "if": { "required": ["textStyleRanges"] },
+          "then": { "required": ["textStyle"] }
         }
       ],
       "additionalProperties": false

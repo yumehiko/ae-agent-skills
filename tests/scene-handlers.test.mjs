@@ -14,6 +14,9 @@ const source = fs.readFileSync(
 function createContext() {
   const context = vm.createContext({
     aeValidateSceneLayoutSpecs() {},
+    aeValidateTextStyle() {},
+    aeValidateTextStyleRanges() {},
+    aeValidateTextAnimators() {},
     File: function File(value) {
       this.fsName = String(value);
       this.exists = true;
@@ -83,6 +86,39 @@ test('scene validation rejects unknown keyframe modes and fractional comp dimens
   const errors = Array.from(result.errors);
   assert.ok(errors.some((message) => message.includes('width must be a positive integer')));
   assert.ok(errors.some((message) => message.includes('keyframeMode must be replace or merge')));
+});
+
+test('scene validation requires a base text style for declarative range styles', () => {
+  const result = validate(createContext(), {
+    layers: [
+      {
+        id: 'title',
+        type: 'text',
+        textStyleRanges: [{ start: 0, end: 2, style: { fillColor: [255, 0, 0] } }],
+      },
+    ],
+  });
+
+  assert.equal(result.ok, false);
+  assert.ok(Array.from(result.errors).some((message) => message.includes('requires textStyle')));
+});
+
+test('scene validation accepts text ranges and animators on a text layer', () => {
+  const result = validate(createContext(), {
+    layers: [
+      {
+        id: 'title',
+        type: 'text',
+        textStyle: { fontSize: 80 },
+        textStyleRanges: [{ start: 0, end: 2, style: { fillColor: [255, 0, 0] } }],
+        textAnimators: [
+          { id: 'reveal', properties: { opacity: 0 }, selector: { start: 0, end: 100 } },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(result.ok, true);
 });
 
 function applyLayer(context, layerSpec) {
