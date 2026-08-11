@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Operate Adobe After Effects with reusable declarative and command-by-command agent workflows.",
   "author": {
     "name": "yumehiko",
