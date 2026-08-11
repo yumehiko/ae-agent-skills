@@ -99,10 +99,6 @@ Guideにはこのメソッドが掲載されていないため、実行時に存
 - `examples/gen_telop.py` を日本語対応PostScriptフォント`HiraginoSans-W6`で実行し、生成した3sceneをvalidate / apply / 再applyした。各compは1レイヤー・1animatorを維持した
 - Pythonテスト94件、Nodeテスト53件、両skill validator、`npm pack --dry-run`が成功した
 
-## リリース運用
-
-各バージョンで、自動テスト、skill validator、npm packに加え、上記のAfter Effects実機受け入れ条件を完了させる。
-
 ## v0.10.0 実装セッション引き継ぎ（2026-08-10）
 
 - 実装ブランチ: `agent/inspection-v0.10`
