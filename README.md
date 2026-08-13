@@ -1,45 +1,45 @@
-# ae-agent-skills
+# ae-agent-skills — py-aep preview
 
-`ae-agent-skills` lets Codex, Gemini, and Claude Code operate Adobe After Effects.
-It installs the After Effects extension, `ae-cli`, and agent skills with one command.
+This prerelease evaluates an offline-first After Effects workflow built on
+[`py-aep`](https://github.com/forticheprod/py-aep). It intentionally replaces the
+installed declarative and mutation skills with one compact skill that edits `.aep` files as
+Python object graphs.
 
-日本語: [README.ja.md](README.ja.md)
+Japanese documentation: [README.ja.md](README.ja.md)
 
-## Quick Start
-
-1. Install:
+## Install the preview
 
 ```bash
-npx ae-agent-skills install
+npx --yes ae-agent-skills@pyaep install --agent codex
 ```
 
-2. Restart After Effects and open `Window > Extensions (Beta) > ae-agent-skill`.
-3. Launch your agent and ask it to perform an After Effects task.
+Replace `codex` with `gemini`, `claude`, or `all`. Restart After Effects after extension
+installation and open `Window > Extensions (Beta) > ae-agent-skill` when live verification
+is needed.
+
+Example request:
 
 ```text
-Use $aftereffects-declarative to create a 1920x1080, 30fps, 5-second composition.
-Set a dark gray background, place "Hello AE Agent" text at the center,
-and add a 0.5-second fade-in animation.
+Use $aftereffects-py-aep to edit /path/to/input.aep, save a new
+/path/to/output.aep, reparse it, and verify the intended changes.
 ```
 
-In Claude Code, use `/aftereffects-declarative` instead of `$aftereffects-declarative`.
+The preview workflow:
 
-## Choosing a skill
+- parses once, applies all edits in memory, and saves once;
+- never overwrites the input project;
+- reparses the output and checks semantic assertions;
+- uses the live AE bridge only for rendering, expression diagnostics, visual bounds,
+  installed fonts/effects, and open-project runtime state;
+- records production feedback in
+  `~/ae-agent-skills-preview/feedback-template.ja.md`.
 
-- `$aftereffects-declarative`: The default for new compositions and repeatable scene-level edits.
-- `$aftereffects-cli`: For focused adjustments to existing scenes and debugging.
-
-## Updating
-
-Quit After Effects, then run the installer for the agent you previously installed:
+## Return to stable
 
 ```bash
+rm -rf ~/.agents/skills/aftereffects-py-aep
 npx --yes ae-agent-skills@latest install --agent codex
 ```
 
-Replace `codex` with `gemini`, `claude`, or `all` as needed. Restart After Effects when it finishes.
-
-## Documentation
-
-- [CLI usage](docs/cli.md)
-- [Development](docs/development.md)
+Prerelease versions are published through the npm `pyaep` dist-tag and GitHub prereleases;
+they do not update npm `latest`.

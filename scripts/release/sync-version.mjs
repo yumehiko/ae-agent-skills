@@ -11,6 +11,7 @@ const rootDir = path.resolve(__dirname, '..', '..');
 const packageJsonPath = path.join(rootDir, 'package.json');
 const manifestPath = path.join(rootDir, 'CSXS', 'manifest.xml');
 const pluginManifestPath = path.join(rootDir, '.codex-plugin', 'plugin.json');
+const pyprojectPath = path.join(rootDir, 'pyproject.toml');
 
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = pkg.version;
@@ -19,15 +20,26 @@ if (!version) {
   throw new Error('package.json version is missing');
 }
 
+const stableMatch = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+const previewMatch = version.match(/^(\d+)\.(\d+)\.(\d+)-pyaep\.(\d+)$/);
+if (!stableMatch && !previewMatch) {
+  throw new Error(`Unsupported release version: ${version}`);
+}
+
+const match = stableMatch || previewMatch;
+const baseVersion = `${match[1]}.${match[2]}.${match[3]}`;
+const pythonVersion = previewMatch ? `${baseVersion}.dev${previewMatch[4]}` : baseVersion;
+const cepVersion = previewMatch ? `${baseVersion}.pyaep-${previewMatch[4]}` : baseVersion;
+
 let manifest = fs.readFileSync(manifestPath, 'utf8');
 
 manifest = manifest.replace(
   /ExtensionBundleVersion="[^"]+"/g,
-  `ExtensionBundleVersion="${version}"`
+  `ExtensionBundleVersion="${cepVersion}"`
 );
 manifest = manifest.replace(
   /(<Extension Id="com\.yumehiko\.aeagentskill\.panel" Version=")[^"]+("\s*\/?>)/g,
-  `$1${version}$2`
+  `$1${cepVersion}$2`
 );
 
 fs.writeFileSync(manifestPath, manifest, 'utf8');
@@ -36,4 +48,13 @@ const pluginManifest = JSON.parse(fs.readFileSync(pluginManifestPath, 'utf8'));
 pluginManifest.version = version;
 fs.writeFileSync(pluginManifestPath, `${JSON.stringify(pluginManifest, null, 2)}\n`, 'utf8');
 
-console.log(`Synced extension and plugin manifest versions to ${version}`);
+let pyproject = fs.readFileSync(pyprojectPath, 'utf8');
+pyproject = pyproject.replace(
+  /^(version\s*=\s*")[^"]+("\s*)$/m,
+  `$1${pythonVersion}$2`,
+);
+fs.writeFileSync(pyprojectPath, pyproject, 'utf8');
+
+console.log(
+  `Synced package=${version} plugin=${version} python=${pythonVersion} cep=${cepVersion}`,
+);

@@ -6,20 +6,27 @@ import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 export const DEFAULT_REPO = 'yumehiko/ae-agent-skills';
-export const AGENT_WORKSPACE_NAME = 'ae-agent-skills';
+export const AGENT_WORKSPACE_NAME = 'ae-agent-skills-preview';
+
+const MODULE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+export const PACKAGE_VERSION = JSON.parse(
+  fs.readFileSync(path.join(MODULE_ROOT, 'package.json'), 'utf8'),
+).version;
 
 export const SKILL_SOURCES = [
-  { name: 'aftereffects-cli' },
-  { name: 'aftereffects-declarative' },
+  { name: 'aftereffects-py-aep' },
+];
+
+export const PREVIEW_REMOVED_SKILLS = [
+  'aftereffects-cli',
+  'aftereffects-declarative',
 ];
 
 export const WORKSPACE_RESOURCE_SOURCES = [
-  { source: ['schemas', 'scene.schema.json'], destination: ['scene.schema.json'] },
-  { source: ['examples', 'scene.example.json'], destination: ['references', 'scene.example.json'] },
-  { source: ['examples', 'footage-edit.example.json'], destination: ['references', 'footage-edit.example.json'] },
-  { source: ['examples', 'comp-assembly.example.json'], destination: ['references', 'comp-assembly.example.json'] },
-  { source: ['docs', 'cli.ja.md'], destination: ['references', 'cli.ja.md'] },
-  { source: ['docs', 'cli.md'], destination: ['references', 'cli.md'] },
+  {
+    source: ['docs', 'py-aep-preview-feedback.ja.md'],
+    destination: ['feedback-template.ja.md'],
+  },
 ];
 
 export const AGENT_REGISTRY = [
@@ -57,7 +64,7 @@ const AGENT_ALIASES = {
 };
 
 export function getRepoRoot() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  return MODULE_ROOT;
 }
 
 export function printHelp(output = console.log) {
@@ -264,6 +271,11 @@ function downloadToFile(url, destination) {
   });
 }
 
+export function releaseApiUrl(repo, packageVersion = PACKAGE_VERSION) {
+  const releaseTag = `v${packageVersion}`;
+  return `https://api.github.com/repos/${repo}/releases/tags/${encodeURIComponent(releaseTag)}`;
+}
+
 export async function resolveZxpPath(opts) {
   if (opts.zxp) {
     if (opts.zxp.startsWith('http://') || opts.zxp.startsWith('https://')) {
@@ -280,8 +292,9 @@ export async function resolveZxpPath(opts) {
     return local;
   }
 
-  console.log(`Fetching latest release from GitHub: ${opts.repo}`);
-  const release = await fetchJson(`https://api.github.com/repos/${opts.repo}/releases/latest`);
+  const releaseTag = `v${PACKAGE_VERSION}`;
+  console.log(`Fetching release ${releaseTag} from GitHub: ${opts.repo}`);
+  const release = await fetchJson(releaseApiUrl(opts.repo));
   const asset = (release.assets || []).find((a) => typeof a.name === 'string' && a.name.endsWith('.zxp'));
   if (!asset) {
     throw new Error(`No .zxp asset found in latest release of ${opts.repo}`);
@@ -302,6 +315,13 @@ export function installSkills(
 
   for (const target of targets) {
     fs.mkdirSync(target.destRoot, { recursive: true });
+    for (const removedName of PREVIEW_REMOVED_SKILLS) {
+      const removedPath = path.join(target.destRoot, removedName);
+      if (fs.existsSync(removedPath)) {
+        fs.rmSync(removedPath, { recursive: true, force: true });
+        console.log(`Removed stable skill for preview: ${removedPath}`);
+      }
+    }
     for (const skill of SKILL_SOURCES) {
       const source = path.join(sourceRoot, skill.name);
       const destination = path.join(target.destRoot, skill.name);
@@ -329,13 +349,7 @@ export function installSkills(
 
 export function setupAgentWorkspace({ root = getRepoRoot(), home = os.homedir() } = {}) {
   const workspaceRoot = path.join(home, AGENT_WORKSPACE_NAME);
-  const workDir = path.join(workspaceRoot, 'work');
-  const doneDir = path.join(workspaceRoot, 'done');
-  const refsDir = path.join(workspaceRoot, 'references');
-
-  fs.mkdirSync(workDir, { recursive: true });
-  fs.mkdirSync(doneDir, { recursive: true });
-  fs.mkdirSync(refsDir, { recursive: true });
+  fs.mkdirSync(workspaceRoot, { recursive: true });
 
   for (const resource of WORKSPACE_RESOURCE_SOURCES) {
     const source = path.join(root, ...resource.source);
@@ -349,11 +363,15 @@ export function setupAgentWorkspace({ root = getRepoRoot(), home = os.homedir() 
   console.log(`Prepared workspace: ${workspaceRoot}`);
 }
 
-export function installCli(repo) {
+export function cliInstallSpec(repo, packageVersion = PACKAGE_VERSION) {
+  return `git+https://github.com/${repo}.git@v${packageVersion}`;
+}
+
+export function installCli(repo, packageVersion = PACKAGE_VERSION) {
   if (!commandExists('python3')) {
     throw new Error('python3 is required to install ae-cli.');
   }
-  const spec = `git+https://github.com/${repo}.git`;
+  const spec = cliInstallSpec(repo, packageVersion);
   run('python3', ['-m', 'pip', 'install', '--user', '--upgrade', spec]);
 
   const helpRes = spawnSync('ae-cli', ['--help'], { stdio: 'inherit' });

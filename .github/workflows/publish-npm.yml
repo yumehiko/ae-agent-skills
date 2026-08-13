@@ -33,4 +33,11 @@ jobs:
         run: npm run test:node
 
       - name: Publish to npm
-        run: npm publish
+        env:
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            npm publish --tag pyaep
+          else
+            npm publish
+          fi

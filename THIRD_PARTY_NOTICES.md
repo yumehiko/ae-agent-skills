@@ -21,3 +21,12 @@ notice is retained in the file.
 - License: Public Domain; no warranty is expressed or implied.
 
 The original public-domain and warranty notice is retained in the file.
+
+## py-aep
+
+- Package: `py-aep==0.15.0`
+- Source: [forticheprod/py-aep](https://github.com/forticheprod/py-aep)
+- License: MIT
+
+The preview installer installs py-aep as a Python dependency. It is not bundled in the ZXP
+or npm archive.

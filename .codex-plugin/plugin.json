@@ -1,7 +1,7 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.13.0",
-  "description": "Operate Adobe After Effects with reusable declarative and command-by-command agent workflows.",
+  "version": "0.14.0-pyaep.1",
+  "description": "Preview offline After Effects editing with py-aep and focused live verification.",
   "author": {
     "name": "yumehiko",
     "url": "https://github.com/yumehiko"
@@ -17,17 +17,16 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "After Effects Agent Skills",
-    "shortDescription": "Build and edit After Effects scenes with agent workflows.",
-    "longDescription": "Create repeatable After Effects compositions from declarative JSON or make precise edits to existing scenes through ae-cli.",
+    "displayName": "After Effects py-aep Preview",
+    "shortDescription": "Edit AEP projects offline with py-aep.",
+    "longDescription": "Edit After Effects project files directly as Python objects, then use live After Effects only for runtime and visual verification.",
     "developerName": "yumehiko",
     "category": "Productivity",
     "capabilities": [
       "Write"
     ],
     "defaultPrompt": [
-      "Use $aftereffects-declarative to create an After Effects composition.",
-      "Use $aftereffects-cli to inspect and edit the active composition."
+      "Use $aftereffects-py-aep to edit an After Effects project offline and verify the output safely."
     ]
   }
 }

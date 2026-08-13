@@ -1,7 +1,9 @@
 # ae-agent-skills
 
-`ae-agent-skills`は、Codex、Gemini、Claude CodeからAdobe After Effectsを操作するためのツールです。
-After Effects拡張、`ae-cli`、エージェント向けskillを1コマンドで導入できます。
+> このブランチは `py-aep` 検証版です。安定版の宣言型・mutation CLIではなく、
+> `.aep`をPythonオブジェクトとして一括編集する実作業評価を目的とします。
+
+検証版は`py-aep`、runtime確認用After Effects拡張、薄いagent skillを導入します。
 
 English README: [README.md](README.md)
 
@@ -10,36 +12,35 @@ English README: [README.md](README.md)
 1. インストールする。
 
 ```bash
-npx ae-agent-skills install
+npx --yes ae-agent-skills@pyaep install
 ```
 
 2. After Effectsを再起動し、`ウィンドウ > 機能拡張 (ベータ) > ae-agent-skill`を開く。
-3. エージェントを起動し、After Effectsの操作を依頼する。
+3. エージェントを起動し、対象`.aep`のオフライン編集を依頼する。
 
 ```text
-$aftereffects-declarative を使って、1920x1080 / 30fps / 5秒のコンポジションを作成して。
-背景はダークグレー、中央に「Hello AE Agent」のテキストを配置し、
-0.5秒でフェードインするアニメーションを追加して。
+$aftereffects-py-aep を使って、/path/to/input.aep のMainコンポにタイトルを追加し、
+/path/to/output.aepへ別名保存して再parse検証して。
 ```
 
-Claude Codeでは`$aftereffects-declarative`の代わりに`/aftereffects-declarative`を使用します。
+Claude Codeでは`$aftereffects-py-aep`の代わりに`/aftereffects-py-aep`を使用します。
 
-## skillの使い分け
+## 検証方針
 
-- `$aftereffects-declarative`: 新規コンポジションや、再実行可能なシーン全体の編集。通常はこちらを使用します。
-- `$aftereffects-cli`: 既存シーンの局所的な調整やデバッグに使用します。
+- file編集は`py-aep`を直接使い、一度parseして一度saveする
+- 入力`.aep`を上書きせず、出力を再parseして意味的に検証する
+- snapshot、式評価、text/shape boundsなどruntime依存の確認だけ`ae-cli`を使う
+- `~/ae-agent-skills-preview/feedback-template.ja.md`へ実案件の結果を記録する
 
 ## アップデート
 
 After Effectsを終了してから、インストール済みのエージェントを指定して実行します。
 
 ```bash
-npx --yes ae-agent-skills@latest install --agent codex
+npx --yes ae-agent-skills@pyaep install --agent codex
 ```
 
 `codex`は`gemini`、`claude`、または`all`へ置き換えられます。完了後にAfter Effectsを再起動してください。
 
-## ドキュメント
-
-- [CLI利用方法](docs/cli.ja.md)
-- [開発者向け情報](docs/development.ja.md)
+安定版へ戻す場合は`~/.agents/skills/aftereffects-py-aep`を削除してから、
+`npx --yes ae-agent-skills@latest install --agent codex`を実行します。

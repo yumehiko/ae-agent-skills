@@ -1,7 +1,7 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.13.0",
-  "description": "After Effects agent skills and CLI for composition building, footage, audio, text, and layout.",
+  "version": "0.14.0-pyaep.1",
+  "description": "Preview workflow for editing After Effects projects offline with py-aep.",
   "repository": {
     "type": "git",
     "url": "https://github.com/yumehiko/ae-agent-skills.git"
@@ -21,12 +21,8 @@
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "bin",
-    "skills",
-    "schemas",
-    "examples/*.json",
-    "examples/*.py",
-    "docs/cli.ja.md",
-    "docs/cli.md"
+    "skills/aftereffects-py-aep",
+    "docs/py-aep-preview-feedback.ja.md"
   ],
   "engines": {
     "node": ">=18"

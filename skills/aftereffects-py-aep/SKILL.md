@@ -1,0 +1,95 @@
+---
+name: aftereffects-py-aep
+description: Edit, inspect, create, and validate After Effects .aep projects offline with py-aep, without opening After Effects for file-level work. Use for existing AEP template edits, composition/layer/property/keyframe/text/shape/footage/render-queue changes, batch processing, or new AEP creation. Use the bundled ae-cli only when live After Effects is required for rendering, snapshots, expression evaluation/errors, text or shape visual bounds, installed fonts/effects, or open-project runtime state.
+---
+
+# After Effects with py-aep
+
+Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
+scene JSON or a sequence of mutation CLI commands.
+
+## Safety contract
+
+- Never overwrite the input `.aep`.
+- Resolve input and output to absolute paths and reject equal paths.
+- Parse once, inspect and mutate the same object graph, then save once.
+- Save to a new `.aep`; `py-aep` itself rejects an existing output.
+- Reparse the output and assert the intended semantic result before reporting success.
+- Preserve the task script beside the project, preferably under `_automation/`.
+- Do not claim visual correctness from a successful binary round-trip.
+
+## Workflow
+
+1. Confirm the input path and record its SHA-256.
+2. Get a compact inventory. Run `scripts/inspect_aep.py <input.aep>` from this skill;
+   add `--comp <name>` when one comp is enough.
+3. Inspect objects in Python. Filter by type, ID, name, comment, source, or match name;
+   do not dump every property tree into context.
+4. Write one Python script that parses, mutates, saves to a new path, reparses, and asserts.
+5. Run the script and confirm the input SHA-256 did not change.
+6. Use live AE checks only for the runtime-dependent facts listed below.
+7. Record preview feedback using `~/ae-agent-skills-preview/feedback-template.ja.md`.
+
+Use the installed package source and [py-aep documentation](https://forticheprod.github.io/py-aep/)
+for API details instead of copying the API surface into task context.
+
+## Editing pattern
+
+```python
+from pathlib import Path
+import py_aep
+
+source = Path("/absolute/project.aep").resolve()
+output = Path("/absolute/project.py-aep-preview.aep").resolve()
+if source == output or output.exists():
+    raise RuntimeError("Use a new output path")
+
+app = py_aep.parse(source)
+project = app.project
+
+matches = [c for c in project.compositions if c.name == "Main"]
+if len(matches) != 1:
+    raise RuntimeError(f"Expected one Main comp, found {len(matches)}")
+comp = matches[0]
+
+# Perform all task mutations here on the same object graph.
+
+project.save(output)
+
+check = py_aep.parse(output).project
+check_matches = [c for c in check.compositions if c.name == "Main"]
+assert len(check_matches) == 1
+```
+
+Prefer object references after resolving them once. Names are not stable identifiers unless
+uniqueness was checked. Inspect signatures or docstrings when an API is uncertain:
+
+```python
+import inspect
+print(inspect.signature(comp.precompose))
+print(inspect.getdoc(type(comp)))
+```
+
+## Runtime boundary
+
+Use `ae-cli` only after opening the new output in After Effects when the task needs:
+
+- `snapshot`: rendered PNG evidence
+- `expression-errors`: actual expression-engine diagnostics
+- `bounds`: text or shape visual ink bounds
+- `list-fonts`: fonts installed in the running AE environment
+- `properties`: comparison against AE's runtime-synthesized property state
+- `health`: identity and dirty state of the project currently open in AE
+
+Expression source can be read and written offline, but its result cannot be evaluated.
+Text and shape structures can be edited offline, but their rendered visual bounds are not
+available from `py-aep`. Arbitrary new effects may require an effect definition already stored
+in the project; treat failure to add one as unsupported rather than synthesizing binary data.
+
+## Validation levels
+
+- File pass: output reparses and semantic assertions pass.
+- AE structure pass: AE opens it and expected comps/layers/properties are present.
+- Visual pass: representative snapshots or renders were reviewed.
+
+State exactly which level was reached. A file pass alone is not a visual pass.
