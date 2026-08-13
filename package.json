@@ -22,6 +22,8 @@
     "THIRD_PARTY_NOTICES.md",
     "bin",
     "skills/aftereffects-py-aep",
+    "!skills/aftereffects-py-aep/**/__pycache__",
+    "!skills/aftereffects-py-aep/**/*.pyc",
     "docs/py-aep-preview-feedback.ja.md"
   ],
   "engines": {

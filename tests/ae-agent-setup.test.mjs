@@ -102,6 +102,8 @@ test('plugin and npm package expose the preview skill only', () => {
     true,
   );
   assert.equal(pkg.files.includes('skills/aftereffects-py-aep'), true);
+  assert.equal(pkg.files.includes('!skills/aftereffects-py-aep/**/__pycache__'), true);
+  assert.equal(pkg.files.includes('!skills/aftereffects-py-aep/**/*.pyc'), true);
   assert.equal(pkg.files.includes('skills'), false);
   assert.equal(pkg.files.includes('schemas'), false);
   assert.equal(pkg.files.includes('src'), false);
