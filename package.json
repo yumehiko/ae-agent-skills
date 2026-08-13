@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "After Effects agent skills and CLI for composition building, footage, audio, text, and layout.",
   "repository": {
     "type": "git",
