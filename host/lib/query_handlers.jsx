@@ -221,6 +221,8 @@ function getProperties(layerId, optionsJSON) {
         var maxDepth = parseMaxDepth(options.maxDepth);
         var includeGroupChildren = options.includeGroupChildren === true;
         var includeKeyframes = options.includeKeyframes === true;
+        var includeExpression = options.includeExpression === true;
+        var includeDisabled = options.includeDisabled === true;
         var evaluationTime = null;
         if (options.time !== null && options.time !== undefined) {
             evaluationTime = Number(options.time);
@@ -240,6 +242,42 @@ function getProperties(layerId, optionsJSON) {
         }
         var layer = resolvedLayer.layer;
         var properties = [];
+
+        if (options.propertyPath !== null && options.propertyPath !== undefined) {
+            var exactPath = String(options.propertyPath);
+            var exactProp = resolveProperty(layer, exactPath);
+            if (!exactProp || !aeIsPropertyNode(exactProp)) {
+                return encodePayload({
+                    status: "error",
+                    message: "Property with path '" + exactPath + "' not found."
+                });
+            }
+            var exactHasExpression = false;
+            try {
+                exactHasExpression = exactProp.expressionEnabled === true;
+            } catch (eExactExpression) {}
+            var exactSummary = {
+                name: exactProp.name,
+                path: exactPath,
+                matchName: exactProp.matchName || null,
+                value: aePropertyValueToString(exactProp),
+                hasExpression: exactHasExpression
+            };
+            if (includeKeyframes) {
+                exactSummary.keyframes = aeQueryPropertyKeyframes(exactProp);
+            }
+            if (includeExpression) {
+                exactSummary.expression = null;
+                exactSummary.expressionEnabled = false;
+                try {
+                    exactSummary.expression = String(exactProp.expression);
+                } catch (eExactSource) {}
+                try {
+                    exactSummary.expressionEnabled = exactProp.expressionEnabled === true;
+                } catch (eExactEnabled) {}
+            }
+            return encodePayload([exactSummary]);
+        }
 
         function shouldSkipTopLevel(matchName, depth) {
             if (depth !== 0 || !matchName || matchName.length === 0) {
@@ -281,7 +319,7 @@ function getProperties(layerId, optionsJSON) {
                 }
 
                 if (aeIsPropertyNode(prop)) {
-                    if (!aeCanExposeProperty(prop)) {
+                    if (!includeDisabled && !aeCanExposeProperty(prop)) {
                         continue;
                     }
                     var hasExpression = false;
@@ -296,6 +334,16 @@ function getProperties(layerId, optionsJSON) {
                     };
                     if (includeKeyframes) {
                         propertySummary.keyframes = aeQueryPropertyKeyframes(prop);
+                    }
+                    if (includeExpression) {
+                        propertySummary.expression = null;
+                        propertySummary.expressionEnabled = false;
+                        try {
+                            propertySummary.expression = String(prop.expression);
+                        } catch (eExpression) {}
+                        try {
+                            propertySummary.expressionEnabled = prop.expressionEnabled === true;
+                        } catch (eExpressionEnabled) {}
                     }
                     properties.push(propertySummary);
                 }

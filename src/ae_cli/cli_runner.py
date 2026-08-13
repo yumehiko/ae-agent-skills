@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -50,6 +52,40 @@ def _read_json_file(path: str, label: str) -> Any:
         raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
 
 
+_SCENE_PATH_VARIABLE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def _resolve_scene_asset_paths(scene: Any, scene_file: Path) -> Any:
+    if not isinstance(scene, dict):
+        return scene
+    assets = scene.get("assets")
+    if not isinstance(assets, list):
+        return scene
+
+    def replace_variable(match: re.Match[str]) -> str:
+        variable_name = match.group(1)
+        value = os.environ.get(variable_name)
+        if value is None:
+            raise ValueError(
+                f"Environment variable {variable_name} referenced by an asset path is not set."
+            )
+        return value
+
+    scene_directory = scene_file.expanduser().resolve().parent
+    for asset in assets:
+        if not isinstance(asset, dict) or "path" not in asset:
+            continue
+        raw_path = asset["path"]
+        if not isinstance(raw_path, str) or not raw_path:
+            continue
+        expanded_path = _SCENE_PATH_VARIABLE.sub(replace_variable, raw_path)
+        resolved_path = Path(expanded_path).expanduser()
+        if not resolved_path.is_absolute():
+            resolved_path = scene_directory / resolved_path
+        asset["path"] = str(resolved_path.resolve())
+    return scene
+
+
 def _layer_selector_kwargs(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "layer_id": getattr(args, "layer_id", None),
@@ -68,8 +104,23 @@ def _run_health(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.health())
 
 
+_BRIEF_LAYER_FIELDS = ("id", "layerUid", "name", "type", "isNull")
+
+
+def _brief_layers(layers: Any) -> Any:
+    if not isinstance(layers, list):
+        return layers
+    return [
+        {key: layer[key] for key in _BRIEF_LAYER_FIELDS if key in layer}
+        if isinstance(layer, dict)
+        else layer
+        for layer in layers
+    ]
+
+
 def _run_layers(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.get_layers(**_comp_selector_kwargs(args)))
+    layers = client.get_layers(**_comp_selector_kwargs(args))
+    _print_json(_brief_layers(layers) if args.brief else layers)
 
 
 def _run_list_comps(client: AEClient, _args: argparse.Namespace) -> None:
@@ -102,6 +153,7 @@ def _run_add_footage_layer(client: AEClient, args: argparse.Namespace) -> None:
             source_in=args.source_in,
             source_out=args.source_out,
             timeline_in=args.timeline_in,
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -119,6 +171,7 @@ def _run_set_footage_cut(client: AEClient, args: argparse.Namespace) -> None:
             source_out=args.source_out,
             timeline_in=args.timeline_in,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -143,6 +196,8 @@ def _run_add_comp_layer(client: AEClient, args: argparse.Namespace) -> None:
             start_time=args.start_time,
             in_point=args.in_point,
             out_point=args.out_point,
+            target_comp_id=args.target_comp_id,
+            target_comp_name=args.target_comp_name,
         )
     )
 
@@ -170,6 +225,7 @@ def _run_set_layer_audio(client: AEClient, args: argparse.Namespace) -> None:
             fade_in=args.fade_in,
             fade_out=args.fade_out,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -181,7 +237,12 @@ def _run_list_fonts(client: AEClient, args: argparse.Namespace) -> None:
 
 
 def _run_get_text_style(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.get_text_style(**_layer_selector_kwargs(args)))
+    _print_json(
+        client.get_text_style(
+            **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
+        )
+    )
 
 
 def _validate_text_color(value: list[float] | None, label: str) -> None:
@@ -242,6 +303,7 @@ def _run_set_text_style(client: AEClient, args: argparse.Namespace) -> None:
             autoLeading=args.auto_leading,
             justification=args.justification,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -254,6 +316,7 @@ def _run_set_text_style_ranges(client: AEClient, args: argparse.Namespace) -> No
         client.set_text_style_ranges(
             text_style_ranges=ranges,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -266,6 +329,7 @@ def _run_set_text_animators(client: AEClient, args: argparse.Namespace) -> None:
         client.set_text_animators(
             text_animators=animators,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -305,6 +369,7 @@ def _run_align_layers(client: AEClient, args: argparse.Namespace) -> None:
             margin_percent=args.margin_percent,
             time=args.time,
             **_layout_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -322,6 +387,7 @@ def _run_distribute_layers(client: AEClient, args: argparse.Namespace) -> None:
             margin_percent=args.margin_percent,
             time=args.time,
             **_layout_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -333,6 +399,7 @@ def _run_visual_center(client: AEClient, args: argparse.Namespace) -> None:
         client.visual_center_layers(
             time=args.time,
             **_layout_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -362,19 +429,42 @@ def _run_expression_errors(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(client.get_expression_errors(**_comp_selector_kwargs(args)))
 
 
-def _run_properties(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(
-        client.get_properties(
-            **_layer_selector_kwargs(args),
-            include_groups=args.include_group,
-            exclude_groups=args.exclude_group,
-            max_depth=args.max_depth,
-            include_group_children=args.include_group_children,
-            include_keyframes=args.include_keyframes,
-            time=args.time,
-            **_comp_selector_kwargs(args),
+def _filter_properties(properties: Any, pattern: str | None) -> Any:
+    if pattern is None or not isinstance(properties, list):
+        return properties
+    try:
+        matcher = re.compile(pattern)
+    except re.error as exc:
+        raise ValueError(f"Invalid --filter regular expression: {exc}") from exc
+    return [
+        prop
+        for prop in properties
+        if isinstance(prop, dict)
+        and (
+            matcher.search(str(prop.get("name", "")))
+            or matcher.search(str(prop.get("path", "")))
         )
+    ]
+
+
+def _run_properties(client: AEClient, args: argparse.Namespace) -> None:
+    # Reject malformed patterns before requesting a potentially large property payload.
+    if args.property_filter is not None:
+        _filter_properties([], args.property_filter)
+    properties = client.get_properties(
+        **_layer_selector_kwargs(args),
+        include_groups=args.include_group,
+        exclude_groups=args.exclude_group,
+        property_path=args.property_path,
+        max_depth=args.max_depth,
+        include_group_children=args.include_group_children,
+        include_keyframes=args.include_keyframes,
+        include_expression=args.include_expression,
+        include_disabled=args.include_disabled,
+        time=args.time,
+        **_comp_selector_kwargs(args),
     )
+    _print_json(_filter_properties(properties, args.property_filter))
 
 
 def _run_bounds(client: AEClient, args: argparse.Namespace) -> None:
@@ -414,6 +504,7 @@ def _run_set_expression(client: AEClient, args: argparse.Namespace) -> None:
             property_path=args.property_path,
             expression=expression,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -425,6 +516,7 @@ def _run_set_property(client: AEClient, args: argparse.Namespace) -> None:
             property_path=args.property_path,
             value=value,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -443,6 +535,7 @@ def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
             ease_in=ease_in,
             ease_out=ease_out,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -453,6 +546,7 @@ def _run_add_essential_property(client: AEClient, args: argparse.Namespace) -> N
             property_path=args.property_path,
             essential_name=args.essential_name,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -463,6 +557,7 @@ def _run_add_effect(client: AEClient, args: argparse.Namespace) -> None:
             effect_match_name=args.effect_match_name,
             effect_name=args.effect_name,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -480,6 +575,7 @@ def _run_add_shape_repeater(client: AEClient, args: argparse.Namespace) -> None:
             start_opacity=args.start_opacity,
             end_opacity=args.end_opacity,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -504,6 +600,7 @@ def _run_add_layer(client: AEClient, args: argparse.Namespace) -> None:
             shape_stroke_width=args.shape_stroke_width,
             shape_stroke_line_cap=args.shape_stroke_line_cap,
             shape_roundness=args.shape_roundness,
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -516,20 +613,29 @@ def _run_set_in_out_point(client: AEClient, args: argparse.Namespace) -> None:
             in_point=args.in_point,
             out_point=args.out_point,
             **_layer_selector_kwargs(args),
+            **_comp_selector_kwargs(args),
         )
     )
 
 
 def _run_move_layer_time(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.move_layer_time(delta=args.delta, **_layer_selector_kwargs(args)))
+    _print_json(client.move_layer_time(
+        delta=args.delta,
+        **_layer_selector_kwargs(args),
+        **_comp_selector_kwargs(args),
+    ))
 
 
 def _run_set_cti(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.set_cti(time=args.time))
+    _print_json(client.set_cti(time=args.time, **_comp_selector_kwargs(args)))
 
 
 def _run_set_work_area(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.set_work_area(start=args.start, duration=args.duration))
+    _print_json(client.set_work_area(
+        start=args.start,
+        duration=args.duration,
+        **_comp_selector_kwargs(args),
+    ))
 
 
 def _run_parent_layer(client: AEClient, args: argparse.Namespace) -> None:
@@ -538,6 +644,7 @@ def _run_parent_layer(client: AEClient, args: argparse.Namespace) -> None:
         client.parent_layer(
             child_layer_id=args.child_layer_id,
             parent_layer_id=parent_layer_id,
+            **_comp_selector_kwargs(args),
         )
     )
 
@@ -548,12 +655,16 @@ def _run_precompose(client: AEClient, args: argparse.Namespace) -> None:
             layer_ids=args.layer_id,
             name=args.name,
             move_all_attributes=args.move_all_attributes,
+            **_comp_selector_kwargs(args),
         )
     )
 
 
 def _run_duplicate_layer(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.duplicate_layer(layer_id=args.layer_id))
+    _print_json(client.duplicate_layer(
+        layer_id=args.layer_id,
+        **_comp_selector_kwargs(args),
+    ))
 
 
 def _run_move_layer_order(client: AEClient, args: argparse.Namespace) -> None:
@@ -564,12 +675,16 @@ def _run_move_layer_order(client: AEClient, args: argparse.Namespace) -> None:
             after_layer_id=args.after_layer_id,
             to_top=args.to_top,
             to_bottom=args.to_bottom,
+            **_comp_selector_kwargs(args),
         )
     )
 
 
 def _run_delete_layer(client: AEClient, args: argparse.Namespace) -> None:
-    _print_json(client.delete_layer(layer_id=args.layer_id))
+    _print_json(client.delete_layer(
+        layer_id=args.layer_id,
+        **_comp_selector_kwargs(args),
+    ))
 
 
 def _run_delete_comp(client: AEClient, args: argparse.Namespace) -> None:
@@ -577,12 +692,20 @@ def _run_delete_comp(client: AEClient, args: argparse.Namespace) -> None:
 
 
 def _run_apply_scene(client: AEClient, args: argparse.Namespace) -> None:
-    scene = _read_json_file(args.scene_file, "scene-file")
+    scene_file = Path(args.scene_file)
+    scene = _resolve_scene_asset_paths(
+        _read_json_file(args.scene_file, "scene-file"),
+        scene_file,
+    )
+    expected_project = None
+    if args.expect_project:
+        expected_project = str(Path(args.expect_project).expanduser().resolve())
     _print_json(
         client.apply_scene(
             scene=scene,
             validate_only=args.validate_only,
             mode=args.mode,
+            expect_project=expected_project,
         )
     )
 

@@ -19,6 +19,24 @@ PYTHONPATH=src python3 -m ae_cli.main --help
 - `AE_BRIDGE_URL` があればそれを使用
 - なければ `http://127.0.0.1:8080`
 
+`health` は疎通だけでなく、After Effectsで現在開いているプロジェクトを返します。
+
+```json
+{
+  "status": "ok",
+  "project": {
+    "path": "/absolute/path/project.aep",
+    "name": "project.aep",
+    "dirty": true,
+    "saved": true
+  }
+}
+```
+
+未保存プロジェクトでは `path` は `null`、`saved` は `false` です。`dirty` を取得できない
+AE環境では `null` になります。変更前に必ず
+`project.path` が対象 `.aep` と一致することを確認してください。
+
 ## ローカルブリッジ認証
 
 After Effectsパネルは起動ごとに認証トークンを生成し、`~/ae-agent-skills/.bridge-token`へ
@@ -43,8 +61,12 @@ ae-cli expression-errors
 
 ```bash
 ae-cli layers --comp-name "TX01_Title"
+ae-cli layers --comp-name "TX01_Title" --brief
 ae-cli expression-errors --comp-id 17
 ae-cli properties --layer-name "Title" --comp-name "TX01_Title" --include-keyframes
+ae-cli properties --layer-name "Title" --comp-name "TX01_Title" --filter "Opacity|Position"
+ae-cli properties --layer-name "Title" --comp-name "TX01_Title" --include-expression
+ae-cli properties --layer-name "Title" --comp-name "TX01_Title" --property-path "ADBE Text Properties.ADBE Text Animators"
 ae-cli bounds --layer-name "Title" --comp-name "TX01_Title" --time 1.25
 ```
 
@@ -55,11 +77,39 @@ ae-cli bounds --layer-name "Title" --comp-name "TX01_Title" --time 1.25
 `layers` の各レイヤーには `isNull` が常に含まれるため、AE内部ではSolidとして表現される
 制御用ヌルも判別できます。`properties --include-keyframes` は各プロパティに `keyframes` を追加し、
 時刻、値、in/out補間と、取得可能な場合はtemporal easeを返します。
+`layers --brief` はCLI表示を `id` / `layerUid` / `name` / `type` / `isNull` に限定します。
+既定レスポンスやブリッジ通信量は変えず、レイヤー選択前のコンテキスト消費だけを抑えます。
+`properties --filter <regex>` は取得後のCLI表示をpropertyの `name` または `path` で絞ります。
+既定のブリッジ通信量は変わりません。`--include-expression` を指定した場合だけ、各propertyへ
+`expression` と `expressionEnabled` を追加します。expression本文には案件固有情報が含まれ得るため、
+必要な調査に限定して使用してください。
+`--include-disabled` は通常の列挙から除くdisabled propertyも診断対象にします。
+`--property-path <matchName path>` は階層を列挙せず1件を直接解決するため、Range Selectorの
+UnitsなどAEが通常列挙しないpropertyの確認と、ブリッジ通信量の削減に使えます。
 
 `bounds` は指定時刻のvisual boundsをコンポ座標で返します。矩形には `left` / `top` /
 `right` / `bottom` / `width` / `height` / `centerX` / `centerY` が含まれます。アンカーポイント、
 scale、rotation、2D親子transformを反映し、null、3D、3D親子関係、visual boundsを持たない
 レイヤーは明示的なエラーになります。
+
+## 更新先コンポを明示する
+
+コンポ内を変更する更新系コマンドは、任意の `--comp-id` または一意な `--comp-name` を
+受け付けます。指定時はそのコンポだけを処理対象として一時的にアクティブ化し、成功・失敗に
+かかわらず直前のアクティブコンポへ戻します。省略時は互換性のため従来どおりアクティブコンポを
+使います。案件作業では誤ったコンポへの書き込みを避けるため、明示指定を推奨します。
+
+```bash
+ae-cli set-property --comp-name "TX01_Title" --layer-name "Title" \
+  --property-path "ADBE Transform Group.ADBE Opacity" --value 80
+ae-cli set-cti --comp-id 17 --time 1.25
+ae-cli add-layer --comp-name "TX01_Title" --layer-type null --name "Controller"
+```
+
+対象はレイヤー追加、property / keyframe / expression、effect / repeater、フッテージ・音声・
+テキスト、配置、タイムライン、parent / precompose / duplicate / reorder / deleteです。
+`add-comp-layer` だけは `--comp-id` / `--comp-name` がソースコンポを表すため、配置先には
+`--target-comp-id` または `--target-comp-name` を使います。
 
 ## コンポのスナップショット
 
@@ -81,9 +131,9 @@ PNG終端まで書き込まれたことを待ってから最終名へ移動し�
 ```bash
 ae-cli list-footage
 ae-cli import-footage --path "/absolute/path/interview.mp4" --name "Interview"
-ae-cli add-footage-layer --footage-name "Interview" \
+ae-cli add-footage-layer --comp-name "Main" --footage-name "Interview" \
   --name "Clip 01" --source-in 12.5 --source-out 18 --timeline-in 0
-ae-cli set-footage-cut --layer-name "Clip 01" \
+ae-cli set-footage-cut --comp-name "Main" --layer-name "Clip 01" \
   --source-in 13 --source-out 17.5 --timeline-in 0
 ```
 
@@ -95,13 +145,14 @@ ae-cli set-footage-cut --layer-name "Clip 01" \
 ## 既存コンポをレイヤーとして配置
 
 ```bash
-ae-cli set-active-comp --comp-name "Main"
 ae-cli add-comp-layer --comp-name "TX01_Title" \
+  --target-comp-name "Main" \
   --name "Title 01" --start-time 2 --in-point 2 --out-point 3.8
 ```
 
-`add-comp-layer` はプロジェクト内の既存コンポを、アクティブコンポへプリコンポレイヤーとして追加します。
-ソースは一意な `--comp-name` または `--comp-id` で指定します。同じコンポを自身の中へ追加することはできません。
+`add-comp-layer` はプロジェクト内の既存コンポを、明示した対象コンポ（省略時はアクティブコンポ）へ
+プリコンポレイヤーとして追加します。ソースは一意な `--comp-name` または `--comp-id`、配置先は
+`--target-comp-name` または `--target-comp-id` で指定します。同じコンポを自身の中へ追加することはできません。
 
 ## 音量・ミュート・フェード
 
@@ -120,7 +171,7 @@ ae-cli set-layer-audio --layer-name "Clip 01" --mute
 
 ```bash
 ae-cli list-fonts --query "Noto Sans" --limit 20
-ae-cli get-text-style --layer-name "Title"
+ae-cli get-text-style --layer-name "Title" --comp-name "TX01_Title"
 ae-cli set-text-style --layer-name "Title" \
   --font "ArialMT" --font-size 96 --fill-color 255 240 210 \
   --enable-stroke --stroke-color 18 34 56 --stroke-width 4 \
@@ -130,6 +181,8 @@ ae-cli set-text-style --layer-name "Title" \
 `--font` は `list-fonts` が返すPostScript名を指定します。色は0〜1または0〜255のRGBです。
 `--leading` は手動行送りへ切り替わるため、`--auto-leading` とは同時指定できません。
 指定した項目だけを更新し、未指定のスタイルは保持します。対象はテキストレイヤー全体です。
+`get-text-style` は `layers` / `properties` / `bounds` と同様に、任意の `--comp-id` または
+一意な `--comp-name` を受け付けます。
 
 文字範囲スタイルとRange SelectorテキストアニメーターはJSON配列で指定します。
 
@@ -141,8 +194,11 @@ ae-cli set-text-animators --layer-name "Title" --animators-file animators.json
 範囲は0始まり・終端を含まない `{ "start": 0, "end": 3, "style": {...} }` です。
 `font` / `fontSize` / fill / stroke / `tracking` を文字範囲ごとに設定できます。この機能は
 `TextDocument.characterRange()`を使うためAfter Effects 24.3以降が必要です。
-テキストアニメーターはPosition / Scale / Opacity / Rotationと、百分率Range Selectorの
-Start / End / Offset / Amountおよびそのキーフレームに対応します。
+テキストアニメーターはPosition / Scale / Opacity / Rotationと、Range Selectorの
+Start / End / Offset / Amountおよびそのキーフレームに対応します。selectorにはさらに
+`units`（1: Percentage、2: Index）、`basedOn`（1: Characters、2: Characters Excluding Spaces、
+3: Words、4: Lines）、`shape`（1: Square、2: Ramp Up、3: Ramp Down、4: Triangle、5: Round、
+6: Smooth）、`smoothness`（0〜100）、`easeHigh` / `easeLow`（-100〜100）を指定できます。
 
 ## 整列・均等配置
 
@@ -170,11 +226,31 @@ Positionにキーフレームがある場合は`--time`の位置へ値を設定�
 ## 宣言的シーン適用
 
 ```bash
-ae-cli apply-scene --scene-file examples/scene.example.json --validate-only
-ae-cli apply-scene --scene-file examples/scene.example.json
-ae-cli apply-scene --scene-file examples/scene.example.json --mode replace-managed
-ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
+ae-cli apply-scene --scene-file /path/to/project/_edl/main.scene.json \
+  --expect-project /path/to/project/main.aep --validate-only
+ae-cli apply-scene --scene-file /path/to/project/_edl/main.scene.json \
+  --expect-project /path/to/project/main.aep
+ae-cli apply-scene --scene-file /path/to/project/_edl/main.scene.json \
+  --expect-project /path/to/project/main.aep --mode replace-managed
+ae-cli apply-scene --scene-file /path/to/project/_edl/main.scene.json \
+  --expect-project /path/to/project/main.aep --mode clear-all
 ```
+
+`--expect-project` はCLI側で絶対パスへ解決され、After Effectsで開いているプロジェクトの
+絶対パスと一致しない場合、`--validate-only` と実適用のどちらも変更前に異常終了します。
+誤った `.aep` への適用を防ぐため、案件作業では省略しないでください。
+
+実適用中にエラーが起きた場合、`apply-scene` はcomp作成、ProjectItem import、layer変更を含む
+専用Undo groupを直ちに1回Undoします。transaction markerが消えた場合だけ
+`rollback.succeeded: true` としてCLIエラーへ報告します。markerを確認できない場合は、無関係な
+Undo履歴を戻さないため自動Undoを実行しません。AE 26.3では内容の復元を確認していますが、
+保存済みclean projectでも成功したrollback後に `project.dirty: true` が残ります。CLIは自動保存
+しないため、`rollback` 診断と対象comp / ProjectItemを確認してから保存または再読み込みしてください。
+
+案件固有のscene JSON、EDL、生成スクリプトは対象 `.aep` と同じ案件ディレクトリに置きます。
+サブディレクトリ名には `_edl/` を推奨しますが、既存の案件構成に合わせて変更できます。
+`~/ae-agent-skills/` は横断再利用するエンジン、schema、referenceに限定し、
+`work/` と `done/` へコピーする二重管理は行いません。
 
 スキーマ:
 
@@ -183,23 +259,24 @@ ae-cli apply-scene --scene-file examples/scene.example.json --mode clear-all
 フッテージ編集例（`path` を実在する絶対パスへ変更して使用）:
 
 ```bash
-ae-cli apply-scene --scene-file examples/footage-edit.example.json --validate-only
-ae-cli apply-scene --scene-file examples/footage-edit.example.json
+ae-cli apply-scene --scene-file examples/footage-edit.example.json --expect-project /path/to/project/main.aep --validate-only
+ae-cli apply-scene --scene-file examples/footage-edit.example.json --expect-project /path/to/project/main.aep
 ```
 
 既存コンポを本編へ並べる例（`Main`、`TX01_Title`、`TX02_Subtitle` を先に作成）:
 
 ```bash
-ae-cli apply-scene --scene-file examples/comp-assembly.example.json --validate-only
-ae-cli apply-scene --scene-file examples/comp-assembly.example.json
+ae-cli apply-scene --scene-file examples/comp-assembly.example.json --expect-project /path/to/project/main.aep --validate-only
+ae-cli apply-scene --scene-file examples/comp-assembly.example.json --expect-project /path/to/project/main.aep
 ```
 
 テロップ量産用の上位DSL例:
 
 ```bash
-python examples/gen_telop.py --out-dir work/telops
-for scene in work/telops/*.scene.json; do
-  ae-cli apply-scene --scene-file "$scene" --validate-only
+python examples/gen_telop.py --out-dir /path/to/project/_edl/telops
+target_aep=/path/to/project/main.aep
+for scene in /path/to/project/_edl/telops/*.scene.json; do
+  ae-cli apply-scene --scene-file "$scene" --expect-project "$target_aep" --validate-only
 done
 ```
 
@@ -212,6 +289,9 @@ done
 
 sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` レイヤーから
 `sourceId` で参照できます。カット範囲は `timing.sourceIn` / `sourceOut` / `timelineIn` で指定します。
+`assets[].path` は絶対パスに加え、scene JSONのディレクトリを基準にした相対パスと
+`${MEDIA_ROOT}/clip.mov` 形式の環境変数を使用できます。CLIは適用前に絶対パスへ解決し、
+参照した環境変数が未定義なら異常終了します。
 音声は各フッテージレイヤーの `audio.muted` / `levelDb` / `fadeIn` / `fadeOut` で指定します。
 宣言的適用では `audio` が音声状態を所有し、`muted: false`・`levelDb: 0`・フェード0秒を既定として
 再適用時にAudio Levelsキーフレームを作り直します。
@@ -230,10 +310,15 @@ sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` �
 - `replace-managed`: 不要な `aeSceneId:*` 管理レイヤーを削除して適用
 - `clear-all`: compを空にして適用
 
+実適用のレスポンスでは、影響した各レイヤーを `layers` / `appliedLayers` に返します。
+各要素の `id` / `layerId` / `layerName` と `action: "created" | "updated"` で結果を確認できます。
+`newlyCreatedLayers` と `updatedLayers` はaction別の一覧です。既存互換性のため、従来の
+`createdLayers` は引き続き全適用レイヤーを表す `appliedLayers` の別名です。
+
 ## 宣言値への収束
 
 - `composition.width` / `height` / `duration` / `frameRate` / `pixelAspect` は、新規作成時だけでなく既存コンポにも適用されます。`--validate-only` は変更予定を `compositionChanges`、実適用は変更結果を同じフィールドで返します。
-- `animations[]` はプロパティのキー集合を所有します。`keyframeMode` の既定値は `replace` で、既存キーをすべて削除してから宣言キーを作成します。空の `keyframes: []` は全キー削除です。
+- `animations[]` はプロパティのキー集合を所有します。`keyframeMode` の既定値は `replace` で、既存キーをすべて削除してから宣言キーを作成します。空の `keyframes: []` は全キー削除です。同じパスの静的値を `transform` または `propertyValues` に宣言した場合は、削除後にその値へ戻します。静的値を宣言しない場合は、キー削除後にAEが保持する値をそのまま使います。
 - 既存キーを残して宣言時刻だけ追加・更新したい場合に限り、animation単位で `"keyframeMode": "merge"` を指定します。
 - 同一レイヤー内で同じ `propertyPath` を複数のanimationへ宣言するとvalidation errorになります。
 - `easeIn` / `easeOut` は `[speed, influence]` です。`influence` は0.1〜100の百分率で、多次元プロパティでは各次元分の配列も指定できます。

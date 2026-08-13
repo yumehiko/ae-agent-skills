@@ -50,6 +50,12 @@ test('text animator validation accepts selector keyframes and rejects duplicate 
       selector: {
         start: 0,
         end: 100,
+        units: 2,
+        basedOn: 2,
+        shape: 2,
+        smoothness: 75,
+        easeHigh: 70,
+        easeLow: -20,
         animations: [
           {
             property: 'start',
@@ -61,6 +67,14 @@ test('text animator validation accepts selector keyframes and rejects duplicate 
   ]);
   vm.runInContext('aeValidateTextAnimators(JSON.parse(animatorsJSON))', context);
 
+  context.invalidAdvancedJSON = JSON.stringify([
+    { id: 'invalid', properties: { opacity: 0 }, selector: { shape: 7 } },
+  ]);
+  assert.throws(
+    () => vm.runInContext('aeValidateTextAnimators(JSON.parse(invalidAdvancedJSON))', context),
+    /shape must be an integer from 1 to 6/,
+  );
+
   context.duplicatesJSON = JSON.stringify([
     { id: 'same', properties: { opacity: 0 } },
     { id: 'same', properties: { rotation: 10 } },
@@ -69,6 +83,39 @@ test('text animator validation accepts selector keyframes and rejects duplicate 
     () => vm.runInContext('aeValidateTextAnimators(JSON.parse(duplicatesJSON))', context),
     /duplicated/,
   );
+});
+
+test('advanced selector fields resolve to their AE match names', () => {
+  const context = createContext();
+  const matchNames = [
+    'ADBE Text Range Units',
+    'ADBE Text Range Type2',
+    'ADBE Text Range Shape',
+    'ADBE Text Selector Smoothness',
+    'ADBE Text Levels Max Ease',
+    'ADBE Text Levels Min Ease',
+  ];
+  context.selector = {
+    numProperties: matchNames.length,
+    property(index) {
+      return { matchName: matchNames[index - 1], numProperties: 0 };
+    },
+  };
+
+  for (const [name, expected] of [
+    ['units', matchNames[0]],
+    ['basedOn', matchNames[1]],
+    ['shape', matchNames[2]],
+    ['smoothness', matchNames[3]],
+    ['easeHigh', matchNames[4]],
+    ['easeLow', matchNames[5]],
+  ]) {
+    context.selectorName = name;
+    assert.equal(
+      vm.runInContext('aeTextSelectorProperty(selector, selectorName).matchName', context),
+      expected,
+    );
+  }
 });
 
 test('text animator properties are activated instead of using hidden placeholders', () => {

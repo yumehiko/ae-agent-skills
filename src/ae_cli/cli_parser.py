@@ -63,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("health", help="Check bridge health")
     layers_parser = subparsers.add_parser("layers", help="Get layers without changing the active comp")
     _add_optional_comp_selector(layers_parser)
+    layers_parser.add_argument(
+        "--brief",
+        action="store_true",
+        help="Return only layer identity fields (id, layerUid, name, type, and isNull)",
+    )
     subparsers.add_parser("list-comps", help="List compositions in the current project")
     subparsers.add_parser("list-footage", help="List file-based footage items in the current project")
     subparsers.add_parser("selected-properties", help="Get currently selected properties")
@@ -102,8 +107,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_footage_layer_parser = subparsers.add_parser(
         "add-footage-layer",
-        help="Add a footage item to the active composition and optionally cut its source range",
+        help="Add a footage item to a target composition and optionally cut its source range",
     )
+    _add_optional_comp_selector(add_footage_layer_parser)
     footage_source_group = add_footage_layer_parser.add_mutually_exclusive_group(required=True)
     footage_source_group.add_argument("--footage-id", type=int, help="Project item id")
     footage_source_group.add_argument("--footage-name", help="Unique project item name")
@@ -122,7 +128,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_comp_layer_parser = subparsers.add_parser(
         "add-comp-layer",
-        help="Add an existing project composition as a layer in the active composition",
+        help="Add an existing project composition as a layer in a target composition",
     )
     comp_source_group = add_comp_layer_parser.add_mutually_exclusive_group(required=True)
     comp_source_group.add_argument("--comp-id", type=int, help="Source composition project item id")
@@ -131,12 +137,16 @@ def build_parser() -> argparse.ArgumentParser:
     add_comp_layer_parser.add_argument("--start-time", type=float, help="Layer start time in seconds")
     add_comp_layer_parser.add_argument("--in-point", type=float, help="Layer in point in seconds")
     add_comp_layer_parser.add_argument("--out-point", type=float, help="Layer out point in seconds")
+    target_comp_group = add_comp_layer_parser.add_mutually_exclusive_group()
+    target_comp_group.add_argument("--target-comp-id", type=int, help="Target composition id")
+    target_comp_group.add_argument("--target-comp-name", help="Unique target composition name")
 
     set_footage_cut_parser = subparsers.add_parser(
         "set-footage-cut",
         help="Set the source range and timeline placement of an existing footage layer",
     )
     _add_layer_selector(set_footage_cut_parser)
+    _add_optional_comp_selector(set_footage_cut_parser)
     set_footage_cut_parser.add_argument("--source-in", type=float, required=True)
     set_footage_cut_parser.add_argument("--source-out", type=float, required=True)
     set_footage_cut_parser.add_argument("--timeline-in", type=float, required=True)
@@ -152,6 +162,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Set mute, volume, and fade durations for an audio-capable layer",
     )
     _add_layer_selector(set_layer_audio_parser)
+    _add_optional_comp_selector(set_layer_audio_parser)
     mute_group = set_layer_audio_parser.add_mutually_exclusive_group()
     mute_group.add_argument("--mute", dest="muted", action="store_true")
     mute_group.add_argument("--unmute", dest="muted", action="store_false")
@@ -172,12 +183,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Get the whole-layer text style for a text layer",
     )
     _add_layer_selector(get_text_style_parser)
+    _add_optional_comp_selector(get_text_style_parser)
 
     set_text_style_parser = subparsers.add_parser(
         "set-text-style",
         help="Set whole-layer font, fill, stroke, spacing, and paragraph style",
     )
     _add_layer_selector(set_text_style_parser)
+    _add_optional_comp_selector(set_text_style_parser)
     set_text_style_parser.add_argument("--font", help="PostScript font name; discover with list-fonts")
     set_text_style_parser.add_argument("--font-size", type=float)
     fill_group = set_text_style_parser.add_mutually_exclusive_group()
@@ -211,6 +224,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Apply half-open per-character text styles from a JSON array (AE 24.3+)",
     )
     _add_layer_selector(set_text_style_ranges_parser)
+    _add_optional_comp_selector(set_text_style_ranges_parser)
     set_text_style_ranges_parser.add_argument(
         "--ranges-file",
         required=True,
@@ -222,6 +236,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Replace managed Range Selector text animators from a JSON array",
     )
     _add_layer_selector(set_text_animators_parser)
+    _add_optional_comp_selector(set_text_animators_parser)
     set_text_animators_parser.add_argument(
         "--animators-file",
         required=True,
@@ -233,6 +248,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Align visual layer bounds to the comp, safe area, or selected bounds",
     )
     _add_layer_list_selector(align_layers_parser)
+    _add_optional_comp_selector(align_layers_parser)
     align_layers_parser.add_argument("--horizontal", choices=["left", "center", "right"])
     align_layers_parser.add_argument("--vertical", choices=["top", "center", "bottom"])
     align_layers_parser.add_argument("--offset", nargs=2, type=float, metavar=("X", "Y"))
@@ -243,6 +259,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Distribute visual layer bounds with equal gaps or center spacing",
     )
     _add_layer_list_selector(distribute_layers_parser)
+    _add_optional_comp_selector(distribute_layers_parser)
     distribute_layers_parser.add_argument(
         "--axis",
         choices=["horizontal", "vertical"],
@@ -260,6 +277,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Move layer anchor points to visual centers without changing appearance",
     )
     _add_layer_list_selector(visual_center_parser)
+    _add_optional_comp_selector(visual_center_parser)
     visual_center_parser.add_argument("--time", type=float, default=0.0)
 
     properties_parser = subparsers.add_parser("properties", help="Get properties for a layer")
@@ -267,9 +285,28 @@ def build_parser() -> argparse.ArgumentParser:
     _add_optional_comp_selector(properties_parser)
     properties_parser.add_argument("--include-group", action="append", default=[])
     properties_parser.add_argument("--exclude-group", action="append", default=[])
+    properties_parser.add_argument(
+        "--property-path",
+        help="Read one exact matchName-based property path, including non-enumerated properties",
+    )
     properties_parser.add_argument("--max-depth", type=int)
     properties_parser.add_argument("--include-group-children", action="store_true")
     properties_parser.add_argument("--include-keyframes", action="store_true")
+    properties_parser.add_argument(
+        "--include-expression",
+        action="store_true",
+        help="Include expression source and enabled state for expression-capable properties",
+    )
+    properties_parser.add_argument(
+        "--include-disabled",
+        action="store_true",
+        help="Include disabled or otherwise normally hidden property nodes for diagnostics",
+    )
+    properties_parser.add_argument(
+        "--filter",
+        dest="property_filter",
+        help="Only print properties whose name or path matches this regular expression",
+    )
     properties_parser.add_argument("--time", type=float, help="Evaluate properties at the specified comp time")
 
     bounds_parser = subparsers.add_parser(
@@ -296,6 +333,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     expression_parser = subparsers.add_parser("set-expression", help="Set expression on a property")
     _add_layer_selector(expression_parser)
+    _add_optional_comp_selector(expression_parser)
     expression_parser.add_argument("--property-path", required=True)
     expression_group = expression_parser.add_mutually_exclusive_group(required=True)
     expression_group.add_argument("--expression")
@@ -303,6 +341,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     property_value_parser = subparsers.add_parser("set-property", help="Set a property value")
     _add_layer_selector(property_value_parser)
+    _add_optional_comp_selector(property_value_parser)
     property_value_parser.add_argument("--property-path", required=True)
     property_value_group = property_value_parser.add_mutually_exclusive_group(required=True)
     property_value_group.add_argument(
@@ -316,6 +355,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Add a layer property to Essential Graphics",
     )
     _add_layer_selector(essential_property_parser)
+    _add_optional_comp_selector(essential_property_parser)
     essential_property_parser.add_argument("--property-path", required=True)
     essential_property_parser.add_argument(
         "--essential-name",
@@ -324,6 +364,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     keyframe_parser = subparsers.add_parser("set-keyframe", help="Set a keyframe value at time")
     _add_layer_selector(keyframe_parser)
+    _add_optional_comp_selector(keyframe_parser)
     keyframe_parser.add_argument("--property-path", required=True)
     keyframe_parser.add_argument("--time", type=float, required=True)
     keyframe_group = keyframe_parser.add_mutually_exclusive_group(required=True)
@@ -353,6 +394,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     effect_parser = subparsers.add_parser("add-effect", help="Add an effect to a layer")
     _add_layer_selector(effect_parser)
+    _add_optional_comp_selector(effect_parser)
     effect_parser.add_argument("--effect-match-name", required=True)
     effect_parser.add_argument("--effect-name")
 
@@ -361,6 +403,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Add a Repeater operator to a shape group",
     )
     _add_layer_selector(shape_repeater_parser)
+    _add_optional_comp_selector(shape_repeater_parser)
     shape_repeater_parser.add_argument(
         "--group-index",
         type=int,
@@ -388,7 +431,8 @@ def build_parser() -> argparse.ArgumentParser:
     shape_repeater_parser.add_argument("--start-opacity", type=float, help="Transform Start Opacity (0-100)")
     shape_repeater_parser.add_argument("--end-opacity", type=float, help="Transform End Opacity (0-100)")
 
-    layer_parser = subparsers.add_parser("add-layer", help="Add a layer to the active composition")
+    layer_parser = subparsers.add_parser("add-layer", help="Add a layer to a target composition")
+    _add_optional_comp_selector(layer_parser)
     layer_parser.add_argument(
         "--layer-type",
         choices=["text", "null", "solid", "shape"],
@@ -468,27 +512,33 @@ def build_parser() -> argparse.ArgumentParser:
 
     set_in_out_parser = subparsers.add_parser("set-in-out-point", help="Set layer in/out points")
     _add_layer_selector(set_in_out_parser)
+    _add_optional_comp_selector(set_in_out_parser)
     set_in_out_parser.add_argument("--in-point", type=float)
     set_in_out_parser.add_argument("--out-point", type=float)
 
     move_layer_time_parser = subparsers.add_parser("move-layer-time", help="Move layer timing by delta seconds")
     _add_layer_selector(move_layer_time_parser)
+    _add_optional_comp_selector(move_layer_time_parser)
     move_layer_time_parser.add_argument("--delta", type=float, required=True)
 
     set_cti_parser = subparsers.add_parser("set-cti", help="Set current time indicator")
+    _add_optional_comp_selector(set_cti_parser)
     set_cti_parser.add_argument("--time", type=float, required=True)
 
     set_work_area_parser = subparsers.add_parser("set-work-area", help="Set comp work area")
+    _add_optional_comp_selector(set_work_area_parser)
     set_work_area_parser.add_argument("--start", type=float, required=True)
     set_work_area_parser.add_argument("--duration", type=float, required=True)
 
     parent_layer_parser = subparsers.add_parser("parent-layer", help="Set or clear layer parent")
+    _add_optional_comp_selector(parent_layer_parser)
     parent_layer_parser.add_argument("--child-layer-id", type=int, required=True)
     parent_group = parent_layer_parser.add_mutually_exclusive_group(required=True)
     parent_group.add_argument("--parent-layer-id", type=int)
     parent_group.add_argument("--clear-parent", action="store_true")
 
     precompose_parser = subparsers.add_parser("precompose", help="Precompose layers")
+    _add_optional_comp_selector(precompose_parser)
     precompose_parser.add_argument("--layer-id", type=int, action="append", required=True)
     precompose_parser.add_argument("--name", required=True)
     precompose_parser.add_argument(
@@ -498,9 +548,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     duplicate_layer_parser = subparsers.add_parser("duplicate-layer", help="Duplicate a layer")
+    _add_optional_comp_selector(duplicate_layer_parser)
     duplicate_layer_parser.add_argument("--layer-id", type=int, required=True)
 
     move_layer_order_parser = subparsers.add_parser("move-layer-order", help="Reorder a layer")
+    _add_optional_comp_selector(move_layer_order_parser)
     move_layer_order_parser.add_argument("--layer-id", type=int, required=True)
     order_group = move_layer_order_parser.add_mutually_exclusive_group(required=True)
     order_group.add_argument("--before-layer-id", type=int)
@@ -509,6 +561,7 @@ def build_parser() -> argparse.ArgumentParser:
     order_group.add_argument("--to-bottom", action="store_true")
 
     delete_layer_parser = subparsers.add_parser("delete-layer", help="Delete a layer")
+    _add_optional_comp_selector(delete_layer_parser)
     delete_layer_parser.add_argument("--layer-id", type=int, required=True)
 
     delete_comp_parser = subparsers.add_parser("delete-comp", help="Delete a composition by id or name")
@@ -524,6 +577,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--scene-file",
         required=True,
         help="Path to a UTF-8 scene JSON file",
+    )
+    apply_scene_parser.add_argument(
+        "--expect-project",
+        help=(
+            "Expected After Effects project path. The path is resolved to an absolute path, "
+            "and apply-scene aborts before mutation when it does not match the open project"
+        ),
     )
     apply_scene_parser.add_argument(
         "--validate-only",

@@ -18,7 +18,7 @@ function handleImportFootage(req, res) {
 }
 
 function handleAddFootageLayer(req, res) {
-    readJsonBody(req, res, ({ footageId, footageName, path, name, sourceIn, sourceOut, timelineIn }) => {
+    readJsonBody(req, res, ({ footageId, footageName, path, name, sourceIn, sourceOut, timelineIn, compId, compName }) => {
         const selectorCount = [footageId, footageName, path]
             .filter((value) => value !== undefined && value !== null && value !== '').length;
         if (selectorCount !== 1) {
@@ -69,12 +69,12 @@ function handleAddFootageLayer(req, res) {
             : toExtendScriptStringLiteral(value);
         const numberLiteral = (value) => value === undefined || value === null ? 'null' : String(value);
         const script = `addFootageLayer(${numberLiteral(footageId)}, ${literal(footageName)}, ${literal(path)}, ${literal(name)}, ${numberLiteral(sourceIn)}, ${numberLiteral(sourceOut)}, ${numberLiteral(timelineIn)})`;
-        handleBridgeMutationCall(script, res, 'addFootageLayer()', 'Failed to add footage layer');
+        handleBridgeMutationCall(script, res, 'addFootageLayer()', 'Failed to add footage layer', compId, compName);
     });
 }
 
 function handleSetFootageCut(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, sourceIn, sourceOut, timelineIn }) => {
+    readJsonBody(req, res, ({ layerId, layerName, sourceIn, sourceOut, timelineIn, compId, compName }) => {
         const selector = normalizeLayerSelector(layerId, layerName);
         if (!selector.ok) {
             sendBadRequest(res, selector.error);
@@ -93,7 +93,7 @@ function handleSetFootageCut(req, res) {
             return;
         }
         const script = `setFootageLayerCut(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${sourceIn}, ${sourceOut}, ${timelineIn})`;
-        handleBridgeMutationCall(script, res, 'setFootageLayerCut()', 'Failed to set footage cut');
+        handleBridgeMutationCall(script, res, 'setFootageLayerCut()', 'Failed to set footage cut', compId, compName);
     });
 }
 

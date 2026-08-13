@@ -1,5 +1,5 @@
 function handleAddEssentialProperty(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, propertyPath, essentialName }) => {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, essentialName, compId, compName }) => {
         if (!propertyPath || typeof propertyPath !== 'string') {
             sendBadRequest(res, 'propertyPath is required and must be a string');
             log('addEssentialProperty failed: invalid propertyPath');
@@ -22,7 +22,7 @@ function handleAddEssentialProperty(req, res) {
             ? 'null'
             : toExtendScriptStringLiteral(essentialName);
         const script = `addEssentialProperty(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${pathLiteral}, ${essentialNameLiteral})`;
-        handleBridgeMutationCall(script, res, 'addEssentialProperty()', 'Failed to add essential property');
+        handleBridgeMutationCall(script, res, 'addEssentialProperty()', 'Failed to add essential property', compId, compName);
     });
 }
 

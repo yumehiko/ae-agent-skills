@@ -29,14 +29,15 @@ After Effects を宣言型 JSON で構築する標準スキル。
 
 ## 基本フロー
 
-1. 疎通確認: `ae-cli health`
+1. `ae-cli health` で疎通と、開いている `.aep` の絶対パスを確認
 2. `~/ae-agent-skills/scene.schema.json` と `~/ae-agent-skills/references/scene.example.json` を確認（フッテージ編集は `footage-edit.example.json`、プリコンポ配置は `comp-assembly.example.json` も確認）
-3. scene JSON を作成/更新（作業中は `~/ae-agent-skills/work/` 配下）
-4. `--validate-only` で検証
-5. 実適用
-6. compを直接指定した `layers` / `properties --include-keyframes` / `bounds` / `expression-errors` で数値確認
-7. `snapshot` で見た目をPNG確認
-7. 完了版は `~/ae-agent-skills/done/` 配下へコピーして保管
+3. 対象 `.aep` と同じ案件ディレクトリに scene JSON と案件固有の生成スクリプトを作成/更新（サブディレクトリ名は `_edl/` を推奨するが強制しない）
+4. `--expect-project <対象.aep>` を付けて `--validate-only` で検証
+5. 同じ `--expect-project` を付けて実適用
+6. apply失敗時はCLIの `Rollback` 診断を読み、`succeeded` でもcomp / ProjectItem / layerを確認する。rollback後は内容が戻ってもdirtyがtrueになり得る
+7. compを直接指定した `layers` / `properties --include-keyframes` / `bounds` / `expression-errors` で数値確認
+8. `snapshot` で見た目をPNG確認
+9. scene JSON は `.aep` と一緒に案件側の履歴管理・同期へ含める。作業中/完了版を別ディレクトリへコピーして二重管理しない
 
 ## 参照ファイル（固定）
 
@@ -49,23 +50,26 @@ After Effects を宣言型 JSON で構築する標準スキル。
 
 ## ファイル運用ルール（重要）
 
-- `~/ae-agent-skills/work/`: 作業中の scene JSON を置くディレクトリ
-- `~/ae-agent-skills/done/`: 完了した scene JSON の保管ディレクトリ
+- 横断再利用するエンジン、schema、referenceは `~/ae-agent-skills/` に置く
+- 案件固有の scene JSON、EDL、生成スクリプトは対象 `.aep` と同じ案件ディレクトリに置く
+- 案件ディレクトリ直下を散らかさない場合は `_edl/` を推奨のサブディレクトリ名として使う。既存の案件構成へは強制しない
+- `work/` / `done/` へのコピー運用は行わない。履歴は案件側のGit、同期ストレージ、バックアップへ一本化する
 - 例:
-  - `ae-cli apply-scene --scene-file ~/ae-agent-skills/work/main.scene.json --validate-only`
-  - `ae-cli apply-scene --scene-file ~/ae-agent-skills/work/main.scene.json`
+  - `ae-cli apply-scene --scene-file /path/to/project/_edl/main.scene.json --expect-project /path/to/project/main.aep --validate-only`
+  - `ae-cli apply-scene --scene-file /path/to/project/_edl/main.scene.json --expect-project /path/to/project/main.aep`
 
 ## コマンド
 
 ```bash
 ae-cli health
 ae-cli list-footage
-ae-cli apply-scene --scene-file <scene.json> --validate-only
-ae-cli apply-scene --scene-file <scene.json>
-ae-cli apply-scene --scene-file <scene.json> --mode replace-managed
-ae-cli apply-scene --scene-file <scene.json> --mode clear-all
+ae-cli apply-scene --scene-file <scene.json> --expect-project <project.aep> --validate-only
+ae-cli apply-scene --scene-file <scene.json> --expect-project <project.aep>
+ae-cli apply-scene --scene-file <scene.json> --expect-project <project.aep> --mode replace-managed
+ae-cli apply-scene --scene-file <scene.json> --expect-project <project.aep> --mode clear-all
 ae-cli layers --comp-name <comp>
-ae-cli properties --layer-name <layer> --comp-name <comp> --include-group <group> --include-group-children --include-keyframes
+ae-cli properties --layer-name <layer> --comp-name <comp> --include-group <group> --include-group-children --include-keyframes [--filter <regex>] [--include-expression] [--include-disabled]
+ae-cli properties --layer-name <layer> --comp-name <comp> --property-path <matchName.path>
 ae-cli bounds --layer-name <layer> --comp-name <comp> --time <sec>
 ae-cli expression-errors --comp-name <comp>
 ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S>] # 0 < S <= 1
@@ -87,6 +91,7 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 - `animations[].keyframeMode` は既定の `replace` を使い、宣言したキー集合へ完全に置換する
 - 既存の宣言外キーを意図的に残す場合だけ `keyframeMode: merge` を使う
 - キーを全削除する場合は `keyframes: []` を宣言する
+- `keyframes: []` 後の静止値も所有する場合は、同じpathの値を `transform` または `propertyValues` に宣言する。未宣言ならAEがキー削除後に保持する値を使う
 - 同じレイヤー内で同一 `propertyPath` を複数のanimationへ分割しない
 - 3Dベクトルには2D入力可（`[x,y] -> [x,y,0]` 自動補完）
 - Repeater は `layers[].repeaters[]`
@@ -96,7 +101,7 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 - フッテージは `assets[]` に1度宣言し、`type: footage` のレイヤーから `sourceId` で参照する
 - 既存コンポは `assets[]` に `type: comp` と `compId` または一意な `compName` で宣言し、`type: comp` のレイヤーから `sourceId` で参照する
 - コンポレイヤーの本編上の配置は `timing.startTime` / `inPoint` / `outPoint` を使う
-- フッテージの `assets[].path` は実在する絶対パスを使う
+- フッテージの `assets[].path` は絶対パス、scene JSONからの相対パス、または `${MEDIA_ROOT}/...` のような環境変数付きパスを使える。CLIは適用前に絶対パスへ解決し、未定義変数はエラーにする
 - カット編集は `timing.sourceIn` / `sourceOut` / `timelineIn` を使う
 - `sourceIn` と `sourceOut` は必ず対で指定し、同じ `sourceId` を複数レイヤーから参照してよい
 - フッテージのカット指定と `inPoint` / `outPoint` / `startTime` は混在させない
@@ -112,7 +117,9 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 - `textStyle` はレイヤー全体の基準スタイル。文字範囲は `textStyleRanges[]`、Range Selectorアニメーションは `textAnimators[]` を使う
 - `textStyleRanges[]` は0始まり・終端を含まない `start` / `end` と文字スタイルを宣言する。After Effects 24.3以降が必要
 - `textStyleRanges` は再適用時に基準スタイルへ戻せるよう、同じレイヤーの `textStyle` と必ず併用する
-- `textAnimators[]` は `id`、Position / Scale / Opacity / Rotation、百分率selectorとStart / End / Offset / Amountのanimationを宣言する
+- `textAnimators[]` は `id`、Position / Scale / Opacity / Rotation、selectorのStart / End / Offset / Amountとそのanimationを宣言する
+- selectorの詳細は `units`（1〜2）、`basedOn`（1〜4）、`shape`（1〜6）、`smoothness`（0〜100）、`easeHigh` / `easeLow`（-100〜100）で宣言する
+- AEが通常列挙しないselector propertyの往復確認には `properties --property-path <matchName path>` を使う
 - `textAnimators` を宣言したレイヤーでは `aeSceneTextAnimator:*` 管理アニメーターを置換する。人手作成の別名アニメーターは保持する
 - 整列・分布はトップレベルの `layout[]` に上から順に宣言し、`layerIds` はscene layer idを参照する
 - `align` は `horizontal` / `vertical`、`distribute` は `axis` と `mode: gaps | centers` を指定する
@@ -129,6 +136,8 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 - 既存compにも `composition.width` / `height` / `duration` / `frameRate` / `pixelAspect` を宣言値として適用する
 - `--validate-only` の `compositionChanges` でcomp設定の変更予定を確認する
 - animationは既定で既存キーを削除してから再構築するため、人手キーを残す場合は明示的に `keyframeMode: merge` を選ぶ
+- runtime error時は専用Undo groupを自動rollbackし、transaction markerの消失で成功を検証する。markerを確認できない場合は無関係な履歴を戻さない
+- rollback成功後もAEのproject dirty状態は保存時点へ戻らない場合がある。CLIは自動保存しない
 
 ## フッテージ音声の例
 
@@ -198,7 +207,7 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 
 ## 最小テンプレート（このまま使える）
 
-以下を `~/ae-agent-skills/work/min.scene.json` として保存して、そのまま `validate/apply` できる。
+以下を対象案件の `_edl/min.scene.json` として保存して、そのまま `validate/apply` できる。
 
 ```json
 {
@@ -242,8 +251,8 @@ ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale <S
 ```
 
 ```bash
-ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json --validate-only
-ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json
+ae-cli apply-scene --scene-file /path/to/project/_edl/min.scene.json --expect-project /path/to/project/main.aep --validate-only
+ae-cli apply-scene --scene-file /path/to/project/_edl/min.scene.json --expect-project /path/to/project/main.aep
 ```
 
 ## propertyPath 運用ルール（汎用）
@@ -261,18 +270,23 @@ ae-cli apply-scene --scene-file ~/ae-agent-skills/work/min.scene.json
 
 ## 標準デバッグ手順（実装コードを読まない）
 
-1. `ae-cli apply-scene --scene-file <scene.json> --validate-only`
-2. `ae-cli apply-scene --scene-file <scene.json>`
-3. `ae-cli expression-errors --comp-name <comp>` で失敗箇所を確認
-4. 対象レイヤーに対して `ae-cli properties --layer-name <layer> --comp-name <comp> --include-group <group> --include-group-children --include-keyframes` を実行し、`propertyPath` とキーを確認
-5. 実寸が関係する場合は `ae-cli bounds --layer-name <layer> --comp-name <comp> --time <sec>` でcomp座標のvisual boundsを確認
-6. `ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale 0.5]` で見た目を確認
-7. scene JSON を修正して再適用
+1. `ae-cli health` の `project.path` が対象 `.aep` と一致することを確認
+2. `ae-cli apply-scene --scene-file <scene.json> --expect-project <project.aep> --validate-only`
+3. `ae-cli apply-scene --scene-file <scene.json> --expect-project <project.aep>`
+4. `ae-cli expression-errors --comp-name <comp>` で失敗箇所を確認
+5. 対象レイヤーに対して `ae-cli properties --layer-name <layer> --comp-name <comp> --include-group <group> --include-group-children --include-keyframes` を実行し、`propertyPath` とキーを確認
+6. 実寸が関係する場合は `ae-cli bounds --layer-name <layer> --comp-name <comp> --time <sec>` でcomp座標のvisual boundsを確認
+7. `ae-cli snapshot --comp-name <comp> --time <sec> --out <absolute.png> [--scale 0.5]` で見た目を確認
+8. scene JSON を修正して、同じ `--expect-project` を付けて再適用
 
 ## トラブル時
 
 - validation 失敗:
   - JSON構造と型を確認
+- apply失敗:
+  - `Rollback: succeeded` と表示されても、`health` / `list-comps` / `list-footage` / `layers` で対象が元へ戻ったことを確認する
+  - rollback後にdirtyだけがtrueなら、自動保存せず内容を確認してから保存またはproject再読み込みを判断する
+  - rollback失敗または未検証なら部分変更が残り得るため、対象を確認するまで再適用しない
 - expression が効かない:
   - `ae-cli expression-errors`
 - 意図しない新規レイヤー作成:

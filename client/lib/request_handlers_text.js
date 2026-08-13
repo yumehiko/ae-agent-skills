@@ -127,7 +127,12 @@ function handleGetTextStyle(searchParams, res) {
         sendBadRequest(res, selector.error);
         return;
     }
-    const script = `getTextStyle(${selector.layerIdLiteral}, ${selector.layerNameLiteral})`;
+    const compSelector = normalizeOptionalCompQuerySelector(searchParams);
+    if (!compSelector.ok) {
+        sendBadRequest(res, compSelector.error);
+        return;
+    }
+    const script = `getTextStyle(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${compSelector.compIdLiteral}, ${compSelector.compNameLiteral})`;
     handleBridgeMutationCall(script, res, 'getTextStyle()', 'Failed to get text style');
 }
 
@@ -140,7 +145,7 @@ function handleSetTextStyle(req, res) {
         }
         const style = {};
         Object.keys(body).forEach((key) => {
-            if (key !== 'layerId' && key !== 'layerName') style[key] = body[key];
+            if (!['layerId', 'layerName', 'compId', 'compName'].includes(key)) style[key] = body[key];
         });
         const validationError = validateTextStyleRequest(style);
         if (validationError) {
@@ -149,7 +154,7 @@ function handleSetTextStyle(req, res) {
         }
         const styleLiteral = toExtendScriptStringLiteral(JSON.stringify(style));
         const script = `setTextStyle(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${styleLiteral})`;
-        handleBridgeMutationCall(script, res, 'setTextStyle()', 'Failed to set text style');
+        handleBridgeMutationCall(script, res, 'setTextStyle()', 'Failed to set text style', body.compId, body.compName);
     });
 }
 
@@ -166,7 +171,14 @@ function handleSetTextJsonCollection(req, res, fieldName, hostFunction, contextL
         }
         const collectionLiteral = toExtendScriptStringLiteral(JSON.stringify(body[fieldName]));
         const script = `${hostFunction}(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${collectionLiteral})`;
-        handleBridgeMutationCall(script, res, `${contextLabel}()`, `Failed to set ${fieldName}`);
+        handleBridgeMutationCall(
+            script,
+            res,
+            `${contextLabel}()`,
+            `Failed to set ${fieldName}`,
+            body.compId,
+            body.compName,
+        );
     });
 }
 

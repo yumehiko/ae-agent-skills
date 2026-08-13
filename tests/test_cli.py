@@ -3,7 +3,95 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from ae_cli.cli_parser import build_parser
-from ae_cli.cli_runner import run_command
+from ae_cli.cli_runner import (
+    _brief_layers,
+    _filter_properties,
+    _resolve_scene_asset_paths,
+    run_command,
+)
+
+
+def test_brief_layers_keeps_only_identity_fields() -> None:
+    layers = [
+        {
+            "id": 1,
+            "layerUid": 101,
+            "name": "Title",
+            "type": "TextLayer",
+            "isNull": False,
+            "startTime": 0,
+            "source": {"path": "/large/payload.mov"},
+            "audio": {"enabled": True},
+        }
+    ]
+
+    assert _brief_layers(layers) == [
+        {
+            "id": 1,
+            "layerUid": 101,
+            "name": "Title",
+            "type": "TextLayer",
+            "isNull": False,
+        }
+    ]
+
+
+def test_brief_layers_preserves_missing_optional_identity_fields() -> None:
+    assert _brief_layers([{"id": 1, "name": "Legacy"}]) == [
+        {"id": 1, "name": "Legacy"}
+    ]
+
+
+def test_filter_properties_matches_name_or_path() -> None:
+    properties = [
+        {"name": "Opacity", "path": "Transform.Opacity"},
+        {"name": "Amount", "path": "Effects.Drop Shadow.Amount"},
+        {"name": "Position", "path": "Transform.Position"},
+    ]
+
+    assert _filter_properties(properties, r"Opacity|Drop Shadow") == properties[:2]
+
+
+def test_filter_properties_rejects_invalid_regex() -> None:
+    try:
+        _filter_properties([], "[")
+    except ValueError as exc:
+        assert "Invalid --filter" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
+
+
+def test_resolve_scene_asset_paths_supports_scene_relative_paths(tmp_path) -> None:
+    scene_file = tmp_path / "_edl" / "main.scene.json"
+    scene_file.parent.mkdir()
+    scene = {"assets": [{"id": "clip", "path": "../media/clip.mov"}]}
+
+    resolved = _resolve_scene_asset_paths(scene, scene_file)
+
+    assert resolved["assets"][0]["path"] == str((tmp_path / "media/clip.mov").resolve())
+
+
+def test_resolve_scene_asset_paths_expands_environment_variables(
+    monkeypatch, tmp_path
+) -> None:
+    media_root = tmp_path / "shared-media"
+    monkeypatch.setenv("MEDIA_ROOT", str(media_root))
+    scene = {"assets": [{"id": "clip", "path": "${MEDIA_ROOT}/clip.mov"}]}
+
+    resolved = _resolve_scene_asset_paths(scene, tmp_path / "main.scene.json")
+
+    assert resolved["assets"][0]["path"] == str((media_root / "clip.mov").resolve())
+
+
+def test_resolve_scene_asset_paths_rejects_missing_environment_variables(tmp_path) -> None:
+    scene = {"assets": [{"id": "clip", "path": "${MISSING_MEDIA_ROOT}/clip.mov"}]}
+
+    try:
+        _resolve_scene_asset_paths(scene, tmp_path / "main.scene.json")
+    except ValueError as exc:
+        assert "MISSING_MEDIA_ROOT" in str(exc)
+    else:
+        raise AssertionError("ValueError was not raised")
 
 
 def test_build_parser_parses_properties_filters() -> None:
@@ -19,15 +107,60 @@ def test_build_parser_parses_properties_filters() -> None:
             "ADBE Transform Group",
             "--exclude-group",
             "ADBE Effect Parade",
+            "--property-path",
+            "ADBE Transform Group.ADBE Opacity",
             "--max-depth",
             "2",
+            "--filter",
+            "Opacity|Position",
+            "--include-expression",
+            "--include-disabled",
         ]
     )
     assert args.command == "properties"
     assert args.layer_id == 3
     assert args.include_group == ["ADBE Transform Group"]
     assert args.exclude_group == ["ADBE Effect Parade"]
+    assert args.property_path == "ADBE Transform Group.ADBE Opacity"
     assert args.max_depth == 2
+    assert args.property_filter == "Opacity|Position"
+    assert args.include_expression is True
+    assert args.include_disabled is True
+
+
+def test_build_parser_parses_layers_brief() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["layers", "--comp-name", "Main", "--brief"])
+
+    assert args.command == "layers"
+    assert args.comp_name == "Main"
+    assert args.brief is True
+
+
+def test_mutation_parsers_accept_explicit_comp_selectors() -> None:
+    parser = build_parser()
+    property_args = parser.parse_args([
+        "set-property",
+        "--layer-id", "2",
+        "--comp-name", "Target",
+        "--property-path", "ADBE Transform Group.ADBE Opacity",
+        "--value", "80",
+    ])
+    cti_args = parser.parse_args(["set-cti", "--comp-id", "17", "--time", "1.25"])
+    layer_args = parser.parse_args([
+        "add-layer", "--comp-name", "Target", "--layer-type", "null",
+    ])
+    comp_layer_args = parser.parse_args([
+        "add-comp-layer",
+        "--comp-name", "Source",
+        "--target-comp-name", "Target",
+    ])
+
+    assert property_args.comp_name == "Target"
+    assert cti_args.comp_id == 17
+    assert layer_args.comp_name == "Target"
+    assert comp_layer_args.comp_name == "Source"
+    assert comp_layer_args.target_comp_name == "Target"
 
 
 def test_build_parser_parses_properties_layer_name_and_time_options() -> None:
@@ -333,9 +466,12 @@ def test_build_parser_parses_list_fonts() -> None:
 
 def test_build_parser_parses_get_text_style() -> None:
     parser = build_parser()
-    args = parser.parse_args(["get-text-style", "--layer-name", "Title"])
+    args = parser.parse_args(
+        ["get-text-style", "--layer-name", "Title", "--comp-name", "TX01_Title"]
+    )
     assert args.command == "get-text-style"
     assert args.layer_name == "Title"
+    assert args.comp_name == "TX01_Title"
 
 
 def test_build_parser_parses_set_text_style() -> None:
@@ -673,11 +809,14 @@ def test_build_parser_parses_apply_scene() -> None:
             "apply-scene",
             "--scene-file",
             "examples/scene.example.json",
+            "--expect-project",
+            "/projects/main.aep",
             "--validate-only",
         ]
     )
     assert args.command == "apply-scene"
     assert args.scene_file == "examples/scene.example.json"
+    assert args.expect_project == "/projects/main.aep"
     assert args.validate_only is True
     assert args.mode == "merge"
 

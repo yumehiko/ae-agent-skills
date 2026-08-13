@@ -30,6 +30,9 @@ ZXPSignCmd
 node_modules/
 *.tgz
 
+# Local working notes
+dtmp/
+
 # Scene JSON workspace (user-local artifacts)
 work/
 done/

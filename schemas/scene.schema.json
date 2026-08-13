@@ -593,6 +593,12 @@
         "end": { "type": "number" },
         "offset": { "type": "number" },
         "amount": { "type": "number" },
+        "units": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "basedOn": { "type": "integer", "minimum": 1, "maximum": 4 },
+        "shape": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "smoothness": { "type": "number", "minimum": 0, "maximum": 100 },
+        "easeHigh": { "type": "number", "minimum": -100, "maximum": 100 },
+        "easeLow": { "type": "number", "minimum": -100, "maximum": 100 },
         "animations": {
           "type": "array",
           "items": { "$ref": "#/$defs/textSelectorAnimation" }

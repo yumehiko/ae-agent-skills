@@ -2,9 +2,10 @@
 """Generate repeatable ae-cli scene JSON files from a tiny telop DSL.
 
 Usage:
-    python examples/gen_telop.py --out-dir work/telops
-    for scene in work/telops/*.scene.json; do
-      ae-cli apply-scene --scene-file "$scene" --validate-only
+    python examples/gen_telop.py --out-dir /path/to/project/_edl/telops
+    target_aep=/path/to/project/main.aep
+    for scene in /path/to/project/_edl/telops/*.scene.json; do
+      ae-cli apply-scene --scene-file "$scene" --expect-project "$target_aep" --validate-only
     done
 """
 

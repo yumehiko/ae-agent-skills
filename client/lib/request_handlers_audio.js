@@ -46,7 +46,7 @@ function handleGetLayerAudio(searchParams, res) {
 }
 
 function handleSetLayerAudio(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, muted, levelDb, fadeIn, fadeOut }) => {
+    readJsonBody(req, res, ({ layerId, layerName, muted, levelDb, fadeIn, fadeOut, compId, compName }) => {
         const selector = normalizeLayerSelector(layerId, layerName);
         if (!selector.ok) {
             sendBadRequest(res, selector.error);
@@ -64,7 +64,7 @@ function handleSetLayerAudio(req, res) {
         }
         const audioLiteral = toExtendScriptStringLiteral(JSON.stringify(audio));
         const script = `setLayerAudio(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${audioLiteral})`;
-        handleBridgeMutationCall(script, res, 'setLayerAudio()', 'Failed to set layer audio');
+        handleBridgeMutationCall(script, res, 'setLayerAudio()', 'Failed to set layer audio', compId, compName);
     });
 }
 

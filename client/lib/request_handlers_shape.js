@@ -2,7 +2,7 @@ function handleAddShapeRepeater(req, res) {
     readJsonBody(
         req,
         res,
-        ({ layerId, layerName, groupIndex, name, copies, offset, position, scale, rotation, startOpacity, endOpacity }) => {
+        ({ layerId, layerName, groupIndex, name, copies, offset, position, scale, rotation, startOpacity, endOpacity, compId, compName }) => {
             const selector = normalizeLayerSelector(layerId, layerName);
             if (!selector.ok) {
                 sendBadRequest(res, selector.error);
@@ -76,7 +76,7 @@ function handleAddShapeRepeater(req, res) {
                 ? 'null'
                 : toExtendScriptStringLiteral(JSON.stringify(options));
             const script = `addShapeRepeater(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${optionsLiteral})`;
-            handleBridgeMutationCall(script, res, 'addShapeRepeater()', 'Failed to add shape repeater');
+            handleBridgeMutationCall(script, res, 'addShapeRepeater()', 'Failed to add shape repeater', compId, compName);
         },
     );
 }
@@ -103,6 +103,8 @@ function handleAddLayer(req, res) {
             shapeStrokeWidth,
             shapeStrokeLineCap,
             shapeRoundness,
+            compId,
+            compName,
         }) => {
             if (!layerType || typeof layerType !== 'string') {
                 sendBadRequest(res, 'layerType is required and must be a string');
@@ -252,25 +254,7 @@ function handleAddLayer(req, res) {
                 : toExtendScriptStringLiteral(JSON.stringify(options));
             const script = `addLayer(${layerTypeLiteral}, ${optionsLiteral})`;
 
-            log(`Calling ExtendScript: ${script}`);
-            evalHostScript(script, (result) => {
-                try {
-                    const parsedResult = parseBridgeResult(result);
-                    if (parsedResult && parsedResult.status === 'error') {
-                        sendJson(res, 500, {
-                            status: 'error',
-                            message: parsedResult.message || 'Failed to add layer',
-                        });
-                        log(`addLayer failed: ${parsedResult.message || 'Unknown error'}`);
-                        return;
-                    }
-                    sendJson(res, 200, { status: 'success', data: parsedResult });
-                    log('addLayer successful.');
-                } catch (e) {
-                    sendBridgeParseError(res, result, e);
-                    log(`addLayer failed: ${e.toString()}`);
-                }
-            });
+            handleBridgeMutationCall(script, res, 'addLayer()', 'Failed to add layer', compId, compName);
         },
     );
 }

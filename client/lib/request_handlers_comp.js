@@ -1,5 +1,5 @@
 function handleAddCompLayer(req, res) {
-    readJsonBody(req, res, ({ compId, compName, name, startTime, inPoint, outPoint }) => {
+    readJsonBody(req, res, ({ compId, compName, name, startTime, inPoint, outPoint, targetCompId, targetCompName }) => {
         const hasCompId = compId !== undefined && compId !== null;
         const hasCompName = typeof compName === 'string' && compName.trim().length > 0;
         if (hasCompId === hasCompName) {
@@ -40,7 +40,7 @@ function handleAddCompLayer(req, res) {
             ? 'null'
             : String(value);
         const script = `addCompLayer(${numberLiteral(compId)}, ${stringLiteral(hasCompName ? compName.trim() : null)}, ${stringLiteral(name)}, ${numberLiteral(startTime)}, ${numberLiteral(inPoint)}, ${numberLiteral(outPoint)})`;
-        handleBridgeMutationCall(script, res, 'addCompLayer()', 'Failed to add composition layer');
+        handleBridgeMutationCall(script, res, 'addCompLayer()', 'Failed to add composition layer', targetCompId, targetCompName);
     });
 }
 

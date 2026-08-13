@@ -73,6 +73,24 @@ function createContext(items, activeItem) {
     aeIsFileFootageItem() {
       return false;
     },
+    aeIsPropertyNode(prop) {
+      return prop.isProperty === true;
+    },
+    aeCanExposeProperty(prop) {
+      return prop.exposed !== false;
+    },
+    aeCanTraverseProperty(prop) {
+      return typeof prop.numProperties === 'number';
+    },
+    aeGetPropertyIdentifier(prop) {
+      return prop.matchName || prop.name;
+    },
+    aePropertyValueToString(prop) {
+      return prop.value;
+    },
+    resolveProperty(layer, propertyPath) {
+      return layer.propertiesByPath ? layer.propertiesByPath[propertyPath] || null : null;
+    },
     aeCompItemSummary(item) {
       return { id: item.id, name: item.name };
     },
@@ -143,6 +161,100 @@ test('keyframe serialization includes values, interpolation, and temporal ease',
     inTemporalEase: [0, 33],
     outTemporalEase: [2, 66],
   }]);
+});
+
+test('getProperties includes expression source only when requested', () => {
+  const expressionProperty = {
+    isProperty: true,
+    name: 'Opacity',
+    matchName: 'ADBE Opacity',
+    value: 100,
+    expression: 'time * 10',
+    expressionEnabled: false,
+  };
+  const targetLayer = {
+    index: 1,
+    name: 'Title',
+    numProperties: 1,
+    property(index) {
+      return index === 1 ? expressionProperty : null;
+    },
+  };
+  const targetComp = new MockCompItem(2, 'TX01_Title', [targetLayer]);
+  const context = createContext([targetComp], targetComp);
+
+  const compact = decodePayload(vm.runInContext(
+    'getProperties(1, JSON.stringify({ compId: 2 }))',
+    context,
+  ));
+  const complete = decodePayload(vm.runInContext(
+    'getProperties(1, JSON.stringify({ compId: 2, includeExpression: true }))',
+    context,
+  ));
+
+  assert.equal(Object.hasOwn(compact[0], 'expression'), false);
+  assert.equal(complete[0].expression, 'time * 10');
+  assert.equal(complete[0].expressionEnabled, false);
+});
+
+test('getProperties can include normally hidden property nodes for diagnostics', () => {
+  const hiddenProperty = {
+    isProperty: true,
+    exposed: false,
+    name: 'Shape',
+    matchName: 'ADBE Text Range Shape',
+    value: 2,
+  };
+  const targetLayer = {
+    index: 1,
+    name: 'Title',
+    numProperties: 1,
+    property(index) {
+      return index === 1 ? hiddenProperty : null;
+    },
+  };
+  const targetComp = new MockCompItem(2, 'TX01_Title', [targetLayer]);
+  const context = createContext([targetComp], targetComp);
+
+  const compact = decodePayload(vm.runInContext(
+    'getProperties(1, JSON.stringify({ compId: 2 }))',
+    context,
+  ));
+  const complete = decodePayload(vm.runInContext(
+    'getProperties(1, JSON.stringify({ compId: 2, includeDisabled: true }))',
+    context,
+  ));
+
+  assert.equal(compact.length, 0);
+  assert.equal(complete[0].path, 'ADBE Text Range Shape');
+  assert.equal(complete[0].value, 2);
+});
+
+test('getProperties reads a non-enumerated property by exact matchName path', () => {
+  const exactPath = 'ADBE Text Range Advanced.ADBE Text Range Shape';
+  const hiddenProperty = {
+    isProperty: true,
+    name: 'Shape',
+    matchName: 'ADBE Text Range Shape',
+    value: 2,
+  };
+  const targetLayer = {
+    index: 1,
+    name: 'Title',
+    numProperties: 0,
+    propertiesByPath: { [exactPath]: hiddenProperty },
+  };
+  const targetComp = new MockCompItem(2, 'TX01_Title', [targetLayer]);
+  const context = createContext([targetComp], targetComp);
+
+  const payload = decodePayload(vm.runInContext(
+    `getProperties(1, JSON.stringify({ compId: 2, propertyPath: ${JSON.stringify(exactPath)} }))`,
+    context,
+  ));
+
+  assert.equal(payload[0].path, exactPath);
+  assert.equal(payload[0].matchName, 'ADBE Text Range Shape');
+  assert.equal(payload[0].value, 2);
 });
 
 test('getLayerBounds returns composition-space bounds without activating the target comp', () => {

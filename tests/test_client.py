@@ -64,13 +64,23 @@ def test_authenticated_client_loads_token_lazily(monkeypatch) -> None:
         def get(self, _url: str, timeout: float) -> DummyResponse:
             assert timeout == 10.0
             assert self.headers["X-AE-Bridge-Token"] == token
-            return DummyResponse({"status": "ok"})
+            return DummyResponse(
+                {
+                    "status": "ok",
+                    "project": {
+                        "path": "/projects/main.aep",
+                        "name": "main.aep",
+                        "dirty": False,
+                        "saved": True,
+                    },
+                }
+            )
 
     monkeypatch.setattr(requests, "Session", FakeSession)
     client = AEClient(token_loader=lambda: calls.append("loaded") or token)
 
     assert calls == []
-    assert client.health() == {"status": "ok"}
+    assert client.health()["project"]["path"] == "/projects/main.aep"
     assert calls == ["loaded"]
 
 
@@ -121,6 +131,31 @@ def test_handle_response_formats_validation_errors() -> None:
         raise AssertionError("AEBridgeError was not raised")
 
 
+def test_handle_response_formats_rollback_diagnostics() -> None:
+    client = AEClient()
+    response = DummyResponse(
+        {
+            "status": "error",
+            "message": "Scene mutation failed.",
+            "rollback": {
+                "attempted": True,
+                "succeeded": True,
+                "warning": "Scene changes were rolled back, but dirty state changed.",
+            },
+        }
+    )
+
+    try:
+        client._handle_response(response)
+    except AEBridgeError as exc:
+        text = str(exc)
+        assert "Rollback: succeeded" in text
+        assert "dirty state changed" in text
+        assert exc.payload["rollback"]["succeeded"] is True
+    else:
+        raise AssertionError("AEBridgeError was not raised")
+
+
 def test_get_properties_builds_query_params(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
@@ -139,6 +174,7 @@ def test_get_properties_builds_query_params(monkeypatch) -> None:
         exclude_groups=["B"],
         max_depth=3,
         include_group_children=True,
+        property_path="ADBE Transform Group.ADBE Opacity",
         time=1.25,
     )
 
@@ -148,6 +184,7 @@ def test_get_properties_builds_query_params(monkeypatch) -> None:
         ("layerId", 7),
         ("includeGroup", "A"),
         ("excludeGroup", "B"),
+        ("propertyPath", "ADBE Transform Group.ADBE Opacity"),
         ("maxDepth", 3),
         ("includeGroupChildren", "true"),
         ("time", 1.25),
@@ -182,10 +219,14 @@ def test_get_properties_supports_comp_and_keyframe_options(monkeypatch) -> None:
         layer_name="Control",
         comp_name="TX01_Title",
         include_keyframes=True,
+        include_expression=True,
+        include_disabled=True,
     )
     assert captured["params"] == [
         ("layerName", "Control"),
         ("includeKeyframes", "true"),
+        ("includeExpression", "true"),
+        ("includeDisabled", "true"),
         ("compName", "TX01_Title"),
     ]
 
@@ -241,6 +282,45 @@ def test_query_commands_reject_multiple_comp_selectors() -> None:
         assert "at most one" in str(exc)
     else:
         raise AssertionError("ValueError was not raised")
+
+
+def test_mutation_commands_forward_explicit_comp_selectors(monkeypatch) -> None:
+    captured: list[tuple[str, Any]] = []
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured.append((url, json))
+        return DummyResponse({"status": "success", "data": {}})
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+
+    client.set_property_value(
+        layer_id=2,
+        comp_name="Target",
+        property_path="ADBE Transform Group.ADBE Opacity",
+        value=80,
+    )
+    client.set_cti(time=1.25, comp_id=17)
+    client.add_layer(layer_type="null", comp_name="Target")
+    client.add_comp_layer(comp_name="Source", target_comp_name="Target")
+
+    assert captured == [
+        (
+            "http://127.0.0.1:8080/property-value",
+            {
+                "layerId": 2,
+                "compName": "Target",
+                "propertyPath": "ADBE Transform Group.ADBE Opacity",
+                "value": 80,
+            },
+        ),
+        ("http://127.0.0.1:8080/cti", {"time": 1.25, "compId": 17}),
+        ("http://127.0.0.1:8080/layers", {"layerType": "null", "compName": "Target"}),
+        (
+            "http://127.0.0.1:8080/comp-layer",
+            {"compName": "Source", "targetCompName": "Target"},
+        ),
+    ]
 
 
 def test_create_snapshot_posts_expected_payload(monkeypatch) -> None:
@@ -531,10 +611,10 @@ def test_get_text_style_calls_expected_endpoint(monkeypatch) -> None:
 
     monkeypatch.setattr(requests, "get", fake_get)
     client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
-    client.get_text_style(layer_name="Title")
+    client.get_text_style(layer_name="Title", comp_name="TX01_Title")
 
     assert captured["url"] == "http://127.0.0.1:8080/text-style"
-    assert captured["params"] == {"layerName": "Title"}
+    assert captured["params"] == {"layerName": "Title", "compName": "TX01_Title"}
 
 
 def test_set_text_style_posts_expected_payload(monkeypatch) -> None:
@@ -938,6 +1018,7 @@ def test_apply_scene_posts_expected_payload(monkeypatch) -> None:
             "layers": [{"id": "title", "type": "text", "text": "Hello"}],
         },
         validate_only=True,
+        expect_project="/projects/main.aep",
     )
 
     assert captured["url"] == "http://127.0.0.1:8080/scene"
@@ -949,6 +1030,7 @@ def test_apply_scene_posts_expected_payload(monkeypatch) -> None:
         },
         "validateOnly": True,
         "mode": "merge",
+        "expectProject": "/projects/main.aep",
     }
 
 

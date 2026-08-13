@@ -59,19 +59,27 @@ function aeCanExposeProperty(prop) {
     if (!aeIsEnabledProperty(prop)) {
         return false;
     }
-    try {
-        if (prop.canSetExpression === false) {
-            return false;
-        }
-        if (prop.canSetExpression === true) {
-            return true;
-        }
-    } catch (e) {}
+    var canSetValue = null;
     try {
         if (typeof prop.canSetValue === "boolean") {
-            return prop.canSetValue;
+            canSetValue = prop.canSetValue;
+            if (canSetValue) {
+                return true;
+            }
         }
-    } catch (e2) {}
+    } catch (eValue) {}
+    var canSetExpression = null;
+    try {
+        if (typeof prop.canSetExpression === "boolean") {
+            canSetExpression = prop.canSetExpression;
+        }
+        if (canSetExpression) {
+            return true;
+        }
+    } catch (eExpression) {}
+    if (canSetValue === false || canSetExpression === false) {
+        return false;
+    }
     return true;
 }
 

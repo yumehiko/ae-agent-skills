@@ -26,9 +26,54 @@ function handleBridgeDataCall(script, res, contextLabel) {
     });
 }
 
-function handleBridgeMutationCall(script, res, contextLabel, fallbackMessage) {
+function normalizeOptionalCompBodySelector(compId, compName) {
+    const hasCompId = compId !== undefined && compId !== null;
+    const hasCompName = compName !== undefined && compName !== null && compName !== '';
+    if (hasCompId && hasCompName) {
+        return { ok: false, error: 'Provide at most one of compId or compName' };
+    }
+    if (hasCompId && (
+        typeof compId !== 'number' || !Number.isInteger(compId) || compId <= 0
+    )) {
+        return { ok: false, error: 'compId must be a positive integer' };
+    }
+    if (hasCompName && (typeof compName !== 'string' || !compName.trim())) {
+        return { ok: false, error: 'compName must be a non-empty string' };
+    }
+    return {
+        ok: true,
+        hasSelector: hasCompId || hasCompName,
+        compIdLiteral: hasCompId ? String(compId) : 'null',
+        compNameLiteral: hasCompName
+            ? toExtendScriptStringLiteral(compName.trim())
+            : 'null',
+    };
+}
+
+function wrapMutationScriptForComp(script, compId, compName) {
+    const selector = normalizeOptionalCompBodySelector(compId, compName);
+    selector.script = script;
+    if (!selector.ok || !selector.hasSelector) return selector;
+    selector.script = `aeRunMutationInComp(${selector.compIdLiteral}, ${selector.compNameLiteral}, function () { return ${script}; })`;
+    return selector;
+}
+
+function handleBridgeMutationCall(
+    script,
+    res,
+    contextLabel,
+    fallbackMessage,
+    compId,
+    compName,
+) {
+    const wrapped = wrapMutationScriptForComp(script, compId, compName);
+    if (!wrapped.ok) {
+        sendBadRequest(res, wrapped.error);
+        log(`${contextLabel} failed: ${wrapped.error}`);
+        return;
+    }
     log(`Calling ExtendScript: ${contextLabel}`);
-    evalHostScript(script, (result) => {
+    evalHostScript(wrapped.script, (result) => {
         try {
             const parsedResult = parseBridgeResult(result);
             if (parsedResult && parsedResult.status === 'error') {
@@ -39,6 +84,11 @@ function handleBridgeMutationCall(script, res, contextLabel, fallbackMessage) {
                 if (parsedResult.error !== undefined) payload.error = parsedResult.error;
                 if (parsedResult.errors !== undefined) payload.errors = parsedResult.errors;
                 if (parsedResult.details !== undefined) payload.details = parsedResult.details;
+                if (parsedResult.rollback !== undefined) payload.rollback = parsedResult.rollback;
+                if (parsedResult.project !== undefined) payload.project = parsedResult.project;
+                if (parsedResult.expectedProject !== undefined) {
+                    payload.expectedProject = parsedResult.expectedProject;
+                }
                 sendJson(res, 500, payload);
                 log(`${contextLabel} failed: ${parsedResult.message || 'Unknown error'}`);
                 return;
@@ -112,8 +162,26 @@ function normalizeOptionalCompQuerySelector(searchParams) {
 }
 
 function handleHealth(res) {
-    sendJson(res, 200, { status: 'ok' });
-    log('Health check responded with ok.');
+    evalHostScript('getProjectState()', (result) => {
+        try {
+            const project = parseBridgeResult(result);
+            if (project
+                && typeof project.status === 'string'
+                && project.status.toLowerCase() === 'error') {
+                sendJson(res, 500, {
+                    status: 'error',
+                    message: project.message || 'Failed to inspect the current project.',
+                });
+                log(`Health check failed: ${project.message || 'Unknown error'}`);
+                return;
+            }
+            sendJson(res, 200, { status: 'ok', project });
+            log('Health check responded with current project state.');
+        } catch (e) {
+            sendBridgeParseError(res, result, e);
+            log(`Health check failed: ${e.toString()}`);
+        }
+    });
 }
 
 function handleGetLayers(searchParams, res) {
@@ -234,9 +302,12 @@ function handleGetProperties(searchParams, res) {
 
     const includeGroups = searchParams.getAll('includeGroup').filter(Boolean);
     const excludeGroups = searchParams.getAll('excludeGroup').filter(Boolean);
+    const propertyPathParam = searchParams.get('propertyPath');
     const maxDepthParam = searchParams.get('maxDepth');
     const includeGroupChildrenParam = searchParams.get('includeGroupChildren');
     const includeKeyframesParam = searchParams.get('includeKeyframes');
+    const includeExpressionParam = searchParams.get('includeExpression');
+    const includeDisabledParam = searchParams.get('includeDisabled');
     const timeParam = searchParams.get('time');
     const compSelector = normalizeOptionalCompQuerySelector(searchParams);
     if (!compSelector.ok) {
@@ -273,6 +344,24 @@ function handleGetProperties(searchParams, res) {
         }
         includeKeyframes = includeKeyframesParam === 'true';
     }
+    let includeExpression;
+    if (includeExpressionParam !== null) {
+        if (!['true', 'false'].includes(includeExpressionParam)) {
+            sendBadRequest(res, 'includeExpression must be true or false');
+            log('getProperties failed: invalid includeExpression');
+            return;
+        }
+        includeExpression = includeExpressionParam === 'true';
+    }
+    let includeDisabled;
+    if (includeDisabledParam !== null) {
+        if (!['true', 'false'].includes(includeDisabledParam)) {
+            sendBadRequest(res, 'includeDisabled must be true or false');
+            log('getProperties failed: invalid includeDisabled');
+            return;
+        }
+        includeDisabled = includeDisabledParam === 'true';
+    }
     let time;
     if (timeParam !== null) {
         const parsedTime = Number(timeParam);
@@ -288,9 +377,14 @@ function handleGetProperties(searchParams, res) {
     if (hasLayerName) options.layerName = layerNameParam.trim();
     if (includeGroups.length > 0) options.includeGroups = includeGroups;
     if (excludeGroups.length > 0) options.excludeGroups = excludeGroups;
+    if (propertyPathParam !== null && propertyPathParam.trim().length > 0) {
+        options.propertyPath = propertyPathParam.trim();
+    }
     if (maxDepth !== undefined) options.maxDepth = maxDepth;
     if (includeGroupChildren !== undefined) options.includeGroupChildren = includeGroupChildren;
     if (includeKeyframes !== undefined) options.includeKeyframes = includeKeyframes;
+    if (includeExpression !== undefined) options.includeExpression = includeExpression;
+    if (includeDisabled !== undefined) options.includeDisabled = includeDisabled;
     if (time !== undefined) options.time = time;
     if (compSelector.compId !== null) options.compId = compSelector.compId;
     if (compSelector.compName !== null) options.compName = compSelector.compName;
@@ -347,7 +441,7 @@ function handleGetLayerBounds(searchParams, res) {
 }
 
 function handleSetExpression(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, propertyPath, expression }) => {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, expression, compId, compName }) => {
         if (!propertyPath || expression === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setExpression failed: Missing parameters');
@@ -368,22 +462,32 @@ function handleSetExpression(req, res) {
         const escapedPath = escapeForExtendScript(propertyPath);
         const expressionLiteral = toExtendScriptStringLiteral(expression);
         const script = `setExpression(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, "${escapedPath}", ${expressionLiteral})`;
+        const wrapped = wrapMutationScriptForComp(script, compId, compName);
+        if (!wrapped.ok) {
+            sendBadRequest(res, wrapped.error);
+            return;
+        }
 
-        log(`Calling ExtendScript: ${script}`);
-        evalHostScript(script, (result) => {
+        log('Calling ExtendScript: setExpression()');
+        evalHostScript(wrapped.script, (result) => {
             if (result === 'success') {
                 sendJson(res, 200, { status: 'success', message: 'Expression set successfully' });
                 log('setExpression successful.');
                 return;
             }
-            sendJson(res, 500, { status: 'error', message: result });
-            log(`setExpression failed: ${result}`);
+            let message = result;
+            try {
+                const parsedResult = parseBridgeResult(result);
+                if (parsedResult && parsedResult.message) message = parsedResult.message;
+            } catch (_parseError) {}
+            sendJson(res, 500, { status: 'error', message });
+            log(`setExpression failed: ${message}`);
         });
     });
 }
 
 function handleSetPropertyValue(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, propertyPath, value }) => {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, value, compId, compName }) => {
         if (!propertyPath || value === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setPropertyValue failed: Missing parameters');
@@ -398,12 +502,12 @@ function handleSetPropertyValue(req, res) {
         const pathLiteral = toExtendScriptStringLiteral(propertyPath);
         const valueLiteral = toExtendScriptStringLiteral(JSON.stringify(value));
         const script = `setPropertyValue(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${pathLiteral}, ${valueLiteral})`;
-        handleBridgeMutationCall(script, res, 'setPropertyValue()', 'Failed to set property value');
+        handleBridgeMutationCall(script, res, 'setPropertyValue()', 'Failed to set property value', compId, compName);
     });
 }
 
 function handleSetKeyframe(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, propertyPath, time, value, inInterp, outInterp, easeIn, easeOut }) => {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, time, value, inInterp, outInterp, easeIn, easeOut, compId, compName }) => {
         if (!propertyPath || time === undefined || value === undefined) {
             sendBadRequest(res, 'Missing parameters');
             log('setKeyframe failed: Missing parameters');
@@ -442,12 +546,12 @@ function handleSetKeyframe(req, res) {
             ? 'null'
             : toExtendScriptStringLiteral(JSON.stringify(options));
         const script = `setKeyframe(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${pathLiteral}, ${time}, ${valueLiteral}, ${optionsLiteral})`;
-        handleBridgeMutationCall(script, res, 'setKeyframe()', 'Failed to set keyframe');
+        handleBridgeMutationCall(script, res, 'setKeyframe()', 'Failed to set keyframe', compId, compName);
     });
 }
 
 function handleAddEffect(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, effectMatchName, effectName }) => {
+    readJsonBody(req, res, ({ layerId, layerName, effectMatchName, effectName, compId, compName }) => {
         if (!effectMatchName) {
             sendBadRequest(res, 'Missing parameters');
             log('addEffect failed: Missing parameters');
@@ -471,25 +575,7 @@ function handleAddEffect(req, res) {
             : toExtendScriptStringLiteral(effectName);
         const script = `addEffect(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${matchNameLiteral}, ${effectNameLiteral})`;
 
-        log(`Calling ExtendScript: ${script}`);
-        evalHostScript(script, (result) => {
-            try {
-                const parsedResult = parseBridgeResult(result);
-                if (parsedResult && parsedResult.status === 'error') {
-                    sendJson(res, 500, {
-                        status: 'error',
-                        message: parsedResult.message || 'Failed to add effect',
-                    });
-                    log(`addEffect failed: ${parsedResult.message || 'Unknown error'}`);
-                    return;
-                }
-                sendJson(res, 200, { status: 'success', data: parsedResult });
-                log('addEffect successful.');
-            } catch (e) {
-                sendBridgeParseError(res, result, e);
-                log(`addEffect failed: ${e.toString()}`);
-            }
-        });
+        handleBridgeMutationCall(script, res, 'addEffect()', 'Failed to add effect', compId, compName);
     });
 }
 

@@ -383,17 +383,56 @@ function aeValidateTextAnimators(animators) {
         }
         if (propertyCount === 0) throw new Error(prefix + ".properties must contain at least one setting.");
         var selector = spec.selector || {};
-        var selectorAllowed = { start: true, end: true, offset: true, amount: true, animations: true };
+        var selectorAllowed = {
+            start: true,
+            end: true,
+            offset: true,
+            amount: true,
+            units: true,
+            basedOn: true,
+            shape: true,
+            smoothness: true,
+            easeHigh: true,
+            easeLow: true,
+            animations: true
+        };
         for (var selectorKey in selector) {
             if (selector.hasOwnProperty(selectorKey) && !selectorAllowed[selectorKey]) {
                 throw new Error("Unknown " + prefix + ".selector setting: " + selectorKey);
             }
         }
-        var numericKeys = ["start", "end", "offset", "amount"];
+        var numericKeys = ["start", "end", "offset", "amount", "smoothness", "easeHigh", "easeLow"];
         for (var n = 0; n < numericKeys.length; n++) {
             var numericKey = numericKeys[n];
             if (selector[numericKey] !== undefined && !aeTextIsFiniteNumber(selector[numericKey])) {
                 throw new Error(prefix + ".selector." + numericKey + " must be a finite number.");
+            }
+        }
+        var enumRanges = {
+            units: [1, 2],
+            basedOn: [1, 4],
+            shape: [1, 6]
+        };
+        for (var enumKey in enumRanges) {
+            if (!enumRanges.hasOwnProperty(enumKey) || selector[enumKey] === undefined) continue;
+            var enumValue = selector[enumKey];
+            var enumRange = enumRanges[enumKey];
+            if (!aeTextIsFiniteNumber(enumValue)
+                || Math.floor(Number(enumValue)) !== Number(enumValue)
+                || Number(enumValue) < enumRange[0]
+                || Number(enumValue) > enumRange[1]) {
+                throw new Error(prefix + ".selector." + enumKey + " must be an integer from "
+                    + enumRange[0] + " to " + enumRange[1] + ".");
+            }
+        }
+        var percentRanges = { smoothness: [0, 100], easeHigh: [-100, 100], easeLow: [-100, 100] };
+        for (var percentKey in percentRanges) {
+            if (!percentRanges.hasOwnProperty(percentKey) || selector[percentKey] === undefined) continue;
+            var percentValue = Number(selector[percentKey]);
+            var percentRange = percentRanges[percentKey];
+            if (percentValue < percentRange[0] || percentValue > percentRange[1]) {
+                throw new Error(prefix + ".selector." + percentKey + " must be from "
+                    + percentRange[0] + " to " + percentRange[1] + ".");
             }
         }
         var animations = selector.animations || [];
@@ -463,7 +502,13 @@ function aeTextSelectorProperty(selector, propertyName) {
         start: "ADBE Text Percent Start",
         end: "ADBE Text Percent End",
         offset: "ADBE Text Percent Offset",
-        amount: "ADBE Text Selector Max Amount"
+        amount: "ADBE Text Selector Max Amount",
+        units: "ADBE Text Range Units",
+        basedOn: "ADBE Text Range Type2",
+        shape: "ADBE Text Range Shape",
+        smoothness: "ADBE Text Selector Smoothness",
+        easeHigh: "ADBE Text Levels Max Ease",
+        easeLow: "ADBE Text Levels Min Ease"
     };
     return aeTextDescendantByMatchName(selector, matchNames[propertyName]);
 }
@@ -533,7 +578,18 @@ function aeApplyTextAnimators(layer, animators) {
         selectors = animator.property("ADBE Text Selectors");
         selector = aeTextChildByMatchName(selectors, "ADBE Text Selector");
         var selectorSpec = spec.selector || {};
-        var selectorNames = ["start", "end", "offset", "amount"];
+        var selectorNames = [
+            "start",
+            "end",
+            "offset",
+            "amount",
+            "smoothness",
+            "easeHigh",
+            "easeLow",
+            "units",
+            "basedOn",
+            "shape"
+        ];
         for (var selectorIndex = 0; selectorIndex < selectorNames.length; selectorIndex++) {
             var selectorName = selectorNames[selectorIndex];
             if (selectorSpec[selectorName] === undefined) continue;
@@ -609,10 +665,14 @@ function listFonts(query, limit) {
     }
 }
 
-function getTextStyle(layerId, layerName) {
+function getTextStyle(layerId, layerName, compId, compName) {
     try {
         ensureJSON();
-        var comp = app.project ? app.project.activeItem : null;
+        var resolvedComp = aeResolveQueryComp(compId, compName);
+        if (resolvedComp.error) {
+            return encodePayload({ status: "error", message: resolvedComp.error });
+        }
+        var comp = resolvedComp.item;
         var resolved = aeResolveLayer(comp, layerId, layerName);
         if (resolved.error) {
             return encodePayload({ status: "error", message: resolved.error });

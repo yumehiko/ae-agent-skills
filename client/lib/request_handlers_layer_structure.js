@@ -1,5 +1,5 @@
 function handleParentLayer(req, res) {
-    readJsonBody(req, res, ({ childLayerId, parentLayerId }) => {
+    readJsonBody(req, res, ({ childLayerId, parentLayerId, compId, compName }) => {
         if (!childLayerId) {
             sendBadRequest(res, 'childLayerId is required');
             log('parentLayer failed: missing childLayerId');
@@ -15,12 +15,12 @@ function handleParentLayer(req, res) {
             ? 'null'
             : String(parentLayerId);
         const script = `parentLayer(${childLayerId}, ${parentLiteral})`;
-        handleBridgeMutationCall(script, res, 'parentLayer()', 'Failed to set parent layer');
+        handleBridgeMutationCall(script, res, 'parentLayer()', 'Failed to set parent layer', compId, compName);
     });
 }
 
 function handlePrecompose(req, res) {
-    readJsonBody(req, res, ({ layerIds, name, moveAllAttributes }) => {
+    readJsonBody(req, res, ({ layerIds, name, moveAllAttributes, compId, compName }) => {
         if (!Array.isArray(layerIds) || layerIds.length === 0 || !name || typeof name !== 'string') {
             sendBadRequest(res, 'layerIds (non-empty array) and name (string) are required');
             log('precompose failed: invalid layerIds or name');
@@ -42,24 +42,24 @@ function handlePrecompose(req, res) {
         const nameLiteral = toExtendScriptStringLiteral(name);
         const moveLiteral = moveAllAttributes === undefined ? 'false' : String(moveAllAttributes);
         const script = `precomposeLayers(${layerIdsLiteral}, ${nameLiteral}, ${moveLiteral})`;
-        handleBridgeMutationCall(script, res, 'precomposeLayers()', 'Failed to precompose layers');
+        handleBridgeMutationCall(script, res, 'precomposeLayers()', 'Failed to precompose layers', compId, compName);
     });
 }
 
 function handleDuplicateLayer(req, res) {
-    readJsonBody(req, res, ({ layerId }) => {
+    readJsonBody(req, res, ({ layerId, compId, compName }) => {
         if (!layerId) {
             sendBadRequest(res, 'layerId is required');
             log('duplicateLayer failed: missing layerId');
             return;
         }
         const script = `duplicateLayer(${layerId})`;
-        handleBridgeMutationCall(script, res, 'duplicateLayer()', 'Failed to duplicate layer');
+        handleBridgeMutationCall(script, res, 'duplicateLayer()', 'Failed to duplicate layer', compId, compName);
     });
 }
 
 function handleMoveLayerOrder(req, res) {
-    readJsonBody(req, res, ({ layerId, beforeLayerId, afterLayerId, toTop, toBottom }) => {
+    readJsonBody(req, res, ({ layerId, beforeLayerId, afterLayerId, toTop, toBottom, compId, compName }) => {
         if (!layerId) {
             sendBadRequest(res, 'layerId is required');
             log('moveLayerOrder failed: missing layerId');
@@ -102,12 +102,12 @@ function handleMoveLayerOrder(req, res) {
         const topLiteral = toTop === true ? 'true' : 'false';
         const bottomLiteral = toBottom === true ? 'true' : 'false';
         const script = `moveLayerOrder(${layerId}, ${beforeLiteral}, ${afterLiteral}, ${topLiteral}, ${bottomLiteral})`;
-        handleBridgeMutationCall(script, res, 'moveLayerOrder()', 'Failed to move layer order');
+        handleBridgeMutationCall(script, res, 'moveLayerOrder()', 'Failed to move layer order', compId, compName);
     });
 }
 
 function handleDeleteLayer(req, res) {
-    readJsonBody(req, res, ({ layerId }) => {
+    readJsonBody(req, res, ({ layerId, compId, compName }) => {
         if (!layerId) {
             sendBadRequest(res, 'layerId is required');
             log('deleteLayer failed: missing layerId');
@@ -120,7 +120,7 @@ function handleDeleteLayer(req, res) {
         }
 
         const script = `deleteLayer(${layerId})`;
-        handleBridgeMutationCall(script, res, 'deleteLayer()', 'Failed to delete layer');
+        handleBridgeMutationCall(script, res, 'deleteLayer()', 'Failed to delete layer', compId, compName);
     });
 }
 

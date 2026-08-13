@@ -1,7 +1,8 @@
 # ロードマップ
 
 機能を小さく保ち、原則として1機能を1マイナーバージョンで追加する。
-実作業フィードバックとの対応と受け入れ条件は `field-feedback-2026-08-10.ja.md` で追跡する。
+実作業フィードバックとの対応と受け入れ条件は `field-feedback-2026-08-10.ja.md` と
+`field-feedback-2026-08-12.ja.md` で追跡する。
 
 | バージョン | テーマ | 状態 | 対象範囲 |
 | --- | --- | --- | --- |
@@ -14,6 +15,7 @@
 | v0.10.0 | 読み取り・検証 | 実装・実機確認済み | comp指定layers/expression-errors、bounds、keyframe情報、isNull |
 | v0.11.0 | ビジュアル検証 | 実装・実機確認済み（dirty / Undoは未観測） | comp snapshotのPNG出力、時刻・scale指定、失敗時cleanup |
 | v0.12.0 | テキスト表現 | 実装・実機確認済み | テキストアニメーター、文字範囲スタイル、visual-center、上位DSL例 |
+| v0.13.0 | プロジェクト安全性 | 実装済み・実機確認待ち | project identity、`apply-scene --expect-project`、案件配下のscene運用、読み取り・更新APIのcomp指定統一 |
 
 各バージョンでは、scene JSON、個別CLI、スキーマ、agent skill、使用例、自動テスト、After Effects実機テストまでを完了条件とする。
 
@@ -61,3 +63,18 @@
 - `textStyle` と `textStyleRanges` の再適用で、宣言から消した文字範囲スタイルが基準スタイルへ戻る
 - `visual-center` 前後でvisual boundsのcomp座標が変わらず、アンカーポイントだけが視覚中央へ移る
 - `examples/gen_telop.py` の生成sceneをvalidate/applyし、再適用してもレイヤーとanimatorが重複しない
+
+## v0.13.0 実機確認項目
+
+- `health` が保存済み/未保存プロジェクトのpath、name、dirty、savedを正しく返す
+- `apply-scene --expect-project` が正しい対象だけを許可し、別projectと未保存projectを変更前に拒否する
+- OneDrive、外付けボリューム、空白・Unicodeを含むproject pathを正しく比較する
+- `get-text-style` がcompId / compNameを受け付け、active compを変更しない
+- project配下 `_edl/` のsceneをvalidate/applyし、`work/` / `done/` コピーなしで制作記録を保持できる
+- Range SelectorのUnits / Based On / Shape / Smoothness / Ease High / Ease Lowがscene再適用で宣言値へ収束する
+- `properties --property-path` で通常列挙されないpropertyをmatchName pathから1件だけ取得できる
+- `keyframes: []` と同じpropertyの静的値を併記すると、全キー削除後に静的値へ収束する
+- apply途中のruntime errorで専用Undo groupを自動rollbackし、transaction markerの消失で成功を検証する
+- rollback成功後に内容が戻ってもproject dirty状態が復元されない場合を、診断情報として明示する
+- comp内容を変更するコマンドが `--comp-id` / `--comp-name` を受け付け、非active compを変更後に元のactive compへ戻る
+- `add-comp-layer` が `--target-comp-id` / `--target-comp-name` で配置先compを明示できる

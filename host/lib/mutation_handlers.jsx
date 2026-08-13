@@ -80,6 +80,34 @@ function findCompByIdOrName(compId, compName) {
     return null;
 }
 
+function aeRunMutationInComp(compId, compName, operation) {
+    try {
+        ensureJSON();
+        var resolvedComp = aeResolveQueryComp(compId, compName);
+        if (resolvedComp.error) {
+            return encodePayload({ status: "error", message: resolvedComp.error });
+        }
+        var targetComp = resolvedComp.item;
+        var previousComp = app.project && app.project.activeItem instanceof CompItem
+            ? app.project.activeItem
+            : null;
+        var switched = previousComp !== targetComp;
+        if (switched) {
+            targetComp.openInViewer();
+        }
+        try {
+            return operation();
+        } finally {
+            if (switched && previousComp) {
+                previousComp.openInViewer();
+            }
+        }
+    } catch (e) {
+        log("aeRunMutationInComp() threw: " + e.toString());
+        return encodePayload({ status: "error", message: e.toString() });
+    }
+}
+
 function setExpression(layerId, layerName, propertyPath, expression) {
     try {
         ensureJSON();

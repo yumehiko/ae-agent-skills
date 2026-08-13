@@ -1,5 +1,5 @@
 function handleSetInOutPoint(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, inPoint, outPoint }) => {
+    readJsonBody(req, res, ({ layerId, layerName, inPoint, outPoint, compId, compName }) => {
         if (inPoint === undefined && outPoint === undefined) {
             sendBadRequest(res, 'At least one of inPoint/outPoint is required');
             log('setInOutPoint failed: missing parameters');
@@ -25,12 +25,12 @@ function handleSetInOutPoint(req, res) {
         const inPointLiteral = inPoint === undefined ? 'null' : String(inPoint);
         const outPointLiteral = outPoint === undefined ? 'null' : String(outPoint);
         const script = `setInOutPoint(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${inPointLiteral}, ${outPointLiteral})`;
-        handleBridgeMutationCall(script, res, 'setInOutPoint()', 'Failed to set in/out point');
+        handleBridgeMutationCall(script, res, 'setInOutPoint()', 'Failed to set in/out point', compId, compName);
     });
 }
 
 function handleMoveLayerTime(req, res) {
-    readJsonBody(req, res, ({ layerId, layerName, delta }) => {
+    readJsonBody(req, res, ({ layerId, layerName, delta, compId, compName }) => {
         if (delta === undefined) {
             sendBadRequest(res, 'delta is required');
             log('moveLayerTime failed: missing parameters');
@@ -49,12 +49,12 @@ function handleMoveLayerTime(req, res) {
         }
 
         const script = `moveLayerTime(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${delta})`;
-        handleBridgeMutationCall(script, res, 'moveLayerTime()', 'Failed to move layer time');
+        handleBridgeMutationCall(script, res, 'moveLayerTime()', 'Failed to move layer time', compId, compName);
     });
 }
 
 function handleSetCti(req, res) {
-    readJsonBody(req, res, ({ time }) => {
+    readJsonBody(req, res, ({ time, compId, compName }) => {
         if (time === undefined) {
             sendBadRequest(res, 'time is required');
             log('setCTI failed: missing time');
@@ -67,12 +67,12 @@ function handleSetCti(req, res) {
         }
 
         const script = `setCTI(${time})`;
-        handleBridgeMutationCall(script, res, 'setCTI()', 'Failed to set CTI');
+        handleBridgeMutationCall(script, res, 'setCTI()', 'Failed to set CTI', compId, compName);
     });
 }
 
 function handleSetWorkArea(req, res) {
-    readJsonBody(req, res, ({ start, duration }) => {
+    readJsonBody(req, res, ({ start, duration, compId, compName }) => {
         if (start === undefined || duration === undefined) {
             sendBadRequest(res, 'start and duration are required');
             log('setWorkArea failed: missing parameters');
@@ -90,7 +90,7 @@ function handleSetWorkArea(req, res) {
         }
 
         const script = `setWorkArea(${start}, ${duration})`;
-        handleBridgeMutationCall(script, res, 'setWorkArea()', 'Failed to set work area');
+        handleBridgeMutationCall(script, res, 'setWorkArea()', 'Failed to set work area', compId, compName);
     });
 }
 

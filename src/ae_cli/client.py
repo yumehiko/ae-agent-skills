@@ -131,6 +131,21 @@ def _format_bridge_error_message(payload: Dict[str, Any]) -> str:
     if details:
         lines.append(f"Details: {_compact_json(details)}")
 
+    rollback = payload.get("rollback")
+    if isinstance(rollback, dict):
+        if rollback.get("succeeded") is True:
+            lines.append("Rollback: succeeded")
+        elif rollback.get("attempted") is True:
+            lines.append("Rollback: failed or could not be verified")
+        else:
+            lines.append("Rollback: not attempted")
+        warning = rollback.get("warning")
+        if warning:
+            lines.append(f"Rollback warning: {warning}")
+        rollback_error = rollback.get("error")
+        if rollback_error:
+            lines.append(f"Rollback error: {rollback_error}")
+
     return "\n".join(lines)
 
 
@@ -253,6 +268,8 @@ class AEClient:
         source_in: float | None = None,
         source_out: float | None = None,
         timeline_in: float | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add footage to the active comp and map a source range onto the timeline."""
         selector_count = sum(
@@ -261,7 +278,9 @@ class AEClient:
         )
         if selector_count != 1:
             raise ValueError("Provide exactly one of footage_id, footage_name, or path.")
-        payload: Dict[str, Any] = {}
+        payload: Dict[str, Any] = self._optional_comp_selector_payload(
+            comp_id=comp_id, comp_name=comp_name
+        )
         if footage_id is not None:
             payload["footageId"] = footage_id
         if footage_name is not None:
@@ -291,6 +310,8 @@ class AEClient:
         start_time: float | None = None,
         in_point: float | None = None,
         out_point: float | None = None,
+        target_comp_id: int | None = None,
+        target_comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add an existing project composition as a layer in the active comp."""
         has_id = comp_id is not None
@@ -310,6 +331,13 @@ class AEClient:
             payload["inPoint"] = in_point
         if out_point is not None:
             payload["outPoint"] = out_point
+        target_selector = self._optional_comp_selector_payload(
+            comp_id=target_comp_id, comp_name=target_comp_name
+        )
+        if "compId" in target_selector:
+            payload["targetCompId"] = target_selector["compId"]
+        if "compName" in target_selector:
+            payload["targetCompName"] = target_selector["compName"]
         response = self._requests.post(
             self._url("/comp-layer"),
             json=payload,
@@ -324,9 +352,12 @@ class AEClient:
         timeline_in: float,
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Set an existing footage layer's source range and timeline placement."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["sourceIn"] = source_in
         payload["sourceOut"] = source_out
         payload["timelineIn"] = timeline_in
@@ -359,9 +390,12 @@ class AEClient:
         level_db: float | None = None,
         fade_in: float | None = None,
         fade_out: float | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Set mute, stereo-linked dB level, and optional fades for a layer."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         if muted is not None:
             payload["muted"] = muted
         if level_db is not None:
@@ -370,7 +404,7 @@ class AEClient:
             payload["fadeIn"] = fade_in
         if fade_out is not None:
             payload["fadeOut"] = fade_out
-        if len(payload) == 1:
+        if muted is None and level_db is None and fade_in is None and fade_out is None:
             raise ValueError("Provide at least one audio setting.")
         response = self._requests.post(
             self._url("/layer-audio"),
@@ -391,9 +425,12 @@ class AEClient:
         self,
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Return the whole-layer text style for a text layer."""
         params = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        params.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         response = self._requests.get(self._url("/text-style"), params=params, timeout=self.timeout)
         return self._handle_response(response)
 
@@ -401,12 +438,16 @@ class AEClient:
         self,
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
         **style: Any,
     ) -> Dict[str, Any]:
         """Partially update the whole-layer text style for a text layer."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
-        payload.update({key: value for key, value in style.items() if value is not None})
-        if len(payload) == 1:
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
+        declared_style = {key: value for key, value in style.items() if value is not None}
+        payload.update(declared_style)
+        if not declared_style:
             raise ValueError("Provide at least one text style setting.")
         response = self._requests.post(self._url("/text-style"), json=payload, timeout=self.timeout)
         return self._handle_response(response)
@@ -416,9 +457,12 @@ class AEClient:
         text_style_ranges: List[Dict[str, Any]],
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Apply half-open per-character style ranges (After Effects 24.3+)."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["textStyleRanges"] = text_style_ranges
         response = self._requests.post(
             self._url("/text-style-ranges"), json=payload, timeout=self.timeout
@@ -430,9 +474,12 @@ class AEClient:
         text_animators: List[Dict[str, Any]],
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Replace ae-agent managed Range Selector text animators."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["textAnimators"] = text_animators
         response = self._requests.post(
             self._url("/text-animators"), json=payload, timeout=self.timeout
@@ -460,9 +507,12 @@ class AEClient:
         offset: List[float] | None = None,
         margin_percent: float | None = None,
         time: float = 0.0,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Align visual layer bounds to a composition reference rectangle."""
         payload = self._layer_list_selector_payload(layer_ids=layer_ids, layer_names=layer_names)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["reference"] = reference
         payload["time"] = time
         if horizontal is not None:
@@ -485,9 +535,12 @@ class AEClient:
         reference: str = "comp",
         margin_percent: float | None = None,
         time: float = 0.0,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Distribute visual layer bounds with equal gaps or center spacing."""
         payload = self._layer_list_selector_payload(layer_ids=layer_ids, layer_names=layer_names)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload.update({"axis": axis, "mode": mode, "reference": reference, "time": time})
         if margin_percent is not None:
             payload["marginPercent"] = margin_percent
@@ -499,9 +552,12 @@ class AEClient:
         layer_ids: List[int] | None = None,
         layer_names: List[str] | None = None,
         time: float = 0.0,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Move anchor points to visual centers while preserving comp-space appearance."""
         payload = self._layer_list_selector_payload(layer_ids=layer_ids, layer_names=layer_names)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["time"] = time
         response = self._requests.post(
             self._url("/layout-visual-center"), json=payload, timeout=self.timeout
@@ -571,9 +627,12 @@ class AEClient:
         layer_name: str | None = None,
         include_groups: List[str] | None = None,
         exclude_groups: List[str] | None = None,
+        property_path: str | None = None,
         max_depth: int | None = None,
         include_group_children: bool = False,
         include_keyframes: bool = False,
+        include_expression: bool = False,
+        include_disabled: bool = False,
         time: float | None = None,
         comp_id: int | None = None,
         comp_name: str | None = None,
@@ -593,12 +652,18 @@ class AEClient:
             for group in exclude_groups:
                 if group:
                     params.append(("excludeGroup", group))
+        if property_path:
+            params.append(("propertyPath", property_path))
         if max_depth is not None:
             params.append(("maxDepth", max_depth))
         if include_group_children:
             params.append(("includeGroupChildren", "true"))
         if include_keyframes:
             params.append(("includeKeyframes", "true"))
+        if include_expression:
+            params.append(("includeExpression", "true"))
+        if include_disabled:
+            params.append(("includeDisabled", "true"))
         if time is not None:
             params.append(("time", time))
         comp_selector = self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name)
@@ -662,9 +727,12 @@ class AEClient:
         expression: str,
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Apply an expression to the given property."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["propertyPath"] = property_path
         payload["expression"] = expression
         response = self._requests.post(
@@ -680,9 +748,12 @@ class AEClient:
         value: Any,
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Set a property value on the given property path."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["propertyPath"] = property_path
         payload["value"] = value
         response = self._requests.post(
@@ -703,9 +774,12 @@ class AEClient:
         out_interp: str | None = None,
         ease_in: Any | None = None,
         ease_out: Any | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Set a keyframe value at a specific time."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["propertyPath"] = property_path
         payload["time"] = time
         payload["value"] = value
@@ -731,9 +805,12 @@ class AEClient:
         layer_id: int | None = None,
         layer_name: str | None = None,
         essential_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add a layer property to Essential Graphics in the active comp."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["propertyPath"] = property_path
         if essential_name is not None:
             payload["essentialName"] = essential_name
@@ -750,9 +827,12 @@ class AEClient:
         layer_id: int | None = None,
         layer_name: str | None = None,
         effect_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add an effect to the specified layer."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["effectMatchName"] = effect_match_name
         if effect_name:
             payload["effectName"] = effect_name
@@ -777,9 +857,12 @@ class AEClient:
         rotation: float | None = None,
         start_opacity: float | None = None,
         end_opacity: float | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add a shape repeater operator to the specified shape group."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["groupIndex"] = group_index
         if name is not None:
             payload["name"] = name
@@ -824,9 +907,12 @@ class AEClient:
         shape_stroke_width: float | None = None,
         shape_stroke_line_cap: str | None = None,
         shape_roundness: float | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Add a new layer to the active composition."""
         payload: Dict[str, Any] = {"layerType": layer_type}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         if name is not None:
             payload["name"] = name
         if text is not None:
@@ -873,9 +959,12 @@ class AEClient:
         layer_name: str | None = None,
         in_point: float | None = None,
         out_point: float | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Set in/out points for the specified layer."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         if in_point is not None:
             payload["inPoint"] = in_point
         if out_point is not None:
@@ -893,9 +982,12 @@ class AEClient:
         delta: float,
         layer_id: int | None = None,
         layer_name: str | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Move layer timing by delta seconds."""
         payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         payload["delta"] = delta
         response = self._requests.post(
             self._url("/layer-time"),
@@ -904,30 +996,49 @@ class AEClient:
         )
         return self._handle_response(response)
 
-    def set_cti(self, time: float) -> Dict[str, Any]:
+    def set_cti(
+        self,
+        time: float,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Set composition current time indicator."""
+        payload: Dict[str, Any] = {"time": time}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         response = self._requests.post(
             self._url("/cti"),
-            json={"time": time},
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
 
-    def set_work_area(self, start: float, duration: float) -> Dict[str, Any]:
+    def set_work_area(
+        self,
+        start: float,
+        duration: float,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Set composition work area start and duration."""
+        payload: Dict[str, Any] = {"start": start, "duration": duration}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         response = self._requests.post(
             self._url("/work-area"),
-            json={
-                "start": start,
-                "duration": duration,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
 
-    def parent_layer(self, child_layer_id: int, parent_layer_id: int | None = None) -> Dict[str, Any]:
+    def parent_layer(
+        self,
+        child_layer_id: int,
+        parent_layer_id: int | None = None,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Set or clear parent relationship for a layer."""
         payload: Dict[str, Any] = {"childLayerId": child_layer_id}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         if parent_layer_id is not None:
             payload["parentLayerId"] = parent_layer_id
         response = self._requests.post(
@@ -942,24 +1053,35 @@ class AEClient:
         layer_ids: List[int],
         name: str,
         move_all_attributes: bool = False,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Precompose selected layers."""
+        payload: Dict[str, Any] = {
+            "layerIds": layer_ids,
+            "name": name,
+            "moveAllAttributes": move_all_attributes,
+        }
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         response = self._requests.post(
             self._url("/precompose"),
-            json={
-                "layerIds": layer_ids,
-                "name": name,
-                "moveAllAttributes": move_all_attributes,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
 
-    def duplicate_layer(self, layer_id: int) -> Dict[str, Any]:
+    def duplicate_layer(
+        self,
+        layer_id: int,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Duplicate a layer."""
+        payload: Dict[str, Any] = {"layerId": layer_id}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         response = self._requests.post(
             self._url("/duplicate-layer"),
-            json={"layerId": layer_id},
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
@@ -971,9 +1093,12 @@ class AEClient:
         after_layer_id: int | None = None,
         to_top: bool = False,
         to_bottom: bool = False,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
     ) -> Dict[str, Any]:
         """Move layer order relative to another layer or to top/bottom."""
         payload: Dict[str, Any] = {"layerId": layer_id}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         if before_layer_id is not None:
             payload["beforeLayerId"] = before_layer_id
         if after_layer_id is not None:
@@ -990,11 +1115,18 @@ class AEClient:
         )
         return self._handle_response(response)
 
-    def delete_layer(self, layer_id: int) -> Dict[str, Any]:
+    def delete_layer(
+        self,
+        layer_id: int,
+        comp_id: int | None = None,
+        comp_name: str | None = None,
+    ) -> Dict[str, Any]:
         """Delete a layer in the active composition."""
+        payload: Dict[str, Any] = {"layerId": layer_id}
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
         response = self._requests.post(
             self._url("/delete-layer"),
-            json={"layerId": layer_id},
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)
@@ -1019,15 +1151,19 @@ class AEClient:
         scene: Dict[str, Any],
         validate_only: bool = False,
         mode: str = "merge",
+        expect_project: str | None = None,
     ) -> Dict[str, Any]:
         """Apply a declarative scene JSON payload."""
+        payload: Dict[str, Any] = {
+            "scene": scene,
+            "validateOnly": validate_only,
+            "mode": mode,
+        }
+        if expect_project is not None:
+            payload["expectProject"] = expect_project
         response = self._requests.post(
             self._url("/scene"),
-            json={
-                "scene": scene,
-                "validateOnly": validate_only,
-                "mode": mode,
-            },
+            json=payload,
             timeout=self.timeout,
         )
         return self._handle_response(response)

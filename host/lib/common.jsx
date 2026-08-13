@@ -59,6 +59,70 @@ function ensureJSON() {
     }
 }
 
+function aeGetProjectState() {
+    var state = {
+        path: null,
+        name: null,
+        dirty: null,
+        saved: false
+    };
+    if (!app.project) {
+        return state;
+    }
+
+    try {
+        if (typeof app.project.dirty === "boolean") {
+            state.dirty = app.project.dirty;
+        }
+    } catch (eDirty) {}
+
+    try {
+        if (app.project.file) {
+            state.path = app.project.file.fsName;
+            state.name = app.project.file.name;
+            state.saved = true;
+        } else if (app.project.name) {
+            state.name = String(app.project.name);
+        }
+    } catch (eFile) {
+        try {
+            state.name = app.project.name ? String(app.project.name) : null;
+        } catch (eName) {}
+    }
+    return state;
+}
+
+function getProjectState() {
+    try {
+        ensureJSON();
+        return encodePayload(aeGetProjectState());
+    } catch (e) {
+        log("getProjectState() threw: " + e.toString());
+        return encodePayload({ status: "error", message: e.toString() });
+    }
+}
+
+function aeNormalizeProjectPath(pathValue) {
+    if (pathValue === null || pathValue === undefined || String(pathValue).length === 0) {
+        return null;
+    }
+    var normalized = File(String(pathValue)).fsName;
+    try {
+        if (Folder.fs === "Windows") {
+            normalized = normalized.toLowerCase();
+        }
+    } catch (eFs) {}
+    return normalized;
+}
+
+function aeProjectPathMatches(expectedPath, projectState) {
+    var expected = aeNormalizeProjectPath(expectedPath);
+    var actual = projectState && projectState.path
+        ? aeNormalizeProjectPath(projectState.path)
+        : null;
+    return expected !== null && actual !== null && expected === actual;
+}
+
 function aeNormalizeLayerId(layerId) {
     if (layerId === null || layerId === undefined || layerId === "") {
         return null;
@@ -121,7 +185,8 @@ function aeResolveLayer(comp, layerId, layerName) {
     if (matchCount > 1) {
         return {
             layer: null,
-            error: "Layer name '" + targetName + "' is ambiguous (" + matchCount + " matches). Use layerId."
+            error: "Layer name '" + targetName + "' is ambiguous (" + matchCount
+                + " matches). Use --layer-id (layerId in the bridge API)."
         };
     }
     return { layer: matched, error: null };

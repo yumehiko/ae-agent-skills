@@ -96,7 +96,7 @@ function handleAlignLayers(req, res) {
         if (body.time !== undefined) options.time = body.time;
         if (body.marginPercent !== undefined) options.marginPercent = body.marginPercent;
         const script = buildLayoutScript('alignLayers', selectorResult.selectors, options);
-        handleBridgeMutationCall(script, res, 'alignLayers()', 'Failed to align layers');
+        handleBridgeMutationCall(script, res, 'alignLayers()', 'Failed to align layers', body.compId, body.compName);
     });
 }
 
@@ -129,7 +129,7 @@ function handleDistributeLayers(req, res) {
         if (body.time !== undefined) options.time = body.time;
         if (body.marginPercent !== undefined) options.marginPercent = body.marginPercent;
         const script = buildLayoutScript('distributeLayers', selectorResult.selectors, options);
-        handleBridgeMutationCall(script, res, 'distributeLayers()', 'Failed to distribute layers');
+        handleBridgeMutationCall(script, res, 'distributeLayers()', 'Failed to distribute layers', body.compId, body.compName);
     });
 }
 
@@ -154,6 +154,8 @@ function handleVisualCenterLayers(req, res) {
             res,
             'visualCenterLayers()',
             'Failed to visually center layer anchor points',
+            body.compId,
+            body.compName,
         );
     });
 }

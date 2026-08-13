@@ -66,12 +66,75 @@ test('query handlers generate explicit composition selectors', () => {
   ]);
 });
 
+test('health reports the project currently open in After Effects', () => {
+  const project = {
+    path: '/projects/main.aep',
+    name: 'main.aep',
+    dirty: true,
+    saved: true,
+  };
+  const { context, calls, responses } = createContext(project);
+  context.res = {};
+
+  vm.runInContext('handleHealth(res)', context);
+
+  assert.deepEqual(calls, ['getProjectState()']);
+  assert.deepEqual(JSON.parse(JSON.stringify(responses)), [{
+    status: 200,
+    payload: { status: 'ok', project },
+  }]);
+});
+
+test('mutation bridge errors preserve rollback diagnostics', () => {
+  const rollback = {
+    attempted: true,
+    succeeded: true,
+    dirtyRestored: false,
+  };
+  const { context, responses } = createContext({
+    status: 'error',
+    message: 'mutation failed',
+    rollback,
+  });
+  context.res = {};
+
+  vm.runInContext(
+    'handleBridgeMutationCall("applyScene()", res, "applyScene", "failed")',
+    context,
+  );
+
+  assert.equal(responses.length, 1);
+  assert.equal(responses[0].status, 500);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(responses[0].payload.rollback)),
+    rollback,
+  );
+});
+
+test('mutation calls wrap explicit composition selectors and preserve legacy active mode', () => {
+  const { context, calls } = createContext({ status: 'success' });
+  context.res = {};
+
+  vm.runInContext(
+    'handleBridgeMutationCall("setCTI(1)", res, "setCTI()", "failed", 17, null)',
+    context,
+  );
+  vm.runInContext(
+    'handleBridgeMutationCall("setCTI(2)", res, "setCTI()", "failed")',
+    context,
+  );
+
+  assert.match(calls[0], /^aeRunMutationInComp\(17, null, function/);
+  assert.match(calls[0], /return setCTI\(1\)/);
+  assert.equal(calls[1], 'setCTI(2)');
+});
+
 test('properties and bounds forward inspection options to ExtendScript', () => {
   const { context, calls } = createContext();
   context.res = {};
 
   vm.runInContext(
-    'handleGetProperties(new URLSearchParams("layerName=Title&compName=TX01_Title&includeKeyframes=true&time=1.25"), res)',
+    'handleGetProperties(new URLSearchParams("layerName=Title&compName=TX01_Title&propertyPath=ADBE%20Transform%20Group.ADBE%20Opacity&includeKeyframes=true&includeExpression=true&includeDisabled=true&time=1.25"), res)',
     context,
   );
   vm.runInContext(
@@ -82,6 +145,9 @@ test('properties and bounds forward inspection options to ExtendScript', () => {
   assert.equal(calls.length, 2);
   assert.match(calls[0], /^getProperties\(null, /);
   assert.match(calls[0], /includeKeyframes/);
+  assert.match(calls[0], /includeExpression/);
+  assert.match(calls[0], /includeDisabled/);
+  assert.match(calls[0], /propertyPath/);
   assert.match(calls[0], /TX01_Title/);
   assert.match(calls[1], /^getLayerBounds\(2, /);
   assert.match(calls[1], /compId/);

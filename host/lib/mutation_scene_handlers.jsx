@@ -1091,6 +1091,36 @@ function aeApplyLayerTransform(layerId, transform, skipPropertyPaths) {
     return count;
 }
 
+function aeFindDeclaredStaticPropertyValue(layerSpec, propertyPath) {
+    var path = String(propertyPath);
+    var transformPathMap = {
+        "ADBE Transform Group.ADBE Anchor Point": "anchorPoint",
+        "ADBE Transform Group.ADBE Position": "position",
+        "ADBE Transform Group.ADBE Scale": "scale",
+        "ADBE Transform Group.ADBE Rotate Z": "rotation",
+        "ADBE Transform Group.ADBE Opacity": "opacity"
+    };
+    var result = { found: false, value: null };
+    var transformKey = transformPathMap[path];
+    if (transformKey !== undefined
+        && layerSpec.transform
+        && layerSpec.transform[transformKey] !== undefined) {
+        result.found = true;
+        result.value = layerSpec.transform[transformKey];
+    }
+
+    // propertyValues are applied after transform, so they also take precedence here.
+    var propertyValues = layerSpec.propertyValues || [];
+    for (var i = 0; i < propertyValues.length; i++) {
+        var propertyValue = propertyValues[i];
+        if (propertyValue && String(propertyValue.propertyPath) === path) {
+            result.found = true;
+            result.value = propertyValue.value;
+        }
+    }
+    return result;
+}
+
 function aeApplyLayerTiming(comp, layerId, timing) {
     if (!timing) {
         return 0;
@@ -1380,13 +1410,45 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
             operationCount += removedForAnimation;
         }
         var keyframes = animation.keyframes || [];
+        if (keyframeMode === "replace" && keyframes.length === 0) {
+            var declaredStaticValue = aeFindDeclaredStaticPropertyValue(
+                layerSpec,
+                animation.propertyPath
+            );
+            if (declaredStaticValue.found) {
+                aeInvokeMutation(
+                    setPropertyValue,
+                    [
+                        layerId,
+                        null,
+                        animation.propertyPath,
+                        JSON.stringify(declaredStaticValue.value)
+                    ],
+                    "setPropertyValue(empty animation fallback)"
+                );
+                operationCount += 1;
+            }
+        }
         for (var n = 0; n < keyframes.length; n++) {
             var keyframe = keyframes[n];
             var keyframeOptions = {};
-            if (keyframe.inInterp !== undefined) keyframeOptions.inInterp = keyframe.inInterp;
-            if (keyframe.outInterp !== undefined) keyframeOptions.outInterp = keyframe.outInterp;
-            if (keyframe.easeIn !== undefined) keyframeOptions.easeIn = keyframe.easeIn;
-            if (keyframe.easeOut !== undefined) keyframeOptions.easeOut = keyframe.easeOut;
+            var hasKeyframeOptions = false;
+            if (keyframe.inInterp !== undefined) {
+                keyframeOptions.inInterp = keyframe.inInterp;
+                hasKeyframeOptions = true;
+            }
+            if (keyframe.outInterp !== undefined) {
+                keyframeOptions.outInterp = keyframe.outInterp;
+                hasKeyframeOptions = true;
+            }
+            if (keyframe.easeIn !== undefined) {
+                keyframeOptions.easeIn = keyframe.easeIn;
+                hasKeyframeOptions = true;
+            }
+            if (keyframe.easeOut !== undefined) {
+                keyframeOptions.easeOut = keyframe.easeOut;
+                hasKeyframeOptions = true;
+            }
             aeInvokeMutation(
                 setKeyframe,
                 [
@@ -1395,7 +1457,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
                     animation.propertyPath,
                     keyframe.time,
                     JSON.stringify(keyframe.value),
-                    JSON.stringify(keyframeOptions),
+                    hasKeyframeOptions ? JSON.stringify(keyframeOptions) : null,
                 ],
                 "setKeyframe"
             );
@@ -1406,6 +1468,7 @@ function aeApplySceneLayer(comp, layerSpec, layerIndex, sceneLayerIndex, sceneAs
     return {
         id: resolved.sceneId,
         created: resolved.created,
+        action: resolved.created ? "created" : "updated",
         parentId: layerSpec.parentId !== undefined ? layerSpec.parentId : undefined,
         layerId: layerId,
         layerUid: layer ? aeTryGetLayerUid(layer) : null,
@@ -1454,6 +1517,74 @@ function aeRestoreSceneActiveComp(state) {
     }
 }
 
+var AE_SCENE_UNDO_COMMAND_ID = 16;
+
+function aeCreateSceneTransactionMarker() {
+    var markerName = "__ae_agent_scene_transaction__"
+        + (new Date()).getTime()
+        + "_"
+        + Math.floor(Math.random() * 1000000);
+    var marker = app.project.items.addFolder(markerName);
+    return {
+        id: marker.id,
+        name: marker.name,
+        item: marker
+    };
+}
+
+function aeProjectContainsItemId(itemId) {
+    if (!app.project || itemId === null || itemId === undefined) {
+        return false;
+    }
+    for (var i = 1; i <= app.project.numItems; i++) {
+        var item = app.project.item(i);
+        if (item && item.id === itemId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function aeRollbackSceneTransaction(marker, projectStateBefore) {
+    var result = {
+        attempted: false,
+        succeeded: false,
+        undoCommandId: AE_SCENE_UNDO_COMMAND_ID,
+        markerPresentBeforeUndo: false,
+        markerRemoved: false,
+        dirtyBefore: projectStateBefore ? projectStateBefore.dirty : null,
+        dirtyAfter: null,
+        dirtyRestored: null,
+        warning: null,
+        error: null
+    };
+    result.markerPresentBeforeUndo = aeProjectContainsItemId(marker.id);
+    if (!result.markerPresentBeforeUndo) {
+        result.warning = "The transaction marker was unavailable; automatic rollback was not attempted because it could undo unrelated history.";
+        return result;
+    }
+    result.attempted = true;
+    try {
+        app.executeCommand(AE_SCENE_UNDO_COMMAND_ID);
+    } catch (eUndoScene) {
+        result.error = eUndoScene.toString();
+    }
+
+    result.markerRemoved = !aeProjectContainsItemId(marker.id);
+    result.succeeded = result.error === null && result.markerRemoved;
+    var projectStateAfter = aeGetProjectState();
+    result.dirtyAfter = projectStateAfter.dirty;
+    if (result.dirtyBefore !== null && result.dirtyAfter !== null) {
+        result.dirtyRestored = result.dirtyBefore === result.dirtyAfter;
+    }
+    if (!result.succeeded) {
+        result.warning = "Automatic rollback could not be verified; partial scene changes may remain.";
+    } else if (result.dirtyRestored === false) {
+        result.warning = "Scene changes were rolled back, but the project dirty state was not restored.";
+    }
+    return result;
+}
+
 function applyScene(sceneJSON, optionsJSON) {
     var activeCompState = null;
 
@@ -1467,13 +1598,30 @@ function applyScene(sceneJSON, optionsJSON) {
         }
         var validateOnly = options.validateOnly === true;
         var applyMode = aeNormalizeSceneApplyMode(options.mode);
+        var projectState = aeGetProjectState();
+        var expectedProject = options.expectProject !== null
+            && options.expectProject !== undefined
+            && String(options.expectProject).length > 0
+            ? aeNormalizeProjectPath(options.expectProject)
+            : null;
+        if (expectedProject !== null && !aeProjectPathMatches(expectedProject, projectState)) {
+            return encodePayload({
+                status: "error",
+                message: "Project path mismatch. Expected '" + expectedProject
+                    + "' but After Effects has '" + (projectState.path || "<unsaved>")
+                    + "' open. No scene changes were applied.",
+                expectedProject: expectedProject,
+                project: projectState
+            });
+        }
 
         var validation = aeValidateSceneSpec(scene);
         if (!validation.ok) {
             return encodePayload({
                 status: "error",
                 message: "Scene validation failed.",
-                errors: validation.errors
+                errors: validation.errors,
+                project: projectState
             });
         }
 
@@ -1547,35 +1695,25 @@ function applyScene(sceneJSON, optionsJSON) {
         var compSpec = scene.composition || {};
         var compositionChanges = [];
         var appliedCompositionChanges = [];
-        if (validateOnly) {
-            try {
-                comp = aeResolveSceneComp(scene, false);
-            } catch (eValidateComp) {
-                var canUseVirtualComp = compSpec.name !== undefined && compSpec.createIfMissing !== false;
-                if (!canUseVirtualComp) {
-                    throw eValidateComp;
-                }
-                compSummary = {
-                    id: null,
-                    name: compSpec.name,
-                    width: compSpec.width !== undefined ? compSpec.width : 1920,
-                    height: compSpec.height !== undefined ? compSpec.height : 1080,
-                    pixelAspect: compSpec.pixelAspect !== undefined ? compSpec.pixelAspect : 1.0,
-                    duration: compSpec.duration !== undefined ? compSpec.duration : 8.0,
-                    frameRate: compSpec.frameRate !== undefined ? compSpec.frameRate : 30.0
-                };
+        var previousActiveComp = validateOnly ? null : aeGetActiveSceneComp();
+        try {
+            // Resolve without mutation here. Missing comp creation belongs inside
+            // the transaction so a later failure can roll it back too.
+            comp = aeResolveSceneComp(scene, false);
+        } catch (eResolveComp) {
+            var canUseVirtualComp = compSpec.name !== undefined && compSpec.createIfMissing !== false;
+            if (!canUseVirtualComp) {
+                throw eResolveComp;
             }
-        } else {
-            var previousActiveComp = aeGetActiveSceneComp();
-            comp = aeResolveSceneComp(scene, true);
-            // Several legacy mutation helpers resolve layers from activeItem. Keep
-            // the declarative target active while applying, then restore the
-            // previous viewer when composition.setActive is false.
-            activeCompState = aeActivateSceneCompForMutation(
-                comp,
-                compSpec,
-                previousActiveComp
-            );
+            compSummary = {
+                id: null,
+                name: compSpec.name,
+                width: compSpec.width !== undefined ? compSpec.width : 1920,
+                height: compSpec.height !== undefined ? compSpec.height : 1080,
+                pixelAspect: compSpec.pixelAspect !== undefined ? compSpec.pixelAspect : 1.0,
+                duration: compSpec.duration !== undefined ? compSpec.duration : 8.0,
+                frameRate: compSpec.frameRate !== undefined ? compSpec.frameRate : 30.0
+            };
         }
         if (comp) {
             compositionChanges = aePlanCompositionSettingChanges(comp, compSpec);
@@ -1615,11 +1753,14 @@ function applyScene(sceneJSON, optionsJSON) {
                 layerCount: layers.length,
                 layoutCount: layoutSpecs.length,
                 operationsPlanned: operationsPlanned,
-                deletedCount: deleteTargets.length
+                deletedCount: deleteTargets.length,
+                project: projectState
             });
         }
 
         var appliedLayers = [];
+        var newlyCreatedLayers = [];
+        var updatedLayers = [];
         var createdCount = 0;
         var reusedCount = 0;
         var parentAppliedCount = 0;
@@ -1628,8 +1769,29 @@ function applyScene(sceneJSON, optionsJSON) {
         var keyframesRemovedCount = 0;
         var deletedLayers = [];
         var resolvedAssets = null;
-        app.beginUndoGroup("Apply Scene");
+        var transactionMarker = null;
+        var transactionError = null;
+        var undoGroupOpen = false;
         try {
+            app.beginUndoGroup("Apply Scene");
+            undoGroupOpen = true;
+            transactionMarker = aeCreateSceneTransactionMarker();
+
+            if (!comp) {
+                comp = aeResolveSceneComp(scene, true);
+                compositionChanges = aePlanCompositionSettingChanges(comp, compSpec);
+                operationsPlanned += compositionChanges.length;
+                deleteTargets = aeCollectLayersForSceneApplyMode(comp, applyMode, declaredSceneIds);
+                operationsPlanned += deleteTargets.length;
+            }
+            // Several legacy mutation helpers resolve layers from activeItem. Keep
+            // the declarative target active while applying, then restore the
+            // previous viewer when composition.setActive is false.
+            activeCompState = aeActivateSceneCompForMutation(
+                comp,
+                compSpec,
+                previousActiveComp
+            );
             appliedCompositionChanges = aeApplyCompositionSettingChanges(comp, compositionChanges);
             resolvedAssets = aeResolveSceneAssets(scene, true, comp);
             deletedLayers = aeDeleteLayerTargets(deleteTargets);
@@ -1645,14 +1807,17 @@ function applyScene(sceneJSON, optionsJSON) {
                 appliedLayers.push(applied);
                 keyframesRemovedCount += applied.keyframesRemoved || 0;
                 if (applied.created) {
+                    newlyCreatedLayers.push(applied);
                     createdCount += 1;
                 } else {
+                    updatedLayers.push(applied);
                     reusedCount += 1;
                 }
             }
 
             for (var t = 0; t < appliedLayers.length; t++) {
                 var normalizedApplied = appliedLayers[t];
+                normalizedApplied.action = normalizedApplied.created ? "created" : "updated";
                 if (!normalizedApplied.id) {
                     continue;
                 }
@@ -1735,8 +1900,39 @@ function applyScene(sceneJSON, optionsJSON) {
                 appliedLayouts.push(appliedLayout);
                 layoutMovedCount += appliedLayout.movedCount;
             }
-        } finally {
-            app.endUndoGroup();
+            transactionMarker.item.remove();
+        } catch (eSceneTransaction) {
+            transactionError = eSceneTransaction;
+        }
+        if (undoGroupOpen) {
+            try {
+                app.endUndoGroup();
+            } catch (eEndSceneUndoGroup) {
+                if (transactionError === null) {
+                    transactionError = eEndSceneUndoGroup;
+                } else {
+                    log("applyScene() also failed to close its Undo group: "
+                        + eEndSceneUndoGroup.toString());
+                }
+            }
+        }
+        if (transactionError !== null) {
+            var rollback = transactionMarker
+                ? aeRollbackSceneTransaction(transactionMarker, projectState)
+                : {
+                    attempted: false,
+                    succeeded: false,
+                    warning: "The transaction marker was not created; automatic rollback was not attempted because it could undo unrelated history.",
+                    error: null
+                };
+            aeRestoreSceneActiveComp(activeCompState);
+            log("applyScene() transaction failed: " + transactionError.toString());
+            return encodePayload({
+                status: "error",
+                message: transactionError.toString(),
+                rollback: rollback,
+                project: aeGetProjectState()
+            });
         }
 
         compSummary = {
@@ -1772,12 +1968,21 @@ function applyScene(sceneJSON, optionsJSON) {
             layouts: appliedLayouts,
             deletedCount: deletedLayers.length,
             deletedLayers: deletedLayers,
+            layers: appliedLayers,
+            // Kept as an alias of appliedLayers for compatibility with existing clients.
             createdLayers: appliedLayers,
-            appliedLayers: appliedLayers
+            newlyCreatedLayers: newlyCreatedLayers,
+            updatedLayers: updatedLayers,
+            appliedLayers: appliedLayers,
+            project: aeGetProjectState()
         });
     } catch (e) {
         aeRestoreSceneActiveComp(activeCompState);
         log("applyScene() threw: " + e.toString());
-        return encodePayload({ status: "error", message: e.toString() });
+        return encodePayload({
+            status: "error",
+            message: e.toString(),
+            project: aeGetProjectState()
+        });
     }
 }
