@@ -5,6 +5,8 @@ description: Edit, inspect, create, and validate After Effects .aep projects off
 
 # After Effects with py-aep
 
+Preview release: `ae-agent-skills@0.14.0-pyaep.2`
+
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
 scene JSON or a sequence of mutation CLI commands.
 
@@ -22,7 +24,8 @@ scene JSON or a sequence of mutation CLI commands.
 
 1. Confirm the input path and record its SHA-256.
 2. Get a compact inventory. Run `scripts/inspect_aep.py <input.aep>` from this skill;
-   add `--comp <name>` when one comp is enough.
+   add `--comp <name>` when one comp is enough and `--brief` for only layer names,
+   in/out points, and source names.
 3. Inspect objects in Python. Filter by type, ID, name, comment, source, or match name;
    do not dump every property tree into context.
 4. Write one Python script that parses, mutates, saves to a new path, reparses, and asserts.
@@ -32,6 +35,8 @@ scene JSON or a sequence of mutation CLI commands.
 
 Use the installed package source and [py-aep documentation](https://forticheprod.github.io/py-aep/)
 for API details instead of copying the API surface into task context.
+Read [references/api-notes.md](references/api-notes.md) when property, item, keyframe, or
+shape traversal is unclear.
 
 ## Editing pattern
 
@@ -74,6 +79,7 @@ print(inspect.getdoc(type(comp)))
 
 Use `ae-cli` only after opening the new output in After Effects when the task needs:
 
+- `purge`: clear RAM and disk caches before visual validation
 - `snapshot`: rendered PNG evidence
 - `expression-errors`: actual expression-engine diagnostics
 - `bounds`: text or shape visual ink bounds
@@ -90,6 +96,11 @@ in the project; treat failure to add one as unsupported rather than synthesizing
 
 - File pass: output reparses and semantic assertions pass.
 - AE structure pass: AE opens it and expected comps/layers/properties are present.
-- Visual pass: representative snapshots or renders were reviewed.
+- Visual pass: after opening the output, `ae-cli purge` succeeded and fresh snapshots or
+  renders were reviewed at every modified transition boundary plus representative hold frames.
 
-State exactly which level was reached. A file pass alone is not a visual pass.
+Offline-derived projects can reuse stale frames from a predecessor project even when the file
+and live properties are correct. Never claim a visual pass unless all memory and disk caches
+were purged immediately beforehand. If `ae-cli purge` is unavailable, use AE's
+Edit > Purge > All Memory & Disk Cache manually. State exactly which validation level was
+reached; a file pass alone is not a visual pass.

@@ -137,6 +137,21 @@ def test_build_parser_parses_layers_brief() -> None:
     assert args.brief is True
 
 
+def test_build_parser_accepts_explicit_comp_alias() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["layers", "--comp", "Main", "--brief"])
+
+    assert args.comp_name == "Main"
+    assert args.comp_id is None
+
+
+def test_build_parser_parses_purge() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["purge"])
+
+    assert args.command == "purge"
+
+
 def test_mutation_parsers_accept_explicit_comp_selectors() -> None:
     parser = build_parser()
     property_args = parser.parse_args([

@@ -8,14 +8,20 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'host', 'lib', 'common.jsx'), 'utf8');
 
-function createContext(project) {
+function createContext(project, purgeCalls = []) {
   function File(value) {
     if (!(this instanceof File)) return new File(value);
     this.fsName = path.resolve(String(value));
     this.name = path.basename(this.fsName);
   }
   const context = vm.createContext({
-    app: { project },
+    app: {
+      project,
+      purge(target) {
+        purgeCalls.push(target);
+      },
+    },
+    PurgeTarget: { ALL_CACHES: 'ALL_CACHES' },
     File,
     Folder: { fs: 'Macintosh' },
     encodePayload(value) {
@@ -70,4 +76,16 @@ test('project path comparison normalizes relative expected paths', () => {
     vm.runInContext('aeProjectPathMatches("/projects/../projects/main.aep", projectState)', context),
     true,
   );
+});
+
+test('purgeAllCaches clears every After Effects cache', () => {
+  const purgeCalls = [];
+  const context = createContext({ file: null, name: 'Untitled' }, purgeCalls);
+
+  const encoded = vm.runInContext('purgeAllCaches()', context);
+  assert.ok(encoded.startsWith('__ENC__'));
+  const result = JSON.parse(decodeURIComponent(encoded.slice('__ENC__'.length)));
+
+  assert.deepEqual(purgeCalls, ['ALL_CACHES']);
+  assert.deepEqual(result, { status: 'success', target: 'all-caches' });
 });

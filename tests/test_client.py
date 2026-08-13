@@ -84,6 +84,26 @@ def test_authenticated_client_loads_token_lazily(monkeypatch) -> None:
     assert calls == ["loaded"]
 
 
+def test_purge_all_caches_posts_expected_endpoint(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_post(url: str, json: Any, timeout: float) -> DummyResponse:
+        captured.update(url=url, json=json, timeout=timeout)
+        return DummyResponse(
+            {"status": "success", "data": {"status": "success", "target": "all-caches"}}
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    client = AEClient(base_url="http://127.0.0.1:8080", timeout=5.0)
+
+    assert client.purge_all_caches()["target"] == "all-caches"
+    assert captured == {
+        "url": "http://127.0.0.1:8080/purge",
+        "json": {},
+        "timeout": 5.0,
+    }
+
+
 def test_handle_response_returns_data_payload() -> None:
     client = AEClient()
     response = DummyResponse({"status": "success", "data": [{"id": 1}]})

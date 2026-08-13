@@ -128,6 +128,10 @@ test('preview workspace contains only the feedback template', () => {
       fs.existsSync(path.join(workspace, 'feedback-template.ja.md')),
       true,
     );
+    assert.match(
+      fs.readFileSync(path.join(workspace, 'feedback-template.ja.md'), 'utf8'),
+      new RegExp(`検証版: ae-agent-skills@${PACKAGE_VERSION}`),
+    );
     assert.equal(fs.existsSync(path.join(workspace, 'scene.schema.json')), false);
   } finally {
     fs.rmSync(tempHome, { recursive: true, force: true });
@@ -141,6 +145,16 @@ test('preview Python and CEP versions are synchronized from npm version', () => 
   const base = `${match[1]}.${match[2]}.${match[3]}`;
   const pyproject = fs.readFileSync(path.join(root, 'pyproject.toml'), 'utf8');
   const manifest = fs.readFileSync(path.join(root, 'CSXS', 'manifest.xml'), 'utf8');
+  const skill = fs.readFileSync(
+    path.join(root, 'skills', 'aftereffects-py-aep', 'SKILL.md'),
+    'utf8',
+  );
+  const agentMetadata = fs.readFileSync(
+    path.join(root, 'skills', 'aftereffects-py-aep', 'agents', 'openai.yaml'),
+    'utf8',
+  );
   assert.match(pyproject, new RegExp(`version = "${base}\\.dev${match[4]}"`));
   assert.match(manifest, new RegExp(`ExtensionBundleVersion="${base}\\.pyaep-${match[4]}"`));
+  assert.match(skill, new RegExp(`ae-agent-skills@${PACKAGE_VERSION}`));
+  assert.match(agentMetadata, new RegExp(`Preview ${PACKAGE_VERSION}`));
 });

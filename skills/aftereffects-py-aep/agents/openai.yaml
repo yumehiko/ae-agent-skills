@@ -1,4 +1,4 @@
 interface:
-  display_name: "After Effects py-aep Preview"
+  display_name: "After Effects py-aep Preview 0.14.0-pyaep.2"
   short_description: "Edit AEP files offline with py-aep safely"
   default_prompt: "Use $aftereffects-py-aep to edit this After Effects project without opening After Effects."

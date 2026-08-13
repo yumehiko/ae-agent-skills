@@ -102,6 +102,20 @@ function getProjectState() {
     }
 }
 
+function purgeAllCaches() {
+    try {
+        ensureJSON();
+        if (typeof PurgeTarget === "undefined" || PurgeTarget.ALL_CACHES === undefined) {
+            throw new Error("PurgeTarget.ALL_CACHES is unavailable in this After Effects version.");
+        }
+        app.purge(PurgeTarget.ALL_CACHES);
+        return encodePayload({ status: "success", target: "all-caches" });
+    } catch (e) {
+        log("purgeAllCaches() threw: " + e.toString());
+        return encodePayload({ status: "error", message: e.toString() });
+    }
+}
+
 function aeNormalizeProjectPath(pathValue) {
     if (pathValue === null || pathValue === undefined || String(pathValue).length === 0) {
         return null;

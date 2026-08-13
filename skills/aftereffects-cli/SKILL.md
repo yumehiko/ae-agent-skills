@@ -25,15 +25,16 @@ description: Command-by-command After Effects editing and inspection via ae-cli,
 ## 基本フロー
 
 1. まず `ae-cli health` で疎通と、開いている `.aep` の `project.path` を確認
-2. 状態確認:
+2. オフライン編集した派生AEPを視覚検証する前に `ae-cli purge`
+3. 状態確認:
    - `ae-cli list-comps`
    - `ae-cli list-footage`
    - `ae-cli layers [--comp-id <id> | --comp-name <name>]`
    - `ae-cli selected-properties`
    - `ae-cli expression-errors [--comp-id <id> | --comp-name <name>]`
-3. 必要な更新コマンドを、対象 `--comp-id` または一意な `--comp-name` を明示して最小回数で実行
-4. 変更後に `layers` / `properties` で結果確認
-5. 見た目が重要なら `snapshot` で指定時刻をPNG確認
+4. 必要な更新コマンドを、対象 `--comp-id` または一意な `--comp-name` を明示して最小回数で実行
+5. 変更後に `layers` / `properties` で結果確認
+6. 見た目が重要なら `snapshot` で指定時刻をPNG確認
 
 ## 参照ファイル（固定）
 
@@ -52,6 +53,7 @@ description: Command-by-command After Effects editing and inspection via ae-cli,
 ## 主要コマンド（レガシー）
 
 - comp:
+  - `ae-cli purge`（全RAM・ディスクキャッシュを消去）
   - `ae-cli create-comp ...`
   - `ae-cli set-active-comp ...`
   - `ae-cli add-comp-layer (--comp-id <source-id> | --comp-name <source-name>) [--target-comp-id <id> | --target-comp-name <name>] [--name <layer>] [--start-time <sec>] [--in-point <sec>] [--out-point <sec>]`
@@ -130,10 +132,12 @@ ae-cli layers --comp-name "Skill_CLI_Minimal_Test"
 - `gaps` は実寸の隙間、`centers` は中心間隔を均等化する。`selection` は対象全体の現在の外周を保持する。
 - layout対象は可視2D AVレイヤーに限る。3D、3D親子関係、Position expressionは使わない。
 - 読み取り時は `layers` / `properties` / `bounds` / `expression-errors` にcompを直接指定する。viewerを切り替える必要はない。
+- `--comp <name>` は `--comp-name <name>` の明示aliasとして使える。
 - 通常列挙されないpropertyや1項目だけを調べる場合は `properties --property-path <matchName path>` を使う。disabled propertyを含む探索には `--include-disabled` を使う。
 - `layers` の `isNull` で制御用ヌルを判別する。AE内部表現の `type: "Solid"` だけで判断しない。
 - animation検証は `properties --include-keyframes`、文字や帯の実寸検証は `bounds` を使う。
 - 見た目は `snapshot` で確認する。既存出力は上書きされないため、毎回一意なPNGパスを使う。
+- py-aep等でオフライン編集した派生AEPは、`snapshot`やrender直前に`purge`を成功させる。未purgeの結果をvisual passとしない。
 - `snapshot --scale` は0より大きく1以下。viewer tabとactive compを切り替えない。
 - 既存シーンへの単発・部分修正は命令型の方が安全な場合が多い（影響範囲を局所化しやすい）。
 - 同じ処理を複数コマンドで繰り返す必要がある場合は、宣言型 `apply-scene` へ切り替える。

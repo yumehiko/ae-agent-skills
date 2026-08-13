@@ -357,7 +357,11 @@ export function setupAgentWorkspace({ root = getRepoRoot(), home = os.homedir() 
     if (!fs.existsSync(source)) {
       throw new Error(`Workspace resource not found: ${source}`);
     }
-    fs.copyFileSync(source, destination);
+    const contents = fs.readFileSync(source, 'utf8').replace(
+      '検証版: ae-agent-skills@',
+      `検証版: ae-agent-skills@${PACKAGE_VERSION}`,
+    );
+    fs.writeFileSync(destination, contents, 'utf8');
   }
 
   console.log(`Prepared workspace: ${workspaceRoot}`);

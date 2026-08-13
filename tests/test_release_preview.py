@@ -36,5 +36,5 @@ def test_pyaep_preview_release_coordinates() -> None:
 
 def test_current_preview_versions_are_synchronized() -> None:
     coordinates = release.require_version_sync(ROOT)
-    assert coordinates["version"] == "0.14.0-pyaep.1"
+    assert coordinates["version"] == "0.14.0-pyaep.2"
     assert coordinates["branch"] == "preview/py-aep"

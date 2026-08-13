@@ -12,6 +12,14 @@ const packageJsonPath = path.join(rootDir, 'package.json');
 const manifestPath = path.join(rootDir, 'CSXS', 'manifest.xml');
 const pluginManifestPath = path.join(rootDir, '.codex-plugin', 'plugin.json');
 const pyprojectPath = path.join(rootDir, 'pyproject.toml');
+const pyAepSkillPath = path.join(rootDir, 'skills', 'aftereffects-py-aep', 'SKILL.md');
+const pyAepAgentPath = path.join(
+  rootDir,
+  'skills',
+  'aftereffects-py-aep',
+  'agents',
+  'openai.yaml',
+);
 
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const version = pkg.version;
@@ -54,6 +62,20 @@ pyproject = pyproject.replace(
   `$1${pythonVersion}$2`,
 );
 fs.writeFileSync(pyprojectPath, pyproject, 'utf8');
+
+let pyAepSkill = fs.readFileSync(pyAepSkillPath, 'utf8');
+pyAepSkill = pyAepSkill.replace(
+  /Preview release: `ae-agent-skills@[^`]+`/,
+  `Preview release: \`ae-agent-skills@${version}\``,
+);
+fs.writeFileSync(pyAepSkillPath, pyAepSkill, 'utf8');
+
+let pyAepAgent = fs.readFileSync(pyAepAgentPath, 'utf8');
+pyAepAgent = pyAepAgent.replace(
+  /display_name: "After Effects py-aep Preview(?: [^"]+)?"/,
+  `display_name: "After Effects py-aep Preview ${version}"`,
+);
+fs.writeFileSync(pyAepAgentPath, pyAepAgent, 'utf8');
 
 console.log(
   `Synced package=${version} plugin=${version} python=${pythonVersion} cep=${cepVersion}`,

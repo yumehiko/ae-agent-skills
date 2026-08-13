@@ -25,6 +25,8 @@ tool往復で気になった点:
 file pass: pass / fail
 AE structure pass: pass / fail / not-run
 visual pass: pass / fail / not-run
+visual pass前のcache purge: pass / fail / not-run
+確認した時刻・transition境界:
 入力破壊・出力破損・意図しない変更:
 
 現行版より良かった点:

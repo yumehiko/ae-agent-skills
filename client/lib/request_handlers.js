@@ -184,6 +184,10 @@ function handleHealth(res) {
     });
 }
 
+function handlePurge(res) {
+    handleBridgeDataCall('purgeAllCaches()', res, 'purgeAllCaches()');
+}
+
 function handleGetLayers(searchParams, res) {
     const compSelector = normalizeOptionalCompQuerySelector(searchParams);
     if (!compSelector.ok) {
@@ -596,6 +600,10 @@ function routeRequest(req, res, bridgeToken) {
 
     if (pathname === '/health' && method === 'GET') {
         handleHealth(res);
+        return;
+    }
+    if (pathname === '/purge' && method === 'POST') {
+        handlePurge(res);
         return;
     }
     if (pathname === '/layers' && method === 'GET') {

@@ -11,8 +11,15 @@ from typing import Any
 import py_aep
 
 
-def layer_data(layer: Any) -> dict[str, Any]:
+def layer_data(layer: Any, *, brief: bool = False) -> dict[str, Any]:
     source = getattr(layer, "source", None)
+    if brief:
+        return {
+            "name": layer.name,
+            "inPoint": layer.in_point,
+            "outPoint": layer.out_point,
+            "source": source.name if source is not None else None,
+        }
     result: dict[str, Any] = {
         "id": layer.id,
         "name": layer.name,
@@ -37,6 +44,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("project", type=Path)
     parser.add_argument("--comp")
+    parser.add_argument(
+        "--brief",
+        action="store_true",
+        help="Show only each layer's name, in/out points, and source name",
+    )
     args = parser.parse_args()
 
     app = py_aep.parse(args.project.resolve())
@@ -56,7 +68,7 @@ def main() -> int:
                 "size": [comp.width, comp.height],
                 "duration": comp.duration,
                 "frameRate": comp.frame_rate,
-                "layers": [layer_data(layer) for layer in comp.layers],
+                "layers": [layer_data(layer, brief=args.brief) for layer in comp.layers],
             }
             for comp in comps
         ],

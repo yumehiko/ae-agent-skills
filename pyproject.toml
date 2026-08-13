@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ae-agent-skills"
-version = "0.14.0.dev1"
+version = "0.14.0.dev2"
 description = "Preview workflow for offline After Effects project editing with py-aep and live runtime verification."
 readme = "README.md"
 requires-python = ">=3.10"

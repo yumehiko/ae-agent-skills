@@ -104,6 +104,10 @@ def _run_health(client: AEClient, _args: argparse.Namespace) -> None:
     _print_json(client.health())
 
 
+def _run_purge(client: AEClient, _args: argparse.Namespace) -> None:
+    _print_json(client.purge_all_caches())
+
+
 _BRIEF_LAYER_FIELDS = ("id", "layerUid", "name", "type", "isNull")
 
 
@@ -714,6 +718,7 @@ CommandHandler = Callable[[AEClient, argparse.Namespace], None]
 
 COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "health": _run_health,
+    "purge": _run_purge,
     "layers": _run_layers,
     "list-comps": _run_list_comps,
     "list-footage": _run_list_footage,
