@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.14.0-pyaep.2",
+  "version": "0.14.0-pyaep.3",
   "description": "Preview workflow for editing After Effects projects offline with py-aep.",
   "repository": {
     "type": "git",

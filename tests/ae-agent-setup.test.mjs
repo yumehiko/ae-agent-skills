@@ -101,6 +101,30 @@ test('plugin and npm package expose the preview skill only', () => {
     fs.existsSync(path.join(root, 'skills', 'aftereffects-py-aep', 'SKILL.md')),
     true,
   );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        root,
+        'skills',
+        'aftereffects-py-aep',
+        'assets',
+        'new_project_template.py',
+      ),
+    ),
+    true,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        root,
+        'skills',
+        'aftereffects-py-aep',
+        'references',
+        'new-project.md',
+      ),
+    ),
+    true,
+  );
   assert.equal(pkg.files.includes('skills/aftereffects-py-aep'), true);
   assert.equal(pkg.files.includes('!skills/aftereffects-py-aep/**/__pycache__'), true);
   assert.equal(pkg.files.includes('!skills/aftereffects-py-aep/**/*.pyc'), true);

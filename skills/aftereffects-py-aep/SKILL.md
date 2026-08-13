@@ -5,22 +5,36 @@ description: Edit, inspect, create, and validate After Effects .aep projects off
 
 # After Effects with py-aep
 
-Preview release: `ae-agent-skills@0.14.0-pyaep.2`
+Preview release: `ae-agent-skills@0.14.0-pyaep.3`
 
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
 scene JSON or a sequence of mutation CLI commands.
 
 ## Safety contract
 
-- Never overwrite the input `.aep`.
-- Resolve input and output to absolute paths and reject equal paths.
-- Parse once, inspect and mutate the same object graph, then save once.
+- Never overwrite an input or foundation `.aep`.
+- Resolve every path and require a nonexistent output path.
+- For an existing project, parse once; for a new project, call `py_aep.new()` once. Build and
+  mutate the same object graph, then save once.
 - Save to a new `.aep`; `py-aep` itself rejects an existing output.
 - Reparse the output and assert the intended semantic result before reporting success.
 - Preserve the task script beside the project, preferably under `_automation/`.
 - Do not claim visual correctness from a successful binary round-trip.
 
-## Workflow
+## Choose the starting point
+
+- Parse an existing template when matching a series, brand system, or proven AE structure.
+- Start with `py_aep.new()` when native layers, imported footage, properties, and keyframes can
+  express the job without borrowing complex project parts.
+- Use a minimal foundation AEP when required effects, third-party plugins, color/render setup,
+  or styled components cannot be synthesized reliably from an empty project.
+
+Do this capability check before writing the build script. Prefer the path that minimizes total
+build and validation work, not the path that uses the fewest tools. For a new project, read
+[references/new-project.md](references/new-project.md) and copy
+`assets/new_project_template.py` into the job's `_automation/` directory.
+
+## Existing-project workflow
 
 1. Confirm the input path and record its SHA-256.
 2. Get a compact inventory. Run `scripts/inspect_aep.py <input.aep>` from this skill;

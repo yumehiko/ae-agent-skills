@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.14.0-pyaep.2",
+  "version": "0.14.0-pyaep.3",
   "description": "Preview offline After Effects editing with py-aep and focused live verification.",
   "author": {
     "name": "yumehiko",
