@@ -15,7 +15,7 @@
 | v0.10.0 | 読み取り・検証 | 実装・実機確認済み | comp指定layers/expression-errors、bounds、keyframe情報、isNull |
 | v0.11.0 | ビジュアル検証 | 実装・実機確認済み（dirty / Undoは未観測） | comp snapshotのPNG出力、時刻・scale指定、失敗時cleanup |
 | v0.12.0 | テキスト表現 | 実装・実機確認済み | テキストアニメーター、文字範囲スタイル、visual-center、上位DSL例 |
-| v0.13.0 | プロジェクト安全性 | 実装済み・実機確認待ち | project identity、`apply-scene --expect-project`、案件配下のscene運用、読み取り・更新APIのcomp指定統一 |
+| v0.13.0 | プロジェクト安全性 | 実装・AE 26.3確認済み（一部path環境未確認） | project identity、`apply-scene --expect-project`、案件配下のscene運用、読み取り・更新APIのcomp指定統一 |
 
 各バージョンでは、scene JSON、個別CLI、スキーマ、agent skill、使用例、自動テスト、After Effects実機テストまでを完了条件とする。
 

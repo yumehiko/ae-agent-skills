@@ -25,7 +25,7 @@ After Effects実機確認が必要な項目は完了扱いにしない。
 | P1 | 全コマンドでプロジェクト情報が見えない | 共通レスポンス形式を変えると既存の配列レスポンスと互換性が衝突する。まず `health` と `apply-scene` を安全経路にする | 部分対応・継続設計 |
 | P1 | `assets[].path` が端末固有の絶対パス | scene相対パスと `${MEDIA_ROOT}` 形式をCLIで絶対パスへ解決し、未定義変数は適用前に拒否する | 実装済み・AE 26.3確認済み |
 | P1 | text Range Selectorの一部をsceneで宣言できない | scene単体の再適用で収束しない具体的な欠落。matchNameと値域をAE 26.3で確認して追加する | 実装済み・AE 26.3往復確認済み |
-| P1 | mutationの書き込み先compがactive comp依存 | 利便性ではなく誤操作防止。既存active方式を残しつつ明示selectorを一貫導入する | 実装済み・AE実機確認待ち |
+| P1 | mutationの書き込み先compがactive comp依存 | 利便性ではなく誤操作防止。既存active方式を残しつつ明示selectorを一貫導入する | 実装済み・AE 26.3確認済み |
 | P2 | `get-text-style` だけcomp指定不可 | 他の読み取りコマンドと統一する | 実装済み・AE 26.3確認済み |
 | P2 | comp / layer / ProjectItemのrename・ProjectItem削除 | 迂回を減らせるが、参照破壊と同名衝突の安全仕様が必要 | 次段階 |
 | P2 | 曖昧レイヤーエラーが `layerId` 表記 | CLIでそのまま使える `--layer-id` を併記する | 実装済み |
@@ -144,6 +144,10 @@ After Effects実機確認が必要な項目は完了扱いにしない。
 - transaction markerは成功apply後・失敗rollback後とも0件だった。通常applyの再適用も成功した
 - 固定Undo ID 16はAE 26.3日本語環境でgroup全体を戻した。`findMenuCommandId("取り消し")` が返した2371はUndoとして機能しなかったため採用しない
 - clean projectからrollbackすると内容は戻るがdirtyはtrueになった。失敗時の自動保存は行わない
+- 非activeの `V013_Main` を明示してnull追加・削除を行い、指定compだけが変わってactiveの `V013_Keyframe_Clear` が維持された
+- `add-comp-layer --target-comp-name V013_Main` で `V013_Baseline` を一時配置でき、削除後は元の3レイヤーへ戻った。source selectorとtarget selectorは衝突しなかった
+- 明示comp内の存在しないlayerへ更新して失敗した場合も、active compは `V013_Keyframe_Clear` へ復元された
+- パネル再読込後のCLIで、意図的なapply失敗に `Rollback: succeeded` とdirty未復元warningが表示された。既存text layerのname / UID /本文とactive compは復元された
 
 未確認または人手確認が必要な項目:
 
