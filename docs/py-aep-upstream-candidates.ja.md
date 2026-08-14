@@ -54,6 +54,36 @@ IssueまたはPRを作成する。2026-08-13時点で該当する既存Issueは�
 - 方針: breaking changeは避け、`.values()`の利用と`project.compositions` /
   `project.footages`をdocsで強調する。必要なら型別iterator utilityを提案する。
 
+## U6: SolidSource-backed FootageItemのrename非永続化
+
+- 優先度: P1、bug Issue/PR候補
+- 上流: https://github.com/forticheprod/py-aep/issues/200
+- 再現: 新規projectへsolidを追加し、その`FootageItem.name`を変更してsave→reparseすると
+  `SolidSource`内のsolid名へ戻る。代入直後のin-memory名だけが変更される。
+- 方針: itemの表示名とsolid source名の二重格納をAE生成fixtureで比較する。setterで両方を
+  同期するのか、solid専用rename APIが必要かを上流と合意してから修正する。
+
+## U7: cross-comp `copy_to_comp()`の安全な意味論
+
+- 優先度: P1、仕様相談
+- 上流: https://github.com/forticheprod/py-aep/issues/199#issuecomment-5288971149
+- 現行仕様: 別compへのcopyはparent/matteを消し、自動suffixを付ける。親ローカル座標が
+  親なしで解釈されるため外観が変わり得る。
+- 方針: 既存APIの破壊的変更は避ける。`preserve_world_transform`または依存レイヤーをまとめて
+  copy/remapする新APIをIssue #199で相談する。skill側は親/matte付きcopyを拒否する。
+
+## U8: `CompItem.duplicate()`のAE runtime参照不整合
+
+- 優先度: 保留（実案件由来の最小再現待ち）
+- 観測: 実案件でpy-aep再parse上は親参照が正しいのに、AEで親が効かず描画位置が壊れた。
+- 現状: upstreamのroundtrip testはAE自身のduplicateとのchunk/参照graph比較を持つため、
+  一般的なparent ID remap欠落とは断定できない。
+- 方針: AE生成の最小fixtureで、元comp保持/削除の両方をsaveし、AE open後のparent ID、bounds、
+  snapshotを比較する。再現したケースだけをfixture化してIssue/PRにする。
+- 追試: py-aep新規fixtureをAE 26.3x87の独立`aerender`で検証し、元comp、duplicate、
+  元comp削除後duplicateの復号frame MD5がすべて`2f18bf77755544b7e86d0e1cf2bf7a0b`で一致した。
+  一般ケースでは再現しないためIssue化せず、実案件由来の最小再現を待つ。
+
 ## PR運用
 
 1. U1は先にDiscussion、U2/U3/U5は独立Issueまたは独立PRにする。
