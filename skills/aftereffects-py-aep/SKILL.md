@@ -5,7 +5,7 @@ description: Edit, inspect, create, and validate After Effects .aep projects off
 
 # After Effects with py-aep
 
-Preview release: `ae-agent-skills@0.14.0-pyaep.3`
+Preview release: `ae-agent-skills@0.14.0-pyaep.4`
 
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
 scene JSON or a sequence of mutation CLI commands.
@@ -20,6 +20,8 @@ scene JSON or a sequence of mutation CLI commands.
 - Reparse the output and assert the intended semantic result before reporting success.
 - Preserve the task script beside the project, preferably under `_automation/`.
 - Do not claim visual correctness from a successful binary round-trip.
+- Write trial outputs under `_automation/scratch/<task>/`; promote only a validated,
+  nonexistent final filename instead of accumulating `_v2`, `_v3`, and similar guesses.
 
 ## Choose the starting point
 
@@ -38,8 +40,9 @@ build and validation work, not the path that uses the fewest tools. For a new pr
 
 1. Confirm the input path and record its SHA-256.
 2. Get a compact inventory. Run `scripts/inspect_aep.py <input.aep>` from this skill;
-   add `--comp <name>` when one comp is enough and `--brief` for only layer names,
-   in/out points, and source names.
+   it prints a comp summary by default. Add `--comp <name>` or `--comp-id <id>` and
+   `--brief` for timing, source, and evaluated transform data. Use `--output` to keep
+   large results out of conversation context.
 3. Inspect objects in Python. Filter by type, ID, name, comment, source, or match name;
    do not dump every property tree into context.
 4. Write one Python script that parses, mutates, saves to a new path, reparses, and asserts.
@@ -89,9 +92,21 @@ print(inspect.signature(comp.precompose))
 print(inspect.getdoc(type(comp)))
 ```
 
+Keep one task script as the orchestrator. For repeated cut, retime, or static reframe work,
+separate the narrow edit data from the mechanism instead of embedding every cut in that script.
+Read [references/editorial-workflow.md](references/editorial-workflow.md), then use
+`scripts/edit_edl.py` and `scripts/render_editorial_proxy.py`. Do not use this EDL as a general
+scene-description language.
+
+Project-panel cleanup is a strong offline use case. Before renaming comps, layers, or footage,
+scan every enabled expression source for name references; reject ambiguous names and preserve
+nonempty folders. Use comments when a Solid footage item needs a durable purpose label.
+
 ## Runtime boundary
 
-Use `ae-cli` only after opening the new output in After Effects when the task needs:
+Use the strict offline editorial proxy for source-content, cut-boundary, and axis-aligned crop
+decisions when its preflight accepts every layer. Use `ae-cli` only after opening the new output
+in After Effects when the task needs:
 
 - `purge`: clear RAM and disk caches before visual validation
 - `snapshot`: rendered PNG evidence
@@ -106,9 +121,16 @@ Text and shape structures can be edited offline, but their rendered visual bound
 available from `py-aep`. Arbitrary new effects may require an effect definition already stored
 in the project; treat failure to add one as unsupported rather than synthesizing binary data.
 
+Treat structural duplication as high risk. Cross-comp `copy_to_comp()` clears parent and matte
+references and may change appearance. Do not use it on parented/matted layers. For a duplicated
+comp containing parents, mattes, effects, or Essential Properties, keep the original until a
+fresh AE structure and visual check passes.
+
 ## Validation levels
 
 - File pass: output reparses and semantic assertions pass.
+- Offline editorial pass: the strict proxy reproduced source selection, timing, and supported
+  crop geometry. This is independent evidence, not an AE render.
 - AE structure pass: AE opens it and expected comps/layers/properties are present.
 - Visual pass: after opening the output, `ae-cli purge` succeeded and fresh snapshots or
   renders were reviewed at every modified transition boundary plus representative hold frames.

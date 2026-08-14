@@ -15,3 +15,15 @@ Use these notes only when API discovery stalls.
 - Cross-project comp/layer copying is not supported. Do not silently flatten a complex source
   into static values; report the boundary when masks, effects, expressions, or keyframes make
   reconstruction unsafe.
+- `layer.effects` and `layer.masks` return `None`, not an empty group, when absent. Iterate over
+  `layer.effects or ()` and `layer.masks or ()`.
+- `comp.layers[0]` is the topmost layer. py-aep layer indices are zero-based.
+- Item and layer IDs are read-only. Use them for selection and validation, not reassignment.
+- Assign `prop.value` only to a static property. If keys exist, use `set_value_at_time()`;
+  use `value_at_time(time)` to read pre-expression interpolation at a composition time.
+- Renaming a `FootageItem` backed by `SolidSource` does not persist in py-aep 0.15.0. Record a
+  durable role in `comment` and verify names only after save and reparse.
+- Across comps, `copy_to_comp()` intentionally clears parent/matte references and auto-numbers
+  duplicate names. Reject parented/matted layers instead of trying to repair baked transforms.
+- Treat `CompItem.duplicate()` with parent/matte/effect references as requiring an AE-open check;
+  parser round-trip alone does not prove that AE resolved every runtime reference.

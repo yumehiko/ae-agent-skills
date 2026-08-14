@@ -113,6 +113,19 @@ test('plugin and npm package expose the preview skill only', () => {
     ),
     true,
   );
+  for (const relativePath of [
+    ['scripts', 'editorial.py'],
+    ['scripts', 'edit_edl.py'],
+    ['scripts', 'render_editorial_proxy.py'],
+    ['references', 'editorial-workflow.md'],
+  ]) {
+    assert.equal(
+      fs.existsSync(
+        path.join(root, 'skills', 'aftereffects-py-aep', ...relativePath),
+      ),
+      true,
+    );
+  }
   assert.equal(
     fs.existsSync(
       path.join(

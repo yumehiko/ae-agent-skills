@@ -10,15 +10,30 @@ from typing import Any
 
 import py_aep
 
+from editorial import find_comp, property_value
 
-def layer_data(layer: Any, *, brief: bool = False) -> dict[str, Any]:
+
+def layer_data(
+    layer: Any, *, brief: bool = False, sample_time: float = 0.0
+) -> dict[str, Any]:
     source = getattr(layer, "source", None)
     if brief:
+        stretch = float(layer.stretch)
+        factor = stretch / 100.0 if stretch else 1.0
         return {
             "name": layer.name,
             "inPoint": layer.in_point,
             "outPoint": layer.out_point,
+            "startTime": layer.start_time,
+            "stretch": stretch,
+            "sourceIn": (layer.in_point - layer.start_time) / factor,
+            "sourceOut": (layer.out_point - layer.start_time) / factor,
             "source": source.name if source is not None else None,
+            "transform": {
+                "position": property_value(layer, "position", sample_time),
+                "scale": property_value(layer, "scale", sample_time),
+                "opacity": property_value(layer, "opacity", sample_time),
+            },
         }
     result: dict[str, Any] = {
         "id": layer.id,
@@ -43,23 +58,37 @@ def layer_data(layer: Any, *, brief: bool = False) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("project", type=Path)
-    parser.add_argument("--comp")
+    selectors = parser.add_mutually_exclusive_group()
+    selectors.add_argument("--comp")
+    selectors.add_argument("--comp-id", type=int)
     parser.add_argument(
         "--brief",
         action="store_true",
-        help="Show only each layer's name, in/out points, and source name",
+        help="Show compact timing, source, and transform data for layers",
     )
+    parser.add_argument("--full", action="store_true", help="Show detailed layer data")
+    parser.add_argument("--time", type=float, default=0.0)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if args.brief and args.full:
+        parser.error("--brief and --full are mutually exclusive")
 
-    app = py_aep.parse(args.project.resolve())
+    project_path = args.project.expanduser().resolve()
+    app = py_aep.parse(project_path)
     comps = app.project.compositions
-    if args.comp is not None:
-        comps = [comp for comp in comps if comp.name == args.comp]
-        if len(comps) != 1:
-            raise SystemExit(f"Expected one comp named {args.comp!r}, found {len(comps)}")
+    if args.comp is not None or args.comp_id is not None:
+        comps = [
+            find_comp(
+                app.project,
+                comp_name=args.comp,
+                comp_id=args.comp_id,
+            )
+        ]
+
+    include_layers = args.brief or args.full
 
     value = {
-        "path": str(args.project.resolve()),
+        "path": str(project_path),
         "aeVersion": app.version,
         "compositions": [
             {
@@ -68,12 +97,44 @@ def main() -> int:
                 "size": [comp.width, comp.height],
                 "duration": comp.duration,
                 "frameRate": comp.frame_rate,
-                "layers": [layer_data(layer, brief=args.brief) for layer in comp.layers],
+                "layerCount": len(comp.layers),
+                **(
+                    {
+                        "layers": [
+                            layer_data(
+                                layer,
+                                brief=args.brief,
+                                sample_time=args.time,
+                            )
+                            for layer in comp.layers
+                        ]
+                    }
+                    if include_layers
+                    else {}
+                ),
             }
             for comp in comps
         ],
     }
-    print(json.dumps(value, ensure_ascii=False, indent=2))
+    rendered = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+    if args.output is None:
+        print(rendered, end="")
+    else:
+        output = args.output.expanduser().resolve()
+        if output.exists():
+            raise FileExistsError(f"Refusing to overwrite: {output}")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(rendered, encoding="utf-8")
+        print(
+            json.dumps(
+                {
+                    "output": str(output),
+                    "compositions": len(comps),
+                    "layersIncluded": include_layers,
+                },
+                ensure_ascii=False,
+            )
+        )
     return 0
 
 
