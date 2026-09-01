@@ -56,12 +56,13 @@ IssueまたはPRを作成する。2026-08-13時点で該当する既存Issueは�
 
 ## U6: SolidSource-backed FootageItemのrename非永続化
 
-- 優先度: P1、bug Issue/PR候補
+- 状態: 解消（2026-09-01、py-aep 0.15.1）
 - 上流: https://github.com/forticheprod/py-aep/issues/200
+- 修正: https://github.com/forticheprod/py-aep/pull/209
 - 再現: 新規projectへsolidを追加し、その`FootageItem.name`を変更してsave→reparseすると
   `SolidSource`内のsolid名へ戻る。代入直後のin-memory名だけが変更される。
-- 方針: itemの表示名とsolid source名の二重格納をAE生成fixtureで比較する。setterで両方を
-  同期するのか、solid専用rename APIが必要かを上流と合意してから修正する。
+- 確認: 同じ最小再現は0.15.0で失敗し、0.15.1で成功した。日本語名を使ったsolidと
+  placeholderのsave→reparseも成功。ae-agent-skillsのPython 121件、Node 76件も通過した。
 
 ## U7: cross-comp `copy_to_comp()`の安全な意味論
 
@@ -87,6 +88,6 @@ IssueまたはPRを作成する。2026-08-13時点で該当する既存Issueは�
 ## PR運用
 
 1. U1は先にDiscussion、U2/U3/U5は独立Issueまたは独立PRにする。
-2. py-aep main上で再現し、0.15.0固有かを切り分ける。
+2. 採用中のpy-aepリリースとcurrent mainの両方で再現し、リリース固有かを切り分ける。
 3. proprietary projectを使わず最小fixtureと回帰テストを添える。
 4. upstream採択前はae-agent-skillsにfork patchを抱えず、skill上の回避策を維持する。

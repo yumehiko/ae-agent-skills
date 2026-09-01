@@ -4,6 +4,13 @@
 - Python 3.14
 - target AEP version `26.3x87`
 
+## Resolution
+
+Fixed by [py-aep #209](https://github.com/forticheprod/py-aep/pull/209) and released in
+[v0.15.1](https://github.com/forticheprod/py-aep/releases/tag/v0.15.1). On 2026-09-01, the
+original reproduction below still failed with 0.15.0 and passed with 0.15.1. Solid and
+placeholder footage names containing Japanese text also persisted after save and reparse.
+
 ## Problem
 
 Assigning `FootageItem.name` works in memory for a `SolidSource`, but the name is restored from
@@ -27,7 +34,7 @@ app.project.save(output)
 
 checked = py_aep.parse(output).project
 solid = next(item for item in checked.footages if item.id == footage.id)
-assert solid.name == "Renamed Solid Item"  # fails: "Original Solid"
+assert solid.name == "Renamed Solid Item"  # fails on 0.15.0; passes on 0.15.1
 ```
 
 ## Expected behavior

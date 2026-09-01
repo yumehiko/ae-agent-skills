@@ -24,7 +24,7 @@ The original public-domain and warranty notice is retained in the file.
 
 ## py-aep
 
-- Package: `py-aep==0.15.0`
+- Package: `py-aep==0.15.1`
 - Source: [forticheprod/py-aep](https://github.com/forticheprod/py-aep)
 - License: MIT
 

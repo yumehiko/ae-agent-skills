@@ -1,4 +1,4 @@
 interface:
-  display_name: "After Effects py-aep Preview 0.14.0-pyaep.4"
+  display_name: "After Effects py-aep Preview 0.14.0-pyaep.5"
   short_description: "Create or edit AEP files safely with py-aep"
   default_prompt: "Use $aftereffects-py-aep to create or edit this After Effects project efficiently and validate the result."

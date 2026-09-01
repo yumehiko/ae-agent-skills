@@ -5,7 +5,7 @@ description: Edit, inspect, create, and validate After Effects .aep projects off
 
 # After Effects with py-aep
 
-Preview release: `ae-agent-skills@0.14.0-pyaep.4`
+Preview release: `ae-agent-skills@0.14.0-pyaep.5`
 
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
 scene JSON or a sequence of mutation CLI commands.
@@ -100,7 +100,8 @@ scene-description language.
 
 Project-panel cleanup is a strong offline use case. Before renaming comps, layers, or footage,
 scan every enabled expression source for name references; reject ambiguous names and preserve
-nonempty folders. Use comments when a Solid footage item needs a durable purpose label.
+nonempty folders. Solid and placeholder footage names persist in py-aep 0.15.1; still reparse
+the saved output and assert every intended rename.
 
 ## Runtime boundary
 

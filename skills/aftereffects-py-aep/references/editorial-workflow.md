@@ -56,4 +56,5 @@ separate from the EDL: observations describe source footage; the EDL describes o
 Before renaming project items, walk all property groups and collect enabled expression sources.
 Search for the old comp/layer/footage names and stop on ambiguous or dynamically constructed
 references. Move items with `parent_folder`; remove folders only after confirming they are empty.
-Use `comment` for durable Solid/null purpose labels until the SolidSource rename bug is fixed.
+Solid and placeholder footage renames persist in py-aep 0.15.1; assert them after save and
+reparse. Use `comment` for semantic metadata that should remain separate from display names.

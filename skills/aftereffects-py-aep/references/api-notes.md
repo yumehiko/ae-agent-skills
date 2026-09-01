@@ -6,7 +6,7 @@ Use these notes only when API discovery stalls.
   typed views such as `project.compositions` and `project.footages`; iterating `project.items`
   itself yields integer IDs.
 - Read keyframes with `prop.keyframes`; use `len(prop.keyframes)` for the ExtendScript-like
-  key count. In py-aep 0.15.0 there is no `num_keys` convenience property.
+  key count. In py-aep 0.15.1 there is no `num_keys` convenience property.
 - Call `prop.value_at_time(time)` for offline pre-expression interpolation. Do not pass
   `pre_expression=False`: that requests expression evaluation, which the parser cannot do.
 - Find nested shape/effect properties recursively by `match_name`, not localized display name.
@@ -21,8 +21,8 @@ Use these notes only when API discovery stalls.
 - Item and layer IDs are read-only. Use them for selection and validation, not reassignment.
 - Assign `prop.value` only to a static property. If keys exist, use `set_value_at_time()`;
   use `value_at_time(time)` to read pre-expression interpolation at a composition time.
-- Renaming a `FootageItem` backed by `SolidSource` does not persist in py-aep 0.15.0. Record a
-  durable role in `comment` and verify names only after save and reparse.
+- py-aep 0.15.1 persists `FootageItem.name` for solid and placeholder footage. As with every
+  file edit, verify the intended names only after save and reparse.
 - Across comps, `copy_to_comp()` intentionally clears parent/matte references and auto-numbers
   duplicate names. Reject parented/matted layers instead of trying to repair baked transforms.
 - Treat `CompItem.duplicate()` with parent/matte/effect references as requiring an AE-open check;
