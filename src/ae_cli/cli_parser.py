@@ -22,13 +22,13 @@ def _add_layer_list_selector(parser: argparse.ArgumentParser) -> None:
 def _add_optional_comp_selector(parser: argparse.ArgumentParser) -> None:
     selector_group = parser.add_mutually_exclusive_group()
     selector_group.add_argument("--comp-id", type=int)
-    selector_group.add_argument("--comp-name")
+    selector_group.add_argument("--comp-name", "--comp", dest="comp_name")
 
 
 def _add_required_comp_selector(parser: argparse.ArgumentParser) -> None:
     selector_group = parser.add_mutually_exclusive_group(required=True)
     selector_group.add_argument("--comp-id", type=int)
-    selector_group.add_argument("--comp-name")
+    selector_group.add_argument("--comp-name", "--comp", dest="comp_name")
 
 
 def _add_layout_reference_options(parser: argparse.ArgumentParser) -> None:
@@ -61,6 +61,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("health", help="Check bridge health")
+    subparsers.add_parser(
+        "purge",
+        help="Purge all After Effects memory and disk caches before visual validation",
+    )
     layers_parser = subparsers.add_parser("layers", help="Get layers without changing the active comp")
     _add_optional_comp_selector(layers_parser)
     layers_parser.add_argument(

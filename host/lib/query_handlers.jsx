@@ -408,7 +408,14 @@ function getLayerBounds(layerId, optionsJSON) {
                 message: "Null layer '" + layer.name + "' does not have visual bounds."
             });
         }
-        var bounds = aeLayoutLayerBounds(layer, time);
+        var previousTime = comp.time;
+        var bounds;
+        comp.time = time;
+        try {
+            bounds = aeLayoutLayerBounds(layer, time);
+        } finally {
+            comp.time = previousTime;
+        }
         return encodePayload({
             compId: comp.id,
             compName: comp.name,

@@ -85,6 +85,25 @@ test('health reports the project currently open in After Effects', () => {
   }]);
 });
 
+test('purge calls the all-cache host operation', () => {
+  const { context, calls, responses } = createContext({
+    status: 'success',
+    target: 'all-caches',
+  });
+  context.res = {};
+
+  vm.runInContext('handlePurge(res)', context);
+
+  assert.deepEqual(calls, ['purgeAllCaches()']);
+  assert.deepEqual(JSON.parse(JSON.stringify(responses)), [{
+    status: 200,
+    payload: {
+      status: 'success',
+      data: { status: 'success', target: 'all-caches' },
+    },
+  }]);
+});
+
 test('mutation bridge errors preserve rollback diagnostics', () => {
   const rollback = {
     attempted: true,

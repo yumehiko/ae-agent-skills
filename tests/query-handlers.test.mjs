@@ -95,6 +95,7 @@ function createContext(items, activeItem) {
       return { id: item.id, name: item.name };
     },
     aeLayoutLayerBounds(layer, time) {
+      layer.observedCompTime = layer.comp.time;
       return {
         left: layer.left + time,
         top: layer.top,
@@ -268,6 +269,7 @@ test('getLayerBounds returns composition-space bounds without activating the tar
     height: 80,
   };
   const targetComp = new MockCompItem(2, 'TX01_Title', [targetLayer]);
+  targetLayer.comp = targetComp;
   const context = createContext([activeComp, targetComp], activeComp);
 
   const payload = decodePayload(vm.runInContext(
@@ -288,6 +290,8 @@ test('getLayerBounds returns composition-space bounds without activating the tar
     centerY: 240,
   });
   assert.equal(context.app.project.activeItem, activeComp);
+  assert.equal(targetLayer.observedCompTime, 1.25);
+  assert.equal(targetComp.time, 0);
 });
 
 test('getLayerBounds rejects null layers instead of returning a controller rectangle', () => {

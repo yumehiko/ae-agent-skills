@@ -29,8 +29,26 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: test "v$(node -p "require('./package.json').version")" = "$RELEASE_TAG"
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Python test dependencies
+        run: python -m pip install '.[dev]'
+
+      - name: Run Python tests
+        run: python -m pytest -q
+
       - name: Run Node.js tests
         run: npm run test:node
 
       - name: Publish to npm
-        run: npm publish
+        env:
+          IS_PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            npm publish --tag pyaep
+          else
+            npm publish
+          fi

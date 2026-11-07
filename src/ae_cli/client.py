@@ -227,6 +227,11 @@ class AEClient:
         response.raise_for_status()
         return response.json()
 
+    def purge_all_caches(self) -> Dict[str, Any]:
+        """Purge all After Effects memory and disk caches."""
+        response = self._requests.post(self._url("/purge"), json={}, timeout=self.timeout)
+        return self._handle_response(response)
+
     def get_layers(
         self,
         comp_id: int | None = None,
