@@ -65,15 +65,15 @@ fs.writeFileSync(pyprojectPath, pyproject, 'utf8');
 
 let pyAepSkill = fs.readFileSync(pyAepSkillPath, 'utf8');
 pyAepSkill = pyAepSkill.replace(
-  /Preview release: `ae-agent-skills@[^`]+`/,
-  `Preview release: \`ae-agent-skills@${version}\``,
+  /(?:Preview release|Release): `ae-agent-skills@[^`]+`/,
+  `${previewMatch ? "Preview release" : "Release"}: \`ae-agent-skills@${version}\``,
 );
 fs.writeFileSync(pyAepSkillPath, pyAepSkill, 'utf8');
 
 let pyAepAgent = fs.readFileSync(pyAepAgentPath, 'utf8');
 pyAepAgent = pyAepAgent.replace(
-  /display_name: "After Effects py-aep Preview(?: [^"]+)?"/,
-  `display_name: "After Effects py-aep Preview ${version}"`,
+  /display_name: "After Effects py-aep(?: Preview)?(?: [^"]+)?"/,
+  `display_name: "After Effects py-aep${previewMatch ? " Preview" : ""} ${version}"`,
 );
 fs.writeFileSync(pyAepAgentPath, pyAepAgent, 'utf8');
 

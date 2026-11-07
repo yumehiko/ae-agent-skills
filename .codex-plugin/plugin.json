@@ -1,7 +1,7 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.14.0-pyaep.5",
-  "description": "Preview offline After Effects editing with py-aep and focused live verification.",
+  "version": "0.14.0",
+  "description": "Offline After Effects editing with py-aep and focused live verification.",
   "author": {
     "name": "yumehiko",
     "url": "https://github.com/yumehiko"
@@ -17,7 +17,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "After Effects py-aep Preview",
+    "displayName": "After Effects py-aep",
     "shortDescription": "Edit AEP projects offline with py-aep.",
     "longDescription": "Edit After Effects project files directly as Python objects, then use live After Effects only for runtime and visual verification.",
     "developerName": "yumehiko",

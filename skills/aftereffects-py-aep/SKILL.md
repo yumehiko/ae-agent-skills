@@ -5,7 +5,7 @@ description: Edit, inspect, create, and validate After Effects .aep projects off
 
 # After Effects with py-aep
 
-Preview release: `ae-agent-skills@0.14.0-pyaep.5`
+Release: `ae-agent-skills@0.14.0`
 
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
 scene JSON or a sequence of mutation CLI commands.
@@ -48,7 +48,8 @@ build and validation work, not the path that uses the fewest tools. For a new pr
 4. Write one Python script that parses, mutates, saves to a new path, reparses, and asserts.
 5. Run the script and confirm the input SHA-256 did not change.
 6. Use live AE checks only for the runtime-dependent facts listed below.
-7. Record preview feedback using `~/ae-agent-skills-preview/feedback-template.ja.md`.
+7. Copy [references/preview-feedback.ja.md](references/preview-feedback.ja.md) beside the
+   task script and record evidence there; no user-specific installation path is required.
 
 Use the installed package source and [py-aep documentation](https://forticheprod.github.io/py-aep/)
 for API details instead of copying the API surface into task context.
@@ -100,8 +101,21 @@ scene-description language.
 
 Project-panel cleanup is a strong offline use case. Before renaming comps, layers, or footage,
 scan every enabled expression source for name references; reject ambiguous names and preserve
-nonempty folders. Solid and placeholder footage names persist in py-aep 0.15.1; still reparse
+nonempty folders. Solid and placeholder footage names persist in the pinned py-aep 0.19.0; still reparse
 the saved output and assert every intended rename.
+
+## Animation verification
+
+For modified numeric animation, read
+[references/keyframe-verification.md](references/keyframe-verification.md). The pinned py-aep 0.19.0
+fixes the ease/timebase bugs reproduced in 0.15.1. Use the public keyframe APIs normally;
+do not apply an unconditional native rewrite. Independently check modified animation in
+AE (time, value, interpolation and ease), including after save/reopen, before signoff.
+The guarded native fallback is only for a demonstrated unsupported case or mismatch,
+not the default authoring route. A file pass is not an animation pass.
+
+Before opening any output in AE, check `health` and preserve the existing project and
+unsaved changes. Coordinate shared app access; never auto-save/discard another task.
 
 ## Runtime boundary
 

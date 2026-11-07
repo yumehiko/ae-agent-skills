@@ -1,10 +1,10 @@
-# py-aep検証版 フィードバック
+# py-aep ワークフロー検証記録
 
 案件ごとにこのテンプレートをコピーし、事実だけを短く記録する。
 
 ```text
 日付:
-検証版: ae-agent-skills@
+バージョン: ae-agent-skills@
 py-aep:
 端末 / OS / AE:
 
@@ -23,6 +23,11 @@ API探索・試行錯誤が重かった箇所:
 tool往復で気になった点:
 
 file pass: pass / fail
+native keyframe pass（time/value/interpolation/ease）: pass / fail / not-run
+native save→reopen 後の再検証: pass / fail / not-run
+元のproject / dirty状態の保護・復元:
+変更した一時設定の復元:
+最小再現と詳細JSONの保存先:
 AE structure pass: pass / fail / not-run
 visual pass: pass / fail / not-run
 visual pass前のcache purge: pass / fail / not-run
@@ -31,5 +36,5 @@ visual pass前のcache purge: pass / fail / not-run
 
 現行版より良かった点:
 現行版より悪かった点:
-次の検証版で変えてほしい点:
+今後改善してほしい点:
 ```

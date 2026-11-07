@@ -1,40 +1,47 @@
+"""Portable version-sync tests: do not depend on the maintainer's private release skill."""
 from __future__ import annotations
 
-import importlib.util
+import json
+import shutil
+import subprocess
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / ".agents/skills/release-ae-agent-skills/scripts/release.py"
-SPEC = importlib.util.spec_from_file_location("release_ae_agent_skills", SCRIPT)
-assert SPEC is not None and SPEC.loader is not None
-release = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(release)
+FILES = [
+    'package.json', 'pyproject.toml', 'CSXS/manifest.xml',
+    '.codex-plugin/plugin.json', 'skills/aftereffects-py-aep/SKILL.md',
+    'skills/aftereffects-py-aep/agents/openai.yaml',
+    'scripts/release/sync-version.mjs',
+]
 
 
-def test_stable_release_coordinates() -> None:
-    assert release.release_coordinates("1.2.3") == {
-        "version": "1.2.3",
-        "pythonVersion": "1.2.3",
-        "cepVersion": "1.2.3",
-        "branch": "main",
-        "prerelease": False,
-        "npmDistTag": "latest",
-    }
+@pytest.mark.parametrize('version,python,cep,label', [
+    ('1.2.3', '1.2.3', '1.2.3', 'Release'),
+    ('0.14.0-pyaep.7', '0.14.0.dev7', '0.14.0.pyaep-7', 'Preview release'),
+])
+def test_release_version_sync(tmp_path: Path, version: str, python: str, cep: str, label: str) -> None:
+    for relative in FILES:
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    package = tmp_path / 'package.json'
+    data = json.loads(package.read_text())
+    data['version'] = version
+    package.write_text(json.dumps(data))
+    subprocess.run(['node', str(tmp_path/'scripts/release/sync-version.mjs')], check=True, capture_output=True)
+    assert json.loads((tmp_path/'.codex-plugin/plugin.json').read_text())['version'] == version
+    assert f'version = "{python}"' in (tmp_path/'pyproject.toml').read_text()
+    assert f'ExtensionBundleVersion="{cep}"' in (tmp_path/'CSXS/manifest.xml').read_text()
+    assert f'{label}: `ae-agent-skills@{version}`' in (tmp_path/'skills/aftereffects-py-aep/SKILL.md').read_text()
+    agent = (tmp_path/'skills/aftereffects-py-aep/agents/openai.yaml').read_text()
+    expected = 'After Effects py-aep' + (' Preview' if label=='Preview release' else '')
+    assert f'display_name: "{expected} {version}"' in agent
 
 
-def test_pyaep_preview_release_coordinates() -> None:
-    assert release.release_coordinates("0.14.0-pyaep.7") == {
-        "version": "0.14.0-pyaep.7",
-        "pythonVersion": "0.14.0.dev7",
-        "cepVersion": "0.14.0.pyaep-7",
-        "branch": "preview/py-aep",
-        "prerelease": True,
-        "npmDistTag": "pyaep",
-    }
-
-
-def test_current_preview_versions_are_synchronized() -> None:
-    coordinates = release.require_version_sync(ROOT)
-    assert coordinates["version"] == "0.14.0-pyaep.5"
-    assert coordinates["branch"] == "preview/py-aep"
+def test_current_stable_versions_are_synchronized() -> None:
+    assert json.loads((ROOT/'package.json').read_text())['version'] == '0.14.0'
+    assert json.loads((ROOT/'.codex-plugin/plugin.json').read_text())['version'] == '0.14.0'
+    assert 'version = "0.14.0"' in (ROOT/'pyproject.toml').read_text()
+    assert 'ExtensionBundleVersion="0.14.0"' in (ROOT/'CSXS/manifest.xml').read_text()

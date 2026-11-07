@@ -157,3 +157,15 @@ def test_editorial_proxy_renders_manifest_sheets_and_video(tmp_path: Path) -> No
     assert Path(manifest["proxy"]).is_file()
     assert Path(manifest["layers"][0]["contactSheet"]).is_file()
     assert len(manifest["layers"][0]["samples"]) == 5
+
+
+def test_empty_groups_are_not_effects_or_masks() -> None:
+    project = py_aep.new().project
+    comp = project.root_folder.add_comp("EmptyGroups", 100, 100, 1, 3, 25)
+    layer = comp.add_shape()
+    reasons = editorial.unsupported_features(layer)
+    assert "effects" not in reasons and "masks" not in reasons
+    layer.effects.add_property("ADBE Slider Control")
+    layer.masks.add_property("ADBE Mask Atom")
+    reasons = editorial.unsupported_features(layer)
+    assert "effects" in reasons and "masks" in reasons

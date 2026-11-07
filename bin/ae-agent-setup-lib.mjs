@@ -6,7 +6,7 @@ import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 export const DEFAULT_REPO = 'yumehiko/ae-agent-skills';
-export const AGENT_WORKSPACE_NAME = 'ae-agent-skills-preview';
+export const AGENT_WORKSPACE_NAME = 'ae-agent-skills';
 
 const MODULE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const PACKAGE_VERSION = JSON.parse(
@@ -319,7 +319,7 @@ export function installSkills(
       const removedPath = path.join(target.destRoot, removedName);
       if (fs.existsSync(removedPath)) {
         fs.rmSync(removedPath, { recursive: true, force: true });
-        console.log(`Removed stable skill for preview: ${removedPath}`);
+        console.log(`Removed superseded skill: ${removedPath}`);
       }
     }
     for (const skill of SKILL_SOURCES) {
@@ -358,8 +358,8 @@ export function setupAgentWorkspace({ root = getRepoRoot(), home = os.homedir() 
       throw new Error(`Workspace resource not found: ${source}`);
     }
     const contents = fs.readFileSync(source, 'utf8').replace(
-      '検証版: ae-agent-skills@',
-      `検証版: ae-agent-skills@${PACKAGE_VERSION}`,
+      'バージョン: ae-agent-skills@',
+      `バージョン: ae-agent-skills@${PACKAGE_VERSION}`,
     );
     fs.writeFileSync(destination, contents, 'utf8');
   }

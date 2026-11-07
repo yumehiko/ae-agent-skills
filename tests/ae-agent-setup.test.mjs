@@ -86,7 +86,7 @@ test('preview installs only py-aep skill and removes stable skills', () => {
   }
 });
 
-test('plugin and npm package expose the preview skill only', () => {
+test('plugin and npm package expose the py-aep skill only', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const plugin = JSON.parse(
@@ -94,7 +94,7 @@ test('plugin and npm package expose the preview skill only', () => {
   );
 
   assert.equal(PACKAGE_VERSION, pkg.version);
-  assert.match(pkg.version, /^\d+\.\d+\.\d+-pyaep\.\d+$/);
+  assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   assert.equal(plugin.version, pkg.version);
   assert.equal(plugin.skills, './skills/');
   assert.equal(
@@ -147,7 +147,7 @@ test('plugin and npm package expose the preview skill only', () => {
   assert.equal(pkg.files.includes('pyproject.toml'), false);
 });
 
-test('preview installer resolves Python and ZXP from its immutable release tag', () => {
+test('installer resolves Python and ZXP from its immutable release tag', () => {
   assert.equal(
     cliInstallSpec('yumehiko/ae-agent-skills'),
     `git+https://github.com/yumehiko/ae-agent-skills.git@v${PACKAGE_VERSION}`,
@@ -158,7 +158,7 @@ test('preview installer resolves Python and ZXP from its immutable release tag',
   );
 });
 
-test('preview workspace contains only the feedback template', () => {
+test('workspace contains only the feedback template', () => {
   const tempHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-agent-preview-home-'));
   try {
     setupAgentWorkspace({ home: tempHome });
@@ -169,7 +169,7 @@ test('preview workspace contains only the feedback template', () => {
     );
     assert.match(
       fs.readFileSync(path.join(workspace, 'feedback-template.ja.md'), 'utf8'),
-      new RegExp(`検証版: ae-agent-skills@${PACKAGE_VERSION}`),
+      new RegExp(`バージョン: ae-agent-skills@${PACKAGE_VERSION}`),
     );
     assert.equal(fs.existsSync(path.join(workspace, 'scene.schema.json')), false);
   } finally {
@@ -177,9 +177,9 @@ test('preview workspace contains only the feedback template', () => {
   }
 });
 
-test('preview Python and CEP versions are synchronized from npm version', () => {
+test('stable Python and CEP versions are synchronized from npm version', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const match = PACKAGE_VERSION.match(/^(\d+)\.(\d+)\.(\d+)-pyaep\.(\d+)$/);
+  const match = PACKAGE_VERSION.match(/^(\d+)\.(\d+)\.(\d+)$/);
   assert.ok(match);
   const base = `${match[1]}.${match[2]}.${match[3]}`;
   const pyproject = fs.readFileSync(path.join(root, 'pyproject.toml'), 'utf8');
@@ -192,8 +192,8 @@ test('preview Python and CEP versions are synchronized from npm version', () => 
     path.join(root, 'skills', 'aftereffects-py-aep', 'agents', 'openai.yaml'),
     'utf8',
   );
-  assert.match(pyproject, new RegExp(`version = "${base}\\.dev${match[4]}"`));
-  assert.match(manifest, new RegExp(`ExtensionBundleVersion="${base}\\.pyaep-${match[4]}"`));
+  assert.match(pyproject, new RegExp(`version = "${base}"`));
+  assert.match(manifest, new RegExp(`ExtensionBundleVersion="${base}"`));
   assert.match(skill, new RegExp(`ae-agent-skills@${PACKAGE_VERSION}`));
-  assert.match(agentMetadata, new RegExp(`Preview ${PACKAGE_VERSION}`));
+  assert.match(agentMetadata, new RegExp(`After Effects py-aep ${PACKAGE_VERSION}`));
 });

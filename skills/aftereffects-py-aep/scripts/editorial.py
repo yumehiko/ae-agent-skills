@@ -55,9 +55,9 @@ def unsupported_features(layer: Any) -> list[str]:
         reasons.append("not-file-backed")
     if getattr(layer, "parent", None) is not None:
         reasons.append("parent")
-    if getattr(layer, "effects", None) is not None:
+    if len(getattr(layer, "effects", None) or ()) > 0:
         reasons.append("effects")
-    if getattr(layer, "masks", None) is not None:
+    if len(getattr(layer, "masks", None) or ()) > 0:
         reasons.append("masks")
     if bool(getattr(layer, "has_track_matte", False)):
         reasons.append("track-matte")
