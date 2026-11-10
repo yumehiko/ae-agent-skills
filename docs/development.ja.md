@@ -21,8 +21,10 @@ defaults write com.adobe.CSXS.11 PlayerDebugMode 1
 ## Python開発セットアップ
 
 ```bash
-python3 -m pip install -e ".[dev]"
-PYTHONPATH=src python3 -m pytest
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+PYTHONPATH=src python -m pytest
 npm run test:node
 ```
 
@@ -69,3 +71,18 @@ npm run test:node
 - `client/lib/request_handlers_layer_structure.js`
 - `client/lib/request_handlers.js`
 - `client/lib/server.js`
+
+## ジェネラティブruntime
+
+正規ソースは `skills/aftereffects-py-aep/scripts/ae_generative/` にあります。
+setuptoolsは `src/ae_cli/` と一緒にパッケージ化し、npmは同じソースと
+`scripts/render_generative.py` をスキルに同梱します。二重実装は作らないでください。
+ブラウザのsmoke test前には、同じPython環境でChromiumを導入してください。
+
+```bash
+python -m playwright install chromium
+ae-generative --help
+AE_GENERATIVE_BROWSER_TESTS=1 PYTHONPATH=src python -m pytest -q
+```
+
+[Generative workflow](../skills/aftereffects-py-aep/references/generative-workflow.md)

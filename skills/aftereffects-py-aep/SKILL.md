@@ -1,14 +1,15 @@
 ---
 name: aftereffects-py-aep
-description: Edit, inspect, create, and validate After Effects .aep projects offline with py-aep, without opening After Effects for file-level work. Use for existing AEP template edits, composition/layer/property/keyframe/text/shape/footage/render-queue changes, batch processing, or new AEP creation. Use the bundled ae-cli only when live After Effects is required for rendering, snapshots, expression evaluation/errors, text or shape visual bounds, installed fonts/effects, or open-project runtime state.
+description: Edit, inspect, create, and validate After Effects .aep projects offline with py-aep, without opening After Effects for file-level work. Use for existing AEP template edits, composition/layer/property/keyframe/text/shape/footage/render-queue changes, batch processing, new AEP creation, or code-authored generative HTML/Canvas/WebGL animation rendered into footage. Use the bundled ae-cli only when live After Effects is required for rendering, snapshots, expression evaluation/errors, text or shape visual bounds, installed fonts/effects, or open-project runtime state.
 ---
 
 # After Effects with py-aep
 
-Release: `ae-agent-skills@0.14.0`
+Release: `ae-agent-skills@0.15.0`
 
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
-scene JSON or a sequence of mutation CLI commands.
+a general scene JSON or a sequence of mutation CLI commands. The narrow generative
+render manifest below describes browser footage, not an AE scene graph.
 
 ## Safety contract
 
@@ -23,6 +24,15 @@ scene JSON or a sequence of mutation CLI commands.
 - Write trial outputs under `_automation/scratch/<task>/`; promote only a validated,
   nonexistent final filename instead of accumulating `_v2`, `_v3`, and similar guesses.
 
+## Python environment
+
+The default installer supplies `~/.local/share/ae-agent-skills/bin/python`, `ae-cli`,
+and `ae-generative`. Use the full managed Python path for task scripts and bundled
+Python helpers, including `inspect_aep.py`; do not assume shell `python3` has py-aep.
+These launchers require no activation and select the dedicated browser cache.
+For pip/skill-only installs, use the user's prepared venv instead. Never fix missing
+dependencies by modifying system/Homebrew Python or using `--break-system-packages`.
+
 ## Choose the starting point
 
 - Parse an existing template when matching a series, brand system, or proven AE structure.
@@ -35,6 +45,22 @@ Do this capability check before writing the build script. Prefer the path that m
 build and validation work, not the path that uses the fewest tools. For a new project, read
 [references/new-project.md](references/new-project.md) and copy
 `assets/new_project_template.py` into the job's `_automation/` directory.
+
+## Code-authored generative footage (core feature)
+
+For procedural graphics that are faster to express in HTML, Canvas, SVG, or WebGL,
+read [references/generative-workflow.md](references/generative-workflow.md). Author local
+code with a frame-addressable `window.renderFrame` function, render a PNG sequence with
+`ae-generative render <scene-dir> --output <new-dir>`, then import it with
+`ae_generative.aep.import_render` in the same task-specific py-aep script.
+The installed skill also includes `scripts/render_generative.py` and the runtime package.
+
+This is a standard part of this skill, not an optional AE plugin. Python Playwright and a
+Chromium browser binary are required (`ae-generative setup`). Only execute trusted,
+locally authored scene code. The output is raster footage, not AE-native shapes:
+AE layers, transforms, and effects remain editable; change the archived source and rerender
+for pixel changes. Determinism is scoped to the same browser/runtime. Rendering browser
+frames is not an AE visual pass.
 
 ## Existing-project workflow
 

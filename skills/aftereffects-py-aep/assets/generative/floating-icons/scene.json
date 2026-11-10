@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "entry": "index.html",
+  "width": 640,
+  "height": 360,
+  "fps": "30000/1001",
+  "frames": 90,
+  "seed": 17,
+  "alpha": true
+}

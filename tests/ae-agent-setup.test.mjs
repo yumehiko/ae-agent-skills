@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -13,6 +14,7 @@ import {
   getDetectedAgents,
   getSkillInstallTargets,
   installSkills,
+  printHelp,
   parseArgs,
   releaseApiUrl,
   setupAgentWorkspace,
@@ -196,4 +198,55 @@ test('stable Python and CEP versions are synchronized from npm version', () => {
   assert.match(manifest, new RegExp(`ExtensionBundleVersion="${base}"`));
   assert.match(skill, new RegExp(`ae-agent-skills@${PACKAGE_VERSION}`));
   assert.match(agentMetadata, new RegExp(`After Effects py-aep ${PACKAGE_VERSION}`));
+});
+
+
+test('skip-cli keeps its flag and documents skipped browser prerequisites', () => {
+  assert.equal(parseArgs(['--skip-cli']).skipCli, true);
+  let help = '';
+  printHelp((text) => { help += text; });
+  assert.match(help, /--skip-cli\s+Skip Python CLIs and generative runtime\/browser prerequisites/);
+});
+
+const generativeFiles = [
+  'scripts/render_generative.py',
+  'scripts/ae_generative/__init__.py',
+  'scripts/ae_generative/cli.py',
+  'scripts/ae_generative/renderer.py',
+  'scripts/ae_generative/aep.py',
+  'references/generative-workflow.md',
+  'assets/generative/floating-icons/index.html',
+  'assets/generative/floating-icons/scene.js',
+  'assets/generative/floating-icons/scene.json',
+  'assets/generative/floating-icons/star.svg',
+];
+
+test('default skill copies carry the core generative runtime for every agent', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ae-generative-install-'));
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  try {
+    installSkills('all', { root, home, env: {} });
+    for (const { destRoot } of getSkillInstallTargets('all', { home, env: {} })) {
+      for (const relative of generativeFiles) {
+        const source = path.join(root, 'skills', 'aftereffects-py-aep', relative);
+        const installed = path.join(destRoot, 'aftereffects-py-aep', relative);
+        assert.equal(fs.readFileSync(installed, 'utf8'), fs.readFileSync(source, 'utf8'), relative);
+      }
+    }
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('npm archive includes the canonical generative runtime and guide', () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+    cwd: root, encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const packed = new Set(JSON.parse(result.stdout)[0].files.map((file) => file.path));
+  for (const relative of generativeFiles) {
+    assert.ok(packed.has(`skills/aftereffects-py-aep/${relative}`), relative);
+  }
+  assert.ok(![...packed].some((file) => file.includes('__pycache__') || file.endsWith('.pyc')));
 });

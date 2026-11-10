@@ -21,8 +21,10 @@ Then fully quit and relaunch After Effects.
 ## Python dev setup
 
 ```bash
-python3 -m pip install -e ".[dev]"
-PYTHONPATH=src python3 -m pytest
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+PYTHONPATH=src python -m pytest
 npm run test:node
 ```
 
@@ -69,3 +71,18 @@ npm run test:node
 - `client/lib/request_handlers_layer_structure.js`
 - `client/lib/request_handlers.js`
 - `client/lib/server.js`
+
+## Generative runtime
+
+The canonical runtime lives in `skills/aftereffects-py-aep/scripts/ae_generative/`.
+Setuptools packages it alongside `src/ae_cli/`, while the npm skill copy carries the
+same source and `scripts/render_generative.py` launcher. Do not fork a second copy.
+Install Chromium with the same Python environment before browser smoke tests:
+
+```bash
+python -m playwright install chromium
+ae-generative --help
+AE_GENERATIVE_BROWSER_TESTS=1 PYTHONPATH=src python -m pytest -q
+```
+
+[Generative workflow](../skills/aftereffects-py-aep/references/generative-workflow.md)

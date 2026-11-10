@@ -1,0 +1,44 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: '3.10'
+          - os: macos-latest
+            python: '3.13'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Python package and test dependencies
+        run: python -m pip install '.[dev]'
+      - name: Install Chromium and browser dependencies
+        run: python -m playwright install --with-deps chromium
+      - name: Run Python tests including real browser renders
+        env:
+          AE_GENERATIVE_BROWSER_TESTS: '1'
+        run: python -m pytest -q
+      - name: Run installer and bridge tests
+        run: npm run test:node
+      - name: Check distributable packages
+        run: |
+          python -m pip wheel --no-deps --wheel-dir dist .
+          npm pack --dry-run

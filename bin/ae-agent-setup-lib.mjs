@@ -80,7 +80,7 @@ Options:
   --repo <owner/repo>          GitHub repository for release and CLI install (default: ${DEFAULT_REPO}).
   --zxp <path-or-url>          Local ZXP path or direct download URL.
   --skip-extension             Skip ZXP extension installation.
-  --skip-cli                   Skip ae-cli installation.
+  --skip-cli                   Skip Python CLIs and generative runtime/browser prerequisites.
   --skip-skills                Skip skill installation.
   -h, --help                   Show this help.
 `);
@@ -368,25 +368,124 @@ export function setupAgentWorkspace({ root = getRepoRoot(), home = os.homedir() 
 }
 
 export function cliInstallSpec(repo, packageVersion = PACKAGE_VERSION) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)
+      || repo.split('/').some((part) => part === '.' || part === '..')) {
+    throw new Error('Invalid repository: expected owner/repo.');
+  }
+  if (!/^\d+\.\d+\.\d+(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$/.test(packageVersion)) {
+    throw new Error('Invalid release version.');
+  }
   return `git+https://github.com/${repo}.git@v${packageVersion}`;
 }
 
-export function installCli(repo, packageVersion = PACKAGE_VERSION) {
-  if (!commandExists('python3')) {
-    throw new Error('python3 is required to install ae-cli.');
-  }
-  const spec = cliInstallSpec(repo, packageVersion);
-  run('python3', ['-m', 'pip', 'install', '--user', '--upgrade', spec]);
+export function getRuntimePaths(home = os.homedir()) {
+  const root = path.resolve(home, '.local', 'share', 'ae-agent-skills');
+  return {
+    root, envs: path.join(root, 'envs'), current: path.join(root, 'current'),
+    bin: path.join(root, 'bin'), browsers: path.join(root, 'browsers'),
+  };
+}
 
-  const helpRes = spawnSync('ae-cli', ['--help'], { stdio: 'inherit' });
-  if (helpRes.status !== 0) {
-    console.log('ae-cli was installed, but not found on PATH.');
-    console.log('Run this once in your shell profile if needed:');
-    console.log('  export PATH="$HOME/Library/Python/3.*/bin:$PATH"');
+function shellQuote(value) {
+  return "'" + value.replaceAll("'", "'\\''") + "'";
+}
+
+// Never inherit an activated environment, Python import overrides, or pip target/user
+// settings. PEP 668 is respected: pip only writes inside our newly created venv.
+export function runtimeEnvironment(env, browsers) {
+  const clean = Object.fromEntries(Object.entries(env).filter(([key]) =>
+    !/^(PYTHON|PIP_|VIRTUAL_ENV|__PYVENV_LAUNCHER__)/.test(key)));
+  return { ...clean, PIP_CONFIG_FILE: os.devNull, PLAYWRIGHT_BROWSERS_PATH: browsers, PLAYWRIGHT_SKIP_BROWSER_GC: '1' };
+}
+
+function writeLauncher(filename, contents) {
+  const temporary = `${filename}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
+  try {
+    fs.writeFileSync(temporary, contents, { mode: 0o755 });
+    fs.renameSync(temporary, filename);
+  } finally {
+    fs.rmSync(temporary, { force: true });
   }
 }
 
+export function installCli(repo, packageVersion = PACKAGE_VERSION, {
+  commandExistsFn = commandExists, runFn = run, spawnSyncFn = spawnSync,
+  home = os.homedir(), env = process.env, output = console.log, platform = process.platform,
+} = {}) {
+  if (platform === 'win32') throw new Error('The managed installer does not support Windows. Use macOS, or Linux with --skip-extension.');
+  const spec = cliInstallSpec(repo, packageVersion);
+  const paths = getRuntimePaths(home);
+  const cleanEnv = runtimeEnvironment(env, paths.browsers);
+  const retry = `npx ae-agent-skills@${packageVersion} install --repo ${repo} --skip-extension`;
+  if (!commandExistsFn('python3')) {
+    throw new Error(`Python 3.10+ is required. Install Python, then retry: ${retry}`);
+  }
+  const probe = spawnSyncFn('python3', ['-I', '-c',
+    'import json,sys; print(json.dumps({"version": list(sys.version_info[:2]), "executable": getattr(sys, "_base_executable", sys.executable)}))'],
+  { encoding: 'utf8', env: cleanEnv });
+  let python;
+  try {
+    const info = JSON.parse(probe.stdout);
+    if (probe.status !== 0 || info.version[0] !== 3 || info.version[1] < 10
+        || !path.isAbsolute(info.executable)) throw new Error('unsupported Python');
+    python = info.executable;
+  } catch {
+    throw new Error(`Python 3.10+ is required; python3 could not provide a supported interpreter. Install Python 3.10+ and retry: ${retry}`);
+  }
+
+  fs.mkdirSync(paths.envs, { recursive: true });
+  fs.mkdirSync(paths.bin, { recursive: true });
+  const candidate = fs.mkdtempSync(path.join(paths.envs, `v${packageVersion}-`));
+  const interpreter = path.join(candidate, 'bin', 'python');
+  const options = { env: cleanEnv };
+  try {
+    runFn(python, ['-I', '-m', 'venv', candidate], options);
+    runFn(interpreter, ['-I', '-m', 'pip', 'install', '--upgrade', spec], options);
+    runFn(interpreter, ['-I', '-c', 'import ae_cli.main, ae_generative.cli, py_aep, playwright.sync_api'], options);
+    for (const command of ['ae-cli', 'ae-generative']) {
+      const module = command === 'ae-cli' ? 'ae_cli.main' : 'ae_generative.cli';
+      runFn(interpreter, ['-I', '-c', `from ${module} import run; raise SystemExit(run())`, '--help'], options);
+    }
+  } catch (err) {
+    fs.rmSync(candidate, { recursive: true, force: true });
+    throw new Error(`Managed runtime installation failed; the previous runtime was not changed. ${err.message}\nRetry: ${retry}`);
+  }
+
+  let browserReady = true;
+  try {
+    runFn(interpreter, ['-I', '-m', 'playwright', 'install', 'chromium'], options);
+    runFn(interpreter, ['-I', '-c',
+      'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(headless=True); b.close(); p.stop()'], options);
+  } catch (err) {
+    browserReady = false;
+    output(`WARNING: Chromium setup or launch failed: ${err.message}`);
+    output('The Python CLIs and skills remain usable, but generative rendering is NOT ready.');
+    output(`Retry browser setup: ${shellQuote(path.join(paths.bin, 'python'))} -m playwright install chromium`);
+    output(`Then verify rendering, or rerun setup: ${retry}`);
+  }
+
+  // Environments are never moved: pip entrypoint shebangs contain their original paths.
+  // Retain the previous environment for running processes and failed upgrade recovery.
+  const link = path.join(paths.root, `.current-${path.basename(candidate)}`);
+  try {
+    fs.symlinkSync(candidate, link, 'dir');
+    for (const command of ['ae-cli', 'ae-generative', 'python']) {
+      const module = command === 'ae-cli' ? 'ae_cli.main' : 'ae_generative.cli';
+      const args = command === 'python' ? ' -E' : ` -I -c ${shellQuote(`from ${module} import run; raise SystemExit(run())`)}`;
+      writeLauncher(path.join(paths.bin, command), `#!/bin/sh\nunset PYTHONHOME PYTHONPATH VIRTUAL_ENV __PYVENV_LAUNCHER__\nexport PLAYWRIGHT_BROWSERS_PATH=${shellQuote(paths.browsers)}\nexport PLAYWRIGHT_SKIP_BROWSER_GC=1\nexec ${shellQuote(path.join(paths.current, 'bin', 'python'))}${args} "$@"\n`);
+    }
+    fs.renameSync(link, paths.current);
+  } finally {
+    fs.rmSync(link, { force: true });
+  }
+  output(`Managed Python runtime installed: ${paths.current}`);
+  output(`Use ${shellQuote(path.join(paths.bin, 'ae-cli'))} and ${shellQuote(path.join(paths.bin, 'ae-generative'))}.`);
+  output(`To prefer these over legacy commands, add to your shell profile: export PATH=${shellQuote(paths.bin)}:"$PATH"`);
+  return { ...paths, interpreter, browserReady };
+}
+
 export async function installCommand(opts) {
+  if (process.platform === 'win32') throw new Error('The managed installer does not support Windows. Use macOS, or Linux with --skip-extension.');
   console.log('Starting ae-agent setup...');
   setupAgentWorkspace();
 
@@ -407,10 +506,10 @@ export async function installCommand(opts) {
   }
 
   if (!opts.skipCli) {
-    console.log('Installing ae-cli...');
+    console.log('Installing ae-cli, ae-generative, and Chromium...');
     installCli(opts.repo);
   } else {
-    console.log('Skipping ae-cli installation (--skip-cli).');
+    console.log('Skipping Python CLIs and generative runtime/browser prerequisites (--skip-cli).');
   }
 
   if (!opts.skipSkills) {
@@ -424,7 +523,7 @@ export async function installCommand(opts) {
   console.log('Next actions:');
   console.log('  1) Fully restart After Effects.');
   console.log('  2) Open the panel: Window > Extensions (Beta) > ae-agent-skill.');
-  console.log('  3) Run: ae-cli health');
+  console.log('  3) Run: "$HOME/.local/share/ae-agent-skills/bin/ae-cli" health');
   console.log(`  4) Use workspace: ${path.join(os.homedir(), AGENT_WORKSPACE_NAME)}`);
 }
 

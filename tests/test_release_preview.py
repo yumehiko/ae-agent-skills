@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -41,7 +42,9 @@ def test_release_version_sync(tmp_path: Path, version: str, python: str, cep: st
 
 
 def test_current_stable_versions_are_synchronized() -> None:
-    assert json.loads((ROOT/'package.json').read_text())['version'] == '0.14.0'
-    assert json.loads((ROOT/'.codex-plugin/plugin.json').read_text())['version'] == '0.14.0'
-    assert 'version = "0.14.0"' in (ROOT/'pyproject.toml').read_text()
-    assert 'ExtensionBundleVersion="0.14.0"' in (ROOT/'CSXS/manifest.xml').read_text()
+    version = json.loads((ROOT/'package.json').read_text())['version']
+    assert re.fullmatch(r'\d+\.\d+\.\d+', version)
+    assert json.loads((ROOT/'.codex-plugin/plugin.json').read_text())['version'] == version
+    assert f'version = "{version}"' in (ROOT/'pyproject.toml').read_text()
+    assert f'ExtensionBundleVersion="{version}"' in (ROOT/'CSXS/manifest.xml').read_text()
+    assert f'Release: `ae-agent-skills@{version}`' in (ROOT/'skills/aftereffects-py-aep/SKILL.md').read_text()
