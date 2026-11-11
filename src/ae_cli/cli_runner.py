@@ -544,6 +544,18 @@ def _run_set_keyframe(client: AEClient, args: argparse.Namespace) -> None:
     )
 
 
+def _run_move_keyframe(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.move_keyframe(
+        property_path=args.property_path, key_index=args.key_index, time=args.time,
+        **_layer_selector_kwargs(args), **_comp_selector_kwargs(args)))
+
+
+def _run_delete_keyframe(client: AEClient, args: argparse.Namespace) -> None:
+    _print_json(client.delete_keyframe(
+        property_path=args.property_path, key_index=args.key_index,
+        **_layer_selector_kwargs(args), **_comp_selector_kwargs(args)))
+
+
 def _run_add_essential_property(client: AEClient, args: argparse.Namespace) -> None:
     _print_json(
         client.add_essential_property(
@@ -746,6 +758,8 @@ COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "set-expression": _run_set_expression,
     "set-property": _run_set_property,
     "set-keyframe": _run_set_keyframe,
+    "move-keyframe": _run_move_keyframe,
+    "delete-keyframe": _run_delete_keyframe,
     "add-essential-property": _run_add_essential_property,
     "add-effect": _run_add_effect,
     "add-shape-repeater": _run_add_shape_repeater,

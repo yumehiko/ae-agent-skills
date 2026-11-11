@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List
@@ -803,6 +804,45 @@ class AEClient:
             timeout=self.timeout,
         )
         return self._handle_response(response)
+
+    def _edit_keyframe(
+        self, action: str, property_path: str, key_index: int,
+        layer_id: int | None = None, layer_name: str | None = None,
+        comp_id: int | None = None, comp_name: str | None = None,
+        time: float | None = None,
+    ) -> Dict[str, Any]:
+        if isinstance(key_index, bool) or not isinstance(key_index, int) or key_index < 1:
+            raise ValueError("key_index must be an AE 1-based positive integer")
+        if not isinstance(property_path, str) or not property_path.strip():
+            raise ValueError("property_path must be a non-empty string")
+        payload = self._layer_selector_payload(layer_id=layer_id, layer_name=layer_name)
+        payload.update(self._optional_comp_selector_payload(comp_id=comp_id, comp_name=comp_name))
+        payload.update(propertyPath=property_path, keyIndex=key_index)
+        if action == "move":
+            if isinstance(time, bool) or not isinstance(time, (int, float)) or not math.isfinite(time):
+                raise ValueError("time must be finite seconds")
+            payload["time"] = time
+        response = self._requests.post(self._url("/keyframes/" + action),
+                                       json=payload, timeout=self.timeout)
+        return self._handle_response(response)
+
+    def move_keyframe(
+        self, property_path: str, key_index: int, time: float,
+        layer_id: int | None = None, layer_name: str | None = None,
+        comp_id: int | None = None, comp_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Move one key using an AE 1-based index, without replacing other keys."""
+        return self._edit_keyframe("move", property_path, key_index, layer_id,
+                                   layer_name, comp_id, comp_name, time)
+
+    def delete_keyframe(
+        self, property_path: str, key_index: int,
+        layer_id: int | None = None, layer_name: str | None = None,
+        comp_id: int | None = None, comp_name: str | None = None,
+    ) -> Dict[str, Any]:
+        """Delete exactly one key using an AE 1-based index."""
+        return self._edit_keyframe("delete", property_path, key_index, layer_id,
+                                   layer_name, comp_id, comp_name)
 
     def add_essential_property(
         self,

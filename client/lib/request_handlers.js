@@ -85,6 +85,8 @@ function handleBridgeMutationCall(
                 if (parsedResult.errors !== undefined) payload.errors = parsedResult.errors;
                 if (parsedResult.details !== undefined) payload.details = parsedResult.details;
                 if (parsedResult.rollback !== undefined) payload.rollback = parsedResult.rollback;
+                if (parsedResult.rollbackError !== undefined) payload.rollbackError = parsedResult.rollbackError;
+                if (parsedResult.mayHaveChanged !== undefined) payload.mayHaveChanged = parsedResult.mayHaveChanged;
                 if (parsedResult.project !== undefined) payload.project = parsedResult.project;
                 if (parsedResult.expectedProject !== undefined) {
                     payload.expectedProject = parsedResult.expectedProject;
@@ -554,6 +556,24 @@ function handleSetKeyframe(req, res) {
     });
 }
 
+function handleEditKeyframe(req, res, action) {
+    readJsonBody(req, res, ({ layerId, layerName, propertyPath, keyIndex, time, compId, compName }) => {
+        const selector = normalizeLayerSelector(layerId, layerName);
+        if (!selector.ok) { sendBadRequest(res, selector.error); return; }
+        if (typeof propertyPath !== 'string' || !propertyPath.trim()) {
+            sendBadRequest(res, 'propertyPath must be a non-empty string'); return;
+        }
+        if (!Number.isInteger(keyIndex) || keyIndex < 1) {
+            sendBadRequest(res, 'keyIndex must be an AE 1-based positive integer'); return;
+        }
+        if (action === 'move' && (typeof time !== 'number' || !isFinite(time))) {
+            sendBadRequest(res, 'time must be finite seconds'); return;
+        }
+        const script = `editSingleKeyframe(${selector.layerIdLiteral}, ${selector.layerNameLiteral}, ${toExtendScriptStringLiteral(propertyPath)}, ${keyIndex}, ${toExtendScriptStringLiteral(action)}, ${action === 'move' ? time : 'null'})`;
+        handleBridgeMutationCall(script, res, 'editSingleKeyframe()', 'Failed to edit keyframe', compId, compName);
+    });
+}
+
 function handleAddEffect(req, res) {
     readJsonBody(req, res, ({ layerId, layerName, effectMatchName, effectName, compId, compName }) => {
         if (!effectMatchName) {
@@ -672,6 +692,10 @@ function routeRequest(req, res, bridgeToken) {
     }
     if (pathname === '/property-value' && method === 'POST') {
         handleSetPropertyValue(req, res);
+        return;
+    }
+    if ((pathname === '/keyframes/move' || pathname === '/keyframes/delete') && method === 'POST') {
+        handleEditKeyframe(req, res, pathname === '/keyframes/move' ? 'move' : 'delete');
         return;
     }
     if (pathname === '/keyframes' && method === 'POST') {

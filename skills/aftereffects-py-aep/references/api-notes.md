@@ -7,6 +7,10 @@ Use these notes only when API discovery stalls.
   itself yields integer IDs.
 - Read keyframes with `prop.keyframes`; use `len(prop.keyframes)` for the ExtendScript-like
   key count. In py-aep 0.19.0 there is no `num_keys` convenience property.
+- Move an existing key with `key.time = composition_seconds`; delete one with
+  `prop.remove_key(zero_based_index)`. See [single-key-edits.md](single-key-edits.md)
+  before editing: collisions fail, list positions can change, and roving tracks can
+  retime other keys. Do not replace the whole track for a single-key request.
 - Call `prop.value_at_time(time)` for offline pre-expression interpolation. Do not pass
   `pre_expression=False`: that requests expression evaluation, which the parser cannot do.
 - Find nested shape/effect properties recursively by `match_name`, not localized display name.

@@ -396,6 +396,17 @@ def build_parser() -> argparse.ArgumentParser:
         help='Outgoing temporal ease as JSON. Example: "[0,66]" or "[[0,66],[0,66]]"',
     )
 
+    for command in ("move-keyframe", "delete-keyframe"):
+        single_key_parser = subparsers.add_parser(command, help="Edit one existing keyframe")
+        _add_layer_selector(single_key_parser)
+        _add_optional_comp_selector(single_key_parser)
+        single_key_parser.add_argument("--property-path", required=True)
+        single_key_parser.add_argument("--key-index", type=int, required=True,
+                                       help="AE 1-based key index (not py-aep's 0-based index)")
+        if command == "move-keyframe":
+            single_key_parser.add_argument("--time", type=float, required=True,
+                                           help="Destination time in seconds")
+
     effect_parser = subparsers.add_parser("add-effect", help="Add an effect to a layer")
     _add_layer_selector(effect_parser)
     _add_optional_comp_selector(effect_parser)

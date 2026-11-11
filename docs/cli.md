@@ -347,3 +347,38 @@ the legacy `createdLayers` field remains an alias of `appliedLayers` and include
 
 Effect color values use AE-native normalized RGBA (four values from 0 to 1), unlike text and shape RGB values.
 Parameter order varies by effect; inspect `properties --layer-name <layer> --include-group "ADBE Effect Parade" --include-group-children` before applying values.
+
+## Move or delete one live keyframe
+
+Inspect the target first, then use its **AE 1-based** key index. Unlike `py-aep`
+`keyframes[0]`, `--key-index 1` selects the first key. Re-inspect after an edit:
+indexes change when keys move past one another or are deleted.
+
+```bash
+ae-cli properties --comp-name Main --layer-name Title --property-path 'ADBE Transform Group.ADBE Opacity' --include-keyframes
+ae-cli move-keyframe --comp-name Main --layer-name Title --property-path 'ADBE Transform Group.ADBE Opacity' --key-index 2 --time 1.5
+ae-cli delete-keyframe --comp-name Main --layer-name Title --property-path 'ADBE Transform Group.ADBE Opacity' --key-index 2
+```
+
+`--time` is an absolute composition time in seconds. Both commands accept
+`--comp-id` instead of `--comp-name`, and `--layer-id` instead of `--layer-name`.
+They edit one key, never replace the entire track. Moving to the exact same time
+is a no-op; a destination within 0.000001 seconds of an existing key is rejected.
+AE may quantize the requested destination by up to 0.000001 seconds; the response
+`time` is the actual stored time. Larger differences are rejected before the source
+key is removed. The prepared replacement is also checked before source removal.
+
+Supported properties are numeric scalar, vector, spatial, and color properties.
+Move preserves the key's value, interpolation, authored Bezier temporal ease, continuity,
+spatial tangents, selection, and label (AE 22.6+). All remaining keys are read back
+and checked after either operation. Linear/hold segment speeds are recomputed by AE
+for the new timing rather than compared as stored ease settings. Deleting the last key also checks the retained
+static value. Expressions are left unchanged; an expression can still determine
+the visible result.
+
+Locked layers, text/shape/marker/custom values, and tracks containing any roving
+or temporal/spatial auto-Bezier key are rejected, because AE may recalculate
+neighboring keys. Missing metadata APIs also cause an error rather than silently
+losing settings. If AE fails while applying the edit, the response reports whether
+the track may have changed. Inspect the track and use AE Undo before retrying when
+that warning appears. Each edit is one Undo group.

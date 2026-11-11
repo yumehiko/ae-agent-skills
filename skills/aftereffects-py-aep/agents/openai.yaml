@@ -1,4 +1,4 @@
 interface:
-  display_name: "After Effects py-aep 0.15.0"
+  display_name: "After Effects py-aep 0.16.0"
   short_description: "Edit AEP files and render code-authored generative footage"
   default_prompt: "Use $aftereffects-py-aep to create or edit this After Effects project efficiently and validate the result."

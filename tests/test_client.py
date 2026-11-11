@@ -1271,3 +1271,37 @@ def test_delete_comp_posts_expected_payload(monkeypatch) -> None:
     assert captured["url"] == "http://127.0.0.1:8080/delete-comp"
     assert captured["timeout"] == 5.0
     assert captured["json"] == {"compName": "Main"}
+
+
+def test_single_key_edit_payloads_and_validation() -> None:
+    import pytest
+
+    calls = []
+
+    class Session:
+        def post(self, url, **kwargs):
+            calls.append((url, kwargs))
+            return DummyResponse({"status": "success"})
+
+    client = AEClient()
+    client._requests = Session()
+    client.move_keyframe("Transform.Opacity", 2, 1.5, layer_name="Title", comp_name="Main")
+    assert calls[-1][0].endswith("/keyframes/move")
+    assert calls[-1][1]["json"] == {
+        "propertyPath": "Transform.Opacity", "keyIndex": 2, "time": 1.5,
+        "layerName": "Title", "compName": "Main",
+    }
+    client.delete_keyframe("Transform.Opacity", 1, layer_id=3, comp_id=7)
+    assert calls[-1][0].endswith("/keyframes/delete")
+    assert calls[-1][1]["json"] == {
+        "propertyPath": "Transform.Opacity", "keyIndex": 1, "layerId": 3, "compId": 7,
+    }
+    for bad in (0, -1, 1.5, True, "1"):
+        with pytest.raises(ValueError, match="1-based"):
+            client.delete_keyframe("Opacity", bad, layer_id=1)
+    for bad in (float("nan"), float("inf"), True, "1", None):
+        with pytest.raises(ValueError, match="finite seconds"):
+            client.move_keyframe("Opacity", 1, bad, layer_id=1)
+    with pytest.raises(ValueError, match="non-empty"):
+        client.delete_keyframe("", 1, layer_id=1)
+    assert len(calls) == 2

@@ -347,3 +347,35 @@ sceneでは `assets[]` に素材を1度宣言し、複数の `type: "footage"` �
 
 エフェクトのカラー値はAEネイティブのRGBA（0〜1、4要素）です。テキスト・ShapeのRGB（0〜1または0〜255、3要素）とは形式が異なります。
 パラメータ順はエフェクトごとに異なるため、適用前に `properties --layer-name <layer> --include-group "ADBE Effect Parade" --include-group-children` で確認してください。
+
+## 開いている AE で単一キーを移動・削除
+
+先に対象を確認し、**AE の 1 始まり**のキー番号を指定します。
+`py-aep` の `keyframes[0]` に相当するのは `--key-index 1` です。
+移動や削除で番号が変わるため、次の編集前に再確認してください。
+
+```bash
+ae-cli properties --comp-name Main --layer-name Title --property-path 'ADBE Transform Group.ADBE Opacity' --include-keyframes
+ae-cli move-keyframe --comp-name Main --layer-name Title --property-path 'ADBE Transform Group.ADBE Opacity' --key-index 2 --time 1.5
+ae-cli delete-keyframe --comp-name Main --layer-name Title --property-path 'ADBE Transform Group.ADBE Opacity' --key-index 2
+```
+
+`--time` はコンポジション内の絶対時刻（秒）です。名前の代わりに
+`--comp-id` / `--layer-id` も使えます。トラック全体を置換せず、指定キーだけを
+編集します。同じ時刻への移動は何も変更せず、既存キーから 0.000001 秒以内の
+移動先は拒否します。AE の時刻量子化は 0.000001 秒まで許容し、応答の `time` に
+実際の保存時刻を返します。それを超える差や置換先キーのメタデータ不一致は、
+元キーを削除する前に検出して中止します。
+
+数値・ベクトル・空間・カラープロパティが対象です。移動では値、補間、ベジェの時間イーズ、
+連続性、空間接線、選択状態、ラベル（AE 22.6 以降）を保持し、編集後に残る全キーを
+読み戻して照合します。リニア・ホールド区間の速度は保存されたイーズ設定として
+比較せず、新しい時刻に合わせて AE が再計算します。最後のキーを削除した場合は
+残った静的値も確認します。
+エクスプレッションは変更しないため、表示結果は式の影響を受ける場合があります。
+
+ロック済みレイヤー、テキスト・シェイプ・マーカー・独自値、および自動ベジェまたは
+ロービングのキーを含むトラックは、周辺キーの再計算を避けるため拒否します。
+必要なメタデータ API がない場合もエラーになります。処理中の失敗で変更が残った
+可能性がある場合は、その旨を返します。再実行前に状態を確認し、必要なら AE の
+「取り消し」で戻してください。各編集は 1 回の取り消し単位です。

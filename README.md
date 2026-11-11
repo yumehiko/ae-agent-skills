@@ -1,97 +1,65 @@
 # ae-agent-skills
 
-An offline-first After Effects workflow built on
-[`py-aep`](https://github.com/forticheprod/py-aep). Version 0.14 replaces the
-installed legacy declarative and mutation skills with one compact skill that edits `.aep` files as
-Python object graphs.
+Edit After Effects projects with Codex, Gemini, or Claude Code using
+[`py-aep`](https://github.com/forticheprod/py-aep). The installer includes the agent
+skill, Python environment, `ae-cli`, `ae-generative`, and After Effects extension.
 
-Japanese documentation: [README.ja.md](README.ja.md)
+日本語: [README.ja.md](README.ja.md)
 
 ## Install
+
+Requires Node.js 18+ and Python 3.10+ with `venv`. Full installation supports macOS;
+on Linux, add `--skip-extension` for offline editing and rendering. The npm installer
+does not support Windows.
 
 ```bash
 npx --yes ae-agent-skills@latest install --agent codex
 ```
 
-Replace `codex` with `gemini`, `claude`, or `all`. Restart After Effects after extension
-installation and open `Window > Extensions (Beta) > ae-agent-skill` when live verification
-is needed.
+Replace `codex` with `gemini`, `claude`, or `all`. The installer downloads the Python
+packages and Chromium into `~/.local/share/ae-agent-skills/`.
 
-Example request:
+For live After Effects operations, restart After Effects and open
+`Window > Extensions (Beta) > ae-agent-skill`.
+
+## Usage
+
+Launch your agent and describe the edit:
 
 ```text
-Use $aftereffects-py-aep to edit /path/to/input.aep, save a new
-/path/to/output.aep, reparse it, and verify the intended changes.
+Use $aftereffects-py-aep to add a title to the Main composition in
+/path/to/input.aep and save it as /path/to/output.aep.
 ```
 
-The workflow:
+In Claude Code, use `/aftereffects-py-aep` instead of `$aftereffects-py-aep`.
 
-- parses once, applies all edits in memory, and saves once;
-- never overwrites the input project;
-- reparses the output and checks semantic assertions;
-- uses the live AE bridge only for rendering, expression diagnostics, visual bounds,
-  installed fonts/effects, open-project runtime state, and independent animation checks;
-- records production feedback in
-  [the bundled feedback template](skills/aftereffects-py-aep/references/preview-feedback.ja.md).
+To create animation from HTML, Canvas, SVG, or WebGL:
 
-The pinned py-aep 0.19.0 includes upstream fixes for the keyframe timing and easing
-bugs reproduced in 0.15.1. Continue native verification, including save/reopen, before
-animation signoff. See [the reproduction and exceptional fallback](skills/aftereffects-py-aep/references/keyframe-verification.md).
-
-## Generative graphics from code
-
-Code-authored HTML/Canvas/SVG/WebGL animation is a core feature of the existing
-`aftereffects-py-aep` skill. Render local, frame-addressable code to a PNG sequence
-and import it into an AEP alongside native layers, text, and effects. No additional
-AE plugin is required. The result is raster footage, not AE-native shapes; edit the
-archived source and rerender to change its pixels.
-
-```bash
-ae-generative render /path/to/scene --output /path/to/new-render
+```text
+Use $aftereffects-py-aep to create a 5-second floating-icons animation in Canvas,
+render it as a PNG sequence, and add it to the Main composition in
+/path/to/input.aep. Save it as /path/to/output.aep.
 ```
 
-The installer creates a dedicated Python environment under
-`~/.local/share/ae-agent-skills/`, including py-aep, Playwright, and Chromium. It does
-not use `pip --user` or modify Homebrew/system Python packages. Python 3.10+ with
-`venv` and Node.js 18+ are required. Add the launcher directory to your shell PATH:
+To run commands directly, add the installed launchers to your PATH and restart your agent:
 
 ```bash
 export PATH="$HOME/.local/share/ae-agent-skills/bin:$PATH"
-# Run task-specific py-aep scripts with the same managed interpreter:
+ae-generative render /path/to/scene --output /path/to/new-render
 "$HOME/.local/share/ae-agent-skills/bin/python" /path/to/task.py
 ```
 
-The same `bin` directory provides `ae-cli` and `ae-generative`. You can call these
-by their full paths without changing PATH. Close/reopen your agent after changing
-PATH. Existing pip-installed CLI copies are left untouched, so put this directory
-before older Python bin directories.
+Start your scene from the [example](skills/aftereffects-py-aep/assets/generative/floating-icons).
+Use a new output directory and trusted local code. To change the rendered artwork,
+edit the scene source and render again. If Chromium setup failed, run `ae-generative setup`.
 
-A failed package upgrade leaves the previous environment selected. A failed browser
-download still installs the CLI and skill, but reports that browser setup is incomplete.
-Retry with `ae-generative setup`, or rerun the installer with `--skip-extension`.
-`--skip-cli` skips the Python environment and browser entirely. Pip/skill-only users
-must create their own venv and install Chromium with that same interpreter.
+## Update
 
-Full installation and live AE verification target macOS. Linux supports the offline
-Python/browser workflow with `--skip-extension`, but may need Playwright's OS libraries.
-The npm installer does not support Windows. Initial setup needs network access to
-GitHub, PyPI and Playwright's browser downloads; rendering uses local assets only.
-Allow roughly 1 GB for a fresh environment/browser, plus PNG sequences and retained
-older upgrade environments. Browser binaries are downloaded, not bundled in npm/ZXP.
-See [third-party licenses](THIRD_PARTY_NOTICES.md).
+Quit After Effects and rerun the install command for your agent, then restart After Effects.
 
-Missing managed Chromium is an error; another browser is only used when explicitly
-selected with `--browser`. Reproducibility requires the same browser/runtime, fonts,
-and local inputs. Only execute trusted local code.
+## Documentation
 
-See [the generative workflow](skills/aftereffects-py-aep/references/generative-workflow.md)
-for the manifest, frame API, source archive, alpha support, and py-aep import helper.
-
-## Migration from 0.13
-
-Version 0.14 installs `aftereffects-py-aep` in place of the previous declarative and
-mutation skills. The live CLI remains available for focused runtime verification.
-Task scripts and projects are not migrated or rewritten automatically.
-
-To return to the older workflow, remove the installed `aftereffects-py-aep` skill and
-install the explicit version `ae-agent-skills@0.13.0`; `latest` now uses py-aep.
+- [Skill usage](skills/aftereffects-py-aep/SKILL.md)
+- [Generative rendering and AEP import](skills/aftereffects-py-aep/references/generative-workflow.md)
+- [Live AE CLI](docs/cli.md)
+- [Third-party licenses](THIRD_PARTY_NOTICES.md)

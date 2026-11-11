@@ -959,3 +959,27 @@ def test_run_layout_rejects_margin_for_selection(capsys) -> None:
     captured = capsys.readouterr()
     assert code == 1
     assert "cannot be used" in captured.err
+
+
+def test_single_key_commands_forward_one_based_index_and_comp(monkeypatch, capsys) -> None:
+    class Client:
+        def move_keyframe(self, **kwargs):
+            self.received = kwargs
+            return {"status": "success"}
+
+        delete_keyframe = move_keyframe
+
+    client = Client()
+    monkeypatch.setattr("ae_cli.cli_runner.AEClient", lambda **kwargs: client)
+    for command in ("move-keyframe", "delete-keyframe"):
+        argv = [command, "--layer-name", "Title", "--comp-name", "Main",
+                "--property-path", "Transform.Opacity", "--key-index", "2"]
+        if command == "move-keyframe":
+            argv += ["--time", "1.5"]
+        args = build_parser().parse_args(argv)
+        assert run_command(args) == 0
+        assert client.received == {
+            "property_path": "Transform.Opacity", "key_index": 2,
+            "layer_id": None, "layer_name": "Title", "comp_id": None, "comp_name": "Main",
+            **({"time": 1.5} if command == "move-keyframe" else {}),
+        }

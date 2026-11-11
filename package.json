@@ -1,6 +1,6 @@
 {
   "name": "ae-agent-skills",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Offline-first After Effects editing with py-aep and verified live runtime checks.",
   "repository": {
     "type": "git",

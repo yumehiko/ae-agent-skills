@@ -5,7 +5,7 @@ description: Edit, inspect, create, and validate After Effects .aep projects off
 
 # After Effects with py-aep
 
-Release: `ae-agent-skills@0.15.0`
+Release: `ae-agent-skills@0.16.0`
 
 Use `py_aep` directly in one task-specific Python script. Do not translate the edit into
 a general scene JSON or a sequence of mutation CLI commands. The narrow generative
@@ -131,6 +131,11 @@ nonempty folders. Solid and placeholder footage names persist in the pinned py-a
 the saved output and assert every intended rename.
 
 ## Animation verification
+
+For a single key, use `key.time = seconds` to move it or `prop.remove_key(index)`
+to delete it (zero-based). Do not rebuild the track. Follow
+[references/single-key-edits.md](references/single-key-edits.md) for selection,
+collision/roving guards, metadata preservation, and save/reopen checks.
 
 For modified numeric animation, read
 [references/keyframe-verification.md](references/keyframe-verification.md). The pinned py-aep 0.19.0
