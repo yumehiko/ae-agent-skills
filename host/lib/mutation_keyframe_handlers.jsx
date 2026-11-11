@@ -326,6 +326,43 @@ function aeRestoreSingleKeyMetadata(prop, index, state) {
     prop.setSelectedAtKey(index, state.selected);
 }
 
+function aeRestoreSingleKeySelection(prop, index, state) {
+    // AE may clear selection on surviving keys when removeKey runs, including
+    // the prepared replacement. Restore only selection, only if it changed,
+    // and only after confirming this is still the expected key.
+    if (Math.abs(prop.keyTime(index) - state.time) <= 0.00000001
+        && prop.keySelected(index) !== state.selected) {
+        prop.setSelectedAtKey(index, state.selected);
+    }
+}
+
+function aeFindSingleKeyIndex(prop, time, tolerance, errorMessage) {
+    // nearestKeyIndex can resolve the wrong key on negative-stretch layers.
+    // Read native times directly and refuse missing or ambiguous matches.
+    var match = null;
+    for (var i = 1; i <= prop.numKeys; i++) {
+        if (Math.abs(prop.keyTime(i) - time) <= tolerance) {
+            if (match !== null) throw new Error(errorMessage);
+            match = i;
+        }
+    }
+    if (match === null) throw new Error(errorMessage);
+    return match;
+}
+
+function aeMatchSingleKeyIndices(prop, expected, errorMessage) {
+    // Native indices can run backwards in composition time. Match every
+    // expected key by time, without reusing a native key.
+    var indices = [], used = {};
+    for (var i = 0; i < expected.length; i++) {
+        var index = aeFindSingleKeyIndex(prop, expected[i].time, 0.00000001, errorMessage);
+        if (used[index]) throw new Error(errorMessage);
+        used[index] = true;
+        indices.push(index);
+    }
+    return indices;
+}
+
 function aeValidateSingleKeyProperty(prop) {
     var type = prop.propertyValueType;
     if (type !== PropertyValueType.OneD && type !== PropertyValueType.TwoD
@@ -439,9 +476,12 @@ function editSingleKeyframe(layerId, layerName, propertyPath, keyIndex, action, 
             if (!aeSingleKeyStateEqual(replacementExpected, aeSingleKeySnapshot(prop, newIndex), 0.000001)) {
                 throw new Error("Replacement metadata verification failed; source was not removed.");
             }
+            var sourceIndex = aeFindSingleKeyIndex(prop, oldTime, 0.00000001,
+                "Cannot identify source key; source was not removed.");
             removalAttempted = true;
-            prop.removeKey(prop.nearestKeyIndex(oldTime));
-            newIndex = prop.nearestKeyIndex(time);
+            prop.removeKey(sourceIndex);
+            newIndex = aeFindSingleKeyIndex(prop, insertedTime, 0.00000001,
+                "Cannot identify moved key after source removal.");
         } else {
             removalAttempted = true;
             prop.removeKey(keyIndex);
@@ -454,11 +494,15 @@ function editSingleKeyframe(layerId, layerName, propertyPath, keyIndex, action, 
             }
             expected.push(before[k]);
         }
-        expected.sort(function(a, b) { return a.time - b.time; });
         if (prop.numKeys !== expected.length) throw new Error("Key count verification failed; use Undo to restore the previous track.");
+        var expectedIndices = aeMatchSingleKeyIndices(prop, expected,
+            "Key metadata verification failed: key times do not match; use Undo to restore the previous track.");
         for (var v = 0; v < expected.length; v++) {
-            if (!aeSingleKeyStateEqual(expected[v], aeSingleKeySnapshot(prop, v + 1))) {
-                throw new Error("Key metadata verification failed at index " + (v + 1) + "; use Undo to restore the previous track.");
+            aeRestoreSingleKeySelection(prop, expectedIndices[v], expected[v]);
+        }
+        for (var v = 0; v < expected.length; v++) {
+            if (!aeSingleKeyStateEqual(expected[v], aeSingleKeySnapshot(prop, expectedIndices[v]))) {
+                throw new Error("Key metadata verification failed at index " + expectedIndices[v] + "; use Undo to restore the previous track.");
             }
         }
         if (action === "delete" && prop.numKeys === 0
@@ -476,8 +520,8 @@ function editSingleKeyframe(layerId, layerName, propertyPath, keyIndex, action, 
         if (insertionAttempted && !removalAttempted && prop.numKeys === originalCount + 1) {
             try {
                 var rollbackTime = insertedTime === null ? time : insertedTime;
-                var rollbackIndex = prop.nearestKeyIndex(rollbackTime);
-                if (Math.abs(prop.keyTime(rollbackIndex) - rollbackTime) > 0.000001) throw new Error("Cannot identify inserted key for rollback.");
+                var rollbackIndex = aeFindSingleKeyIndex(prop, rollbackTime,
+                    insertedTime === null ? 0.000001 : 0.00000001, "Cannot identify inserted key for rollback.");
                 for (var original = 0; original < before.length; original++) {
                     if (prop.keyTime(rollbackIndex) === before[original].time) throw new Error("Rollback candidate is an original key.");
                 }
@@ -488,9 +532,13 @@ function editSingleKeyframe(layerId, layerName, propertyPath, keyIndex, action, 
         if (insertionAttempted && !removalAttempted && rollbackError === null) {
             try {
                 if (prop.numKeys !== before.length) throw new Error("Rollback key count mismatch.");
+                var rollbackIndices = aeMatchSingleKeyIndices(prop, before, "Rollback metadata mismatch: key times do not match.");
                 for (var r = 0; r < before.length; r++) {
-                    if (!aeSingleKeyStateEqual(before[r], aeSingleKeySnapshot(prop, r + 1))) {
-                        throw new Error("Rollback metadata mismatch at key " + (r + 1));
+                    aeRestoreSingleKeySelection(prop, rollbackIndices[r], before[r]);
+                }
+                for (var r = 0; r < before.length; r++) {
+                    if (!aeSingleKeyStateEqual(before[r], aeSingleKeySnapshot(prop, rollbackIndices[r]))) {
+                        throw new Error("Rollback metadata mismatch at key " + rollbackIndices[r]);
                     }
                 }
             } catch (verification) { rollbackError = verification.toString(); }

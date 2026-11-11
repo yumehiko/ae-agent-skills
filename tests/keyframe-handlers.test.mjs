@@ -61,15 +61,20 @@ test('removePropertyKeyframes accepts an already unkeyed property', () => {
 
 // Native-like numeric track: indexes change on insertion/removal, metadata belongs
 // to individual keys. A host exception can be injected at any setter.
-function singleKeyContext({ spatial = false, labels = true } = {}) {
+function singleKeyContext({ spatial = false, labels = true, clearSelectionOnRemove = false, negativeStretch = false } = {}) {
   const keys = [0, 1, 2].map((time, i) => ({
     time, value: spatial ? [i * 10, i * 20] : i * 25,
     inType: 'bezier', outType: i === 1 ? 'hold' : 'linear',
     inEase: [{ speed: 12, influence: 40 }], outEase: [{ speed: 7, influence: 60 }],
     temporalContinuous: true, temporalAutoBezier: false,
-    inTangent: [-3, -4], outTangent: [5, 6], spatialContinuous: true,
-    spatialAutoBezier: false, roving: false, selected: i === 1, label: i + 2,
+    ...(spatial ? { inTangent: [-3, -4], outTangent: [5, 6], spatialContinuous: true,
+      spatialAutoBezier: false, roving: false } : {}),
+    selected: i === 1, label: i + 2,
   }));
+  if (negativeStretch) {
+    for (const key of keys) key.time += 1.000000333667;
+    keys.reverse();
+  }
   const calls = [];
   const property = {
     propertyValueType: spatial ? 'spatial' : 'number', isSpatial: spatial,
@@ -81,10 +86,13 @@ function singleKeyContext({ spatial = false, labels = true } = {}) {
     },
     addKey(time) {
       calls.push(['add', time]);
-      keys.push({ time }); keys.sort((a, b) => a.time - b.time);
-      return this.nearestKeyIndex(time);
+      keys.push({ time }); keys.sort((a, b) => negativeStretch ? b.time - a.time : a.time - b.time);
+      return keys.findIndex(key => key.time === time) + 1;
     },
-    removeKey(i) { calls.push(['remove', i]); keys.splice(i - 1, 1); },
+    removeKey(i) {
+      calls.push(['remove', i]); keys.splice(i - 1, 1);
+      if (clearSelectionOnRemove) for (const key of keys) key.selected = false;
+    },
     setValueAtKey(i, value) { keys[i - 1].value = value; },
     setInterpolationTypeAtKey(i, inType, outType) { Object.assign(keys[i - 1], { inType, outType }); },
     setTemporalEaseAtKey(i, inEase, outEase) { Object.assign(keys[i - 1], { inEase, outEase }); },
@@ -134,6 +142,196 @@ test('same time is a no-op without mutation', () => {
   const { edit, calls } = singleKeyContext();
   assert.equal(edit(2, 'move', 1).changed, false);
   assert.deepEqual(calls, []);
+});
+
+for (const time of [-1, 1.5, 3]) {
+  test(`move to ${time} restores selection cleared by AE source removal`, () => {
+    const { property, keys, edit } = singleKeyContext({ spatial: true, clearSelectionOnRemove: true });
+    keys[0].selected = true;
+    const before = structuredClone(keys);
+    const selections = [];
+    const set = property.setSelectedAtKey;
+    property.setSelectedAtKey = (i, selected) => { selections.push([keys[i - 1].time, selected]); set(i, selected); };
+    assert.equal(edit(2, 'move', time).status, 'success');
+    assert.deepEqual(keys, [before[0], { ...before[1], time }, before[2]].sort((a, b) => a.time - b.time));
+    assert.deepEqual(selections, [[time, true], [0, true], [time, true]]);
+  });
+}
+
+test('delete restores surviving selections without selecting unselected neighbors', () => {
+  const { keys, edit } = singleKeyContext({ clearSelectionOnRemove: true });
+  keys[0].selected = true;
+  const before = structuredClone(keys);
+  assert.equal(edit(2, 'delete').status, 'success');
+  assert.deepEqual(keys, [before[0], before[2]]);
+});
+
+test('unchanged selection does not trigger extra setters after removal', () => {
+  const { property, edit } = singleKeyContext();
+  const set = property.setSelectedAtKey;
+  let calls = 0;
+  property.setSelectedAtKey = (i, selected) => { calls++; set(i, selected); };
+  assert.equal(edit(2, 'move', 3).status, 'success');
+  assert.equal(calls, 1);
+  assert.equal(edit(1, 'delete').status, 'success');
+  assert.equal(calls, 1);
+});
+
+for (const action of ['move', 'delete']) {
+  for (const failure of ['throw', 'ignore']) {
+    test(`${action} reports ${failure} during post-removal selection restoration`, () => {
+      const { property, keys, calls, edit } = singleKeyContext({ clearSelectionOnRemove: true });
+      keys[0].selected = true;
+      const set = property.setSelectedAtKey;
+      property.setSelectedAtKey = (i, selected) => {
+        if (calls.some(c => c[0] === 'remove')) {
+          if (failure === 'throw') throw new Error('selection restoration failed');
+          return;
+        }
+        set(i, selected);
+      };
+      const result = edit(2, action, 3);
+      assert.equal(result.status, 'error');
+      assert.equal(result.mayHaveChanged, true);
+      assert.match(result.message, /use Undo/);
+      assert.equal(calls.filter(c => c[0] === 'remove').length, 1);
+      assert.deepEqual(calls.at(-1), ['end']);
+    });
+  }
+}
+
+test('rollback restores selection cleared by removing the inserted key', () => {
+  const { property, keys, edit } = singleKeyContext({ clearSelectionOnRemove: true });
+  const before = structuredClone(keys);
+  property.setTemporalEaseAtKey = () => { throw new Error('metadata setter failed'); };
+  const result = edit(2, 'move', -1);
+  assert.equal(result.status, 'error');
+  assert.equal(result.mayHaveChanged, false);
+  assert.equal(result.rollbackError, null);
+  assert.deepEqual(keys, before);
+});
+
+test('rollback selection setter failure reports the track may have changed', () => {
+  const { property, edit } = singleKeyContext({ clearSelectionOnRemove: true });
+  property.setTemporalEaseAtKey = () => { throw new Error('metadata setter failed'); };
+  property.setSelectedAtKey = () => { throw new Error('selection restoration failed'); };
+  const result = edit(2, 'move', 3);
+  assert.equal(result.mayHaveChanged, true);
+  assert.match(result.rollbackError, /selection restoration failed/);
+});
+
+for (const spatial of [false, true]) {
+  for (const time of [0.5, 2.5, 4]) {
+    test(`negative stretch move to ${time} preserves native descending order and metadata (spatial=${spatial})`, () => {
+      const { property, keys, edit } = singleKeyContext({ negativeStretch: true, spatial, clearSelectionOnRemove: true });
+      // AE may return the destination index when asked for the source time.
+      // Native addKey still returns the correct newly inserted index.
+      property.nearestKeyIndex = () => { throw new Error('must not use unreliable nearestKeyIndex'); };
+      keys[0].selected = true;
+      const before = structuredClone(keys);
+      const result = edit(2, 'move', time);
+      assert.equal(result.status, 'success');
+      assert.deepEqual(keys, [before[0], { ...before[1], time }, before[2]].sort((a, b) => b.time - a.time));
+      assert.equal(result.keyIndex, keys.findIndex(key => key.time === time) + 1);
+      assert.equal(result.time, time);
+    });
+  }
+  test(`negative stretch delete preserves surviving keys and selection (spatial=${spatial})`, () => {
+    const { keys, edit } = singleKeyContext({ negativeStretch: true, spatial, clearSelectionOnRemove: true });
+    keys[0].selected = true;
+    const before = structuredClone(keys);
+    assert.equal(edit(2, 'delete').status, 'success');
+    assert.deepEqual(keys, [before[0], before[2]]);
+  });
+}
+
+test('negative stretch rollback preserves the original track and selection', () => {
+  const { property, keys, edit } = singleKeyContext({ negativeStretch: true, clearSelectionOnRemove: true });
+  property.nearestKeyIndex = () => { throw new Error('must not use unreliable nearestKeyIndex'); };
+  const before = structuredClone(keys);
+  property.setTemporalEaseAtKey = () => { throw new Error('metadata setter failed'); };
+  const result = edit(2, 'move', 4);
+  assert.equal(result.status, 'error');
+  assert.equal(result.mayHaveChanged, false);
+  assert.equal(result.rollbackError, null);
+  assert.deepEqual(keys, before);
+});
+
+test('negative stretch still detects neighbor metadata corruption after removal', () => {
+  const { property, keys, edit } = singleKeyContext({ negativeStretch: true, clearSelectionOnRemove: true });
+  const remove = property.removeKey;
+  property.removeKey = i => { remove(i); keys[0].label = 16; };
+  const result = edit(2, 'move', 0.5);
+  assert.equal(result.status, 'error');
+  assert.equal(result.mayHaveChanged, true);
+  assert.match(result.message, /metadata verification failed/);
+});
+
+test('time matching cannot reuse one native key for two expected snapshots', () => {
+  const { property, keys, context } = singleKeyContext();
+  keys[1].time = 0.000000005;
+  const expected = keys.slice(0, 2).map(key => ({ time: key.time }));
+  property.nearestKeyIndex = () => 1;
+  assert.throws(() => context.aeMatchSingleKeyIndices(property, expected, 'duplicate match'), /duplicate match/);
+});
+
+test('negative stretch rollback rejects time corruption outside absolute tolerance', () => {
+  const { property, keys, edit } = singleKeyContext({ negativeStretch: true });
+  property.setTemporalEaseAtKey = () => { throw new Error('metadata setter failed'); };
+  const remove = property.removeKey;
+  property.removeKey = i => { remove(i); keys[0].time += 0.0000001; };
+  const result = edit(2, 'move', 4);
+  assert.equal(result.status, 'error');
+  assert.equal(result.mayHaveChanged, true);
+  assert.match(result.rollbackError, /Rollback metadata mismatch/);
+});
+
+test('negative stretch ignores a native nearestKeyIndex that always selects the replacement', () => {
+  const { property, keys, edit } = singleKeyContext({ negativeStretch: true, clearSelectionOnRemove: true });
+  property.nearestKeyIndex = () => 1;
+  const before = structuredClone(keys);
+  const result = edit(2, 'move', 4);
+  assert.equal(result.status, 'success');
+  assert.equal(result.keyIndex, 1);
+  assert.deepEqual(keys, [{ ...before[1], time: 4 }, before[0], before[2]]);
+});
+
+test('ambiguous source time aborts before removal and rolls back only the replacement', () => {
+  const { keys, calls, edit } = singleKeyContext();
+  keys[1].time = 0.000000005;
+  const before = structuredClone(keys);
+  const result = edit(2, 'move', 3);
+  assert.equal(result.status, 'error');
+  assert.match(result.message, /Cannot identify source key/);
+  assert.deepEqual(keys, before);
+  assert.deepEqual(calls.filter(c => c[0] === 'remove'), [['remove', 4]]);
+  // Final rollback verification also refuses ambiguous native times.
+  assert.equal(result.mayHaveChanged, true);
+  assert.match(result.rollbackError, /Rollback metadata mismatch/);
+});
+
+test('missing source time aborts before removal and reports the changed original', () => {
+  const { property, keys, calls, edit } = singleKeyContext({ negativeStretch: true });
+  const set = property.setValueAtKey;
+  property.setValueAtKey = (i, value) => { set(i, value); keys.find(key => key.value === 25 && key.time !== 4).time += 0.001; };
+  const result = edit(2, 'move', 4);
+  assert.equal(result.status, 'error');
+  assert.match(result.message, /Cannot identify source key/);
+  assert.equal(result.mayHaveChanged, true);
+  assert.deepEqual(calls.filter(c => c[0] === 'remove'), [['remove', 1]]);
+  assert.equal(keys.length, 3);
+});
+
+test('negative stretch insertion throwing after a quantized add scans the inserted key for rollback', () => {
+  const { property, keys, edit } = singleKeyContext({ negativeStretch: true, clearSelectionOnRemove: true });
+  property.nearestKeyIndex = () => { throw new Error('must not use unreliable nearestKeyIndex'); };
+  const before = structuredClone(keys);
+  const add = property.addKey;
+  property.addKey = time => { add.call(property, time + 0.0000005); throw new Error('after insertion'); };
+  const result = edit(2, 'move', 4);
+  assert.equal(result.status, 'error');
+  assert.equal(result.mayHaveChanged, false);
+  assert.deepEqual(keys, before);
 });
 
 test('delete removes just the selected key', () => {
